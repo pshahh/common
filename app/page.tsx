@@ -1,7 +1,14 @@
+import { supabase } from '@/lib/supabase';
 import Header from './components/Header';
 import PostCard from './components/PostCard';
 
-export default function Home() {
+export default async function Home() {
+  // Fetch posts from Supabase
+  const { data: posts, error } = await supabase
+    .from('posts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
       <Header isLoggedIn={false} />
@@ -42,35 +49,31 @@ export default function Home() {
 
         {/* Post cards */}
         <div>
-          <PostCard 
-            title="Dog walking"
-            location="Clissold Park"
-            time="weekday evenings"
-            name="Adam"
-            peopleIn={3}
-          />
-          <PostCard 
-            title="Beginners only chess"
-            location="Alpaca pub, Angel"
-            time="tonight"
-            name="Jim"
-          />
-          <PostCard 
-            title="Sketching / Painting in a park"
-            location="Hyde Park"
-            time="Sundays"
-            notes="Beginner artists"
-            name="Lona"
-            preference="Women preferred"
-          />
-          <PostCard 
-            title="Pub quiz"
-            location="The Crown, Stoke Newington"
-            time="Tomorrow evening"
-            notes="Looking for 2 people"
-            name="Mo"
-            peopleIn={1}
-          />
+          {error && (
+            <p style={{ color: 'red', fontSize: '14px' }}>
+              Error loading posts. Please try again.
+            </p>
+          )}
+          
+          {posts && posts.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)' }}>
+              <p style={{ fontSize: '16px', marginBottom: '8px' }}>Nothing nearby yet.</p>
+              <p style={{ fontSize: '14px' }}>Be the first to share what you're doing.</p>
+            </div>
+          )}
+          
+          {posts && posts.map((post) => (
+            <PostCard 
+              key={post.id}
+              title={post.title}
+              location={post.location}
+              time={post.time}
+              notes={post.notes}
+              name={post.name}
+              peopleIn={post.people_interested}
+              preference={post.preference !== 'anyone' ? post.preference : undefined}
+            />
+          ))}
         </div>
       </main>
     </div>
