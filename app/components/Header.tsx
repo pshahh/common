@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 interface HeaderProps {
   isLoggedIn?: boolean;
@@ -8,6 +9,10 @@ interface HeaderProps {
 }
 
 export default function Header({ isLoggedIn = false, onLoginClick }: HeaderProps) {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
   return (
     <header style={{
       height: '56px',
@@ -28,7 +33,7 @@ export default function Header({ isLoggedIn = false, onLoginClick }: HeaderProps
         common
       </Link>
       
-      {!isLoggedIn && (
+      {!isLoggedIn ? (
         <button 
           onClick={onLoginClick}
           style={{ 
@@ -40,6 +45,19 @@ export default function Header({ isLoggedIn = false, onLoginClick }: HeaderProps
           }}
         >
           Log in / Sign up
+        </button>
+      ) : (
+        <button 
+          onClick={handleLogout}
+          style={{ 
+            fontSize: '14px', 
+            color: 'var(--text-secondary)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          Log out
         </button>
       )}
     </header>

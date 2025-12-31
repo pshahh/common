@@ -67,6 +67,20 @@ a {
   background-color: #FAFAFA;
 }
 
+.btn-accent {
+  background-color: var(--accent);
+  color: #FFFFFF;
+  padding: 12px 24px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-accent:hover {
+  background-color: var(--accent-hover);
+}
 /* Card styles */
 .card {
   background: #FFFFFF;

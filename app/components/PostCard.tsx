@@ -8,6 +8,7 @@ interface PostCardProps {
   name: string;
   peopleIn?: number;
   preference?: string;
+  onInterestedClick?: () => void;
 }
 
 export default function PostCard({ 
@@ -17,7 +18,8 @@ export default function PostCard({
   notes, 
   name, 
   peopleIn = 0,
-  preference 
+  preference,
+  onInterestedClick
 }: PostCardProps) {
   return (
     <div className="card">
@@ -48,7 +50,7 @@ export default function PostCard({
       
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={onInterestedClick}>
             I'm interested
           </button>
           {peopleIn > 0 && (
