@@ -1,65 +1,55 @@
 'use client';
 
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
 
 interface HeaderProps {
-  isLoggedIn?: boolean;
-  onLoginClick?: () => void;
+  onLoginClick: () => void;
+  user: User | null;
+  onLogout: () => void;
 }
 
-export default function Header({ isLoggedIn = false, onLoginClick }: HeaderProps) {
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
+export default function Header({ onLoginClick, user, onLogout }: HeaderProps) {
+  const [firstName, setFirstName] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('first_name')
+          .eq('id', user.id)
+          .single();
+        
+        if (data && !error) {
+          setFirstName(data.first_name);
+        }
+      } else {
+        setFirstName(null);
+      }
+    }
+
+    fetchProfile();
+  }, [user]);
 
   return (
-    <header style={{
-      height: '56px',
-      borderBottom: '1px solid var(--border)',
-      backgroundColor: '#FFFFFF',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 24px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 40
-    }}>
-      <Link 
-        href="/"
-        style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' }}
-      >
-        common
-      </Link>
-      
-      {!isLoggedIn ? (
-        <button 
-          onClick={onLoginClick}
-          style={{ 
-            fontSize: '14px', 
-            color: 'var(--text-secondary)',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          Log in / Sign up
-        </button>
-      ) : (
-        <button 
-          onClick={handleLogout}
-          style={{ 
-            fontSize: '14px', 
-            color: 'var(--text-secondary)',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          Log out
-        </button>
-      )}
+    <header className="header">
+      <a href="/" className="logo">common</a>
+      <div className="header-right">
+        {user ? (
+          <div className="user-info">
+            {firstName && <span className="user-name">{firstName}</span>}
+            <button onClick={onLogout} className="text-link">
+              Log out
+            </button>
+          </div>
+        ) : (
+          <button onClick={onLoginClick} className="text-link">
+            Log in / Sign up
+          </button>
+        )}
+      </div>
     </header>
   );
 }

@@ -1,65 +1,142 @@
 'use client';
 
+import { useState } from 'react';
+
 interface PostCardProps {
+  id: string;
   title: string;
   location: string;
+  latitude?: number | null;
+  longitude?: number | null;
   time: string;
   notes?: string;
   name: string;
-  peopleIn?: number;
+  peopleInterested?: number;
   preference?: string;
-  onInterestedClick?: () => void;
+  isLoggedIn: boolean;
+  onImInterested: () => void;
 }
 
-export default function PostCard({ 
-  title, 
-  location, 
-  time, 
-  notes, 
-  name, 
-  peopleIn = 0,
+export default function PostCard({
+  id,
+  title,
+  location,
+  latitude,
+  longitude,
+  time,
+  notes,
+  name,
+  peopleInterested = 0,
   preference,
-  onInterestedClick
+  isLoggedIn,
+  onImInterested,
 }: PostCardProps) {
+  const [showNameTooltip, setShowNameTooltip] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+
+  // Generate Google Maps URL
+  const getMapUrl = () => {
+    if (latitude && longitude) {
+      // If we have coordinates, link directly to them
+      return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    }
+    // Fallback to searching by location name
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+  };
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/post/${id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+      } catch (err) {
+        // User cancelled or share failed, copy to clipboard instead
+        navigator.clipboard.writeText(url);
+      }
+    } else {
+      navigator.clipboard.writeText(url);
+      // Could add a toast notification here
+    }
+  };
+
   return (
     <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ fontWeight: 600, fontSize: '16px', marginBottom: '6px' }}>{title}</h3>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>{location}</span>
-            <span style={{ margin: '0 8px' }}>·</span>
+      <div className="card-header">
+        <div className="card-content">
+          <h3 className="card-title">{title}</h3>
+          <div className="card-meta">
+            <a
+              href={getMapUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="location-link"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {location}
+            </a>
+            <span className="meta-separator">·</span>
             <span>{time}</span>
-          </p>
-          {notes && (
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-              {notes}
-            </p>
-          )}
-          {preference && (
-            <span className="badge-preference" style={{ display: 'inline-block', marginBottom: '12px' }}>
-              {preference}
-            </span>
+          </div>
+          {notes && <p className="card-notes">{notes}</p>}
+          {preference && preference !== 'Anyone' && (
+            <span className="preference-badge">{preference}</span>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '12px' }}>
-          <span>Share</span>
-          <span>↗</span>
+        <div className="card-actions">
+          <button className="share-button" onClick={handleShare}>
+            Share ↗
+          </button>
+          <div className="menu-container">
+            <button
+              className="menu-button"
+              onClick={() => setShowMenu(!showMenu)}
+            >
+              ⋯
+            </button>
+            {showMenu && (
+              <div className="dropdown-menu">
+                <button
+                  className="dropdown-item"
+                  onClick={() => {
+                    setShowMenu(false);
+                    // TODO: Implement report modal
+                  }}
+                >
+                  Report post
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button className="btn-primary" onClick={onInterestedClick}>
+
+      <div className="card-footer">
+        <div className="footer-left">
+          <button className="btn btn-primary" onClick={onImInterested}>
             I'm interested
           </button>
-          {peopleIn > 0 && (
-            <span className="badge-interested">
-              {peopleIn} interested
+          {peopleInterested > 0 && (
+            <span className="interested-badge">
+              {peopleInterested} interested
             </span>
           )}
         </div>
-        <span style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>{name}</span>
+        <div
+          className="poster-name"
+          onMouseEnter={() => setShowNameTooltip(true)}
+          onMouseLeave={() => setShowNameTooltip(false)}
+        >
+          {name}
+          {showNameTooltip && (
+            <div className="name-tooltip">
+              <div className="tooltip-avatar"></div>
+              <div className="tooltip-info">
+                <span className="tooltip-name">{name}</span>
+                <span className="tooltip-since">Active since Jan 2025</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
