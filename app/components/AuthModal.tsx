@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -10,7 +9,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'check-email'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -23,18 +22,19 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     e.preventDefault();
     setLoading(true);
     setError(null);
-
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
+    
     if (error) {
       setError(error.message);
       setLoading(false);
     } else {
       onSuccess();
       onClose();
+      resetForm();
     }
   };
 
@@ -42,19 +42,19 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     e.preventDefault();
     setLoading(true);
     setError(null);
-
+    
     // Create the user
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     });
-
+    
     if (signUpError) {
       setError(signUpError.message);
       setLoading(false);
       return;
     }
-
+    
     // Create their profile
     if (data.user) {
       const { error: profileError } = await supabase
@@ -63,17 +63,109 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           id: data.user.id,
           first_name: firstName,
         });
-
+      
       if (profileError) {
-        setError(profileError.message);
-        setLoading(false);
-        return;
+        // Profile creation failed, but user might still be created
+        console.error('Profile creation error:', profileError);
       }
     }
+    
+    setLoading(false);
+    // Show check email screen
+    setMode('check-email');
+  };
 
-    onSuccess();
+  const resetForm = () => {
+    setEmail('');
+    setPassword('');
+    setFirstName('');
+    setError(null);
+    setMode('login');
+  };
+
+  const handleClose = () => {
+    resetForm();
     onClose();
   };
+
+  // Check email confirmation screen
+  if (mode === 'check-email') {
+    return (
+      <div 
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: '16px',
+        }}
+        onClick={handleClose}
+      >
+        <div 
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '400px',
+            overflow: 'hidden',
+            textAlign: 'center',
+            padding: '40px 32px',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Email icon */}
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            background: '#f0f0f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            fontSize: '24px',
+          }}>
+            ✉
+          </div>
+          
+          <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
+            Check your email
+          </h2>
+          
+          <p style={{ fontSize: '14px', color: '#666', marginBottom: '8px', lineHeight: 1.5 }}>
+            We've sent a confirmation link to:
+          </p>
+          
+          <p style={{ fontSize: '14px', fontWeight: 500, marginBottom: '16px' }}>
+            {email}
+          </p>
+          
+          <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: 1.5 }}>
+            Click the link in the email to activate your account, then come back here to log in.
+          </p>
+          
+          <button
+            onClick={handleClose}
+            style={{
+              background: '#000',
+              color: '#fff',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '24px',
+              fontWeight: 600,
+              fontSize: '14px',
+              cursor: 'pointer',
+            }}
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -87,7 +179,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         zIndex: 50,
         padding: '16px',
       }}
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div 
         style={{
@@ -102,23 +194,29 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         {/* Header */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid var(--border)',
+          borderBottom: '1px solid #e0e0e0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 600 }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>
             {mode === 'login' ? 'Log in' : 'Create account'}
           </h2>
           <button 
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               background: 'none',
               border: 'none',
               fontSize: '24px',
               cursor: 'pointer',
-              color: 'var(--text-tertiary)',
+              color: '#888',
               lineHeight: 1,
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
             }}
           >
             ×
@@ -128,7 +226,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         {/* Form */}
         <form onSubmit={mode === 'login' ? handleLogin : handleSignup}>
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
                 Email
@@ -141,14 +238,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid var(--border)',
+                  border: '1px solid #e0e0e0',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
-
+            
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
                 Password
@@ -162,14 +260,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid var(--border)',
+                  border: '1px solid #e0e0e0',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
-
+            
             {mode === 'signup' && (
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
@@ -183,24 +282,36 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   style={{
                     width: '100%',
                     padding: '12px 16px',
-                    border: '1px solid var(--border)',
+                    border: '1px solid #e0e0e0',
                     borderRadius: '12px',
                     fontSize: '14px',
                     outline: 'none',
+                    boxSizing: 'border-box',
                   }}
                 />
               </div>
             )}
-
+            
             {error && (
-              <p style={{ color: '#DC2626', fontSize: '14px' }}>{error}</p>
+              <p style={{ color: '#DC2626', fontSize: '14px', margin: 0 }}>{error}</p>
             )}
-
+            
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary"
-              style={{ width: '100%', marginTop: '8px', opacity: loading ? 0.7 : 1 }}
+              style={{
+                width: '100%',
+                marginTop: '8px',
+                background: '#000',
+                color: '#fff',
+                border: 'none',
+                padding: '12px 24px',
+                borderRadius: '24px',
+                fontWeight: 600,
+                fontSize: '14px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+              }}
             >
               {loading ? 'Please wait...' : (mode === 'login' ? 'Log in' : 'Create account')}
             </button>
@@ -210,11 +321,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         {/* Footer */}
         <div style={{
           padding: '16px 24px',
-          borderTop: '1px solid var(--border)',
+          borderTop: '1px solid #e0e0e0',
           textAlign: 'center',
-          backgroundColor: 'var(--background-subtle)',
+          backgroundColor: '#fafafa',
         }}>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+          <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>
             {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
             <button
               type="button"
@@ -228,7 +339,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 textDecoration: 'underline',
                 cursor: 'pointer',
                 fontSize: '14px',
-                color: 'var(--text-secondary)',
+                color: '#666',
               }}
             >
               {mode === 'login' ? 'Create one' : 'Log in'}

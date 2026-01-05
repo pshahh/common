@@ -1,6 +1,5 @@
 'use client';
-
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface CreatePostModalProps {
@@ -31,42 +30,121 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  
+  const locationInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Default expiry date (2 weeks from now)
+  const defaultExpiry = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  // Reset form state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setTitle('');
+      setLocation('');
+      setLatitude(null);
+      setLongitude(null);
+      setLocationSuggestions([]);
+      setShowSuggestions(false);
+      setTimingMode('specific');
+      setDate('');
+      setTimeDetails('');
+      setExpiresAt(defaultExpiry); // Set default expiry
+      setWhoCanRespond('anyone');
+      setNotes('');
+      setLoading(false);
+      setError(null);
+      setLocationError(null);
+      setShowConfirmation(false);
+    }
+  }, [isOpen, defaultExpiry]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        suggestionsRef.current && 
+        !suggestionsRef.current.contains(event.target as Node) &&
+        locationInputRef.current &&
+        !locationInputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounced location search
+  useEffect(() => {
+    if (location.length < 3) {
+      setLocationSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    // Don't search if we already have valid coordinates (user selected from dropdown)
+    if (latitude !== null && longitude !== null) {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setSearchingLocation(true);
+      try {
+        // Search with broader parameters for better POI coverage
+        // Adding addressdetails and different search approach
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=8&addressdetails=1&extratags=1`
+        );
+        const data = await response.json();
+        setLocationSuggestions(data);
+        setShowSuggestions(data.length > 0);
+      } catch (err) {
+        console.error('Location search failed:', err);
+      }
+      setSearchingLocation(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [location, latitude, longitude]);
 
   if (!isOpen) return null;
 
-  // Search for locations using OpenStreetMap Nominatim
-  const searchLocation = async (query: string) => {
-    if (query.length < 3) {
-      setLocationSuggestions([]);
-      return;
-    }
-  
-    setSearchingLocation(true);
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=gb`
-      );
-      const data = await response.json();
-      setLocationSuggestions(data);
-      setShowSuggestions(true);
-    } catch (err) {
-      console.error('Location search failed:', err);
-    }
-    setSearchingLocation(false);
-  };
-
   const selectLocation = (suggestion: LocationSuggestion) => {
-    // Extract a cleaner name (first part before the comma usually)
-    const shortName = suggestion.display_name.split(',').slice(0, 2).join(',');
+    // Show more of the address - take first 3-4 meaningful parts
+    const parts = suggestion.display_name.split(',').map(p => p.trim());
+    // Take up to 4 parts but skip very long addresses
+    const meaningfulParts = parts.slice(0, 4);
+    const shortName = meaningfulParts.join(', ');
+    
     setLocation(shortName);
     setLatitude(parseFloat(suggestion.lat));
     setLongitude(parseFloat(suggestion.lon));
     setShowSuggestions(false);
     setLocationSuggestions([]);
+    setLocationError(null);
+  };
+
+  const handleLocationChange = (value: string) => {
+    setLocation(value);
+    // Clear coordinates when user types - they must select from dropdown
+    setLatitude(null);
+    setLongitude(null);
+    setLocationError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate location has coordinates
+    if (latitude === null || longitude === null) {
+      setLocationError('Please select a location from the dropdown suggestions');
+      locationInputRef.current?.focus();
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -95,15 +173,16 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
       timeString = timeDetails || 'Flexible timing';
     }
 
-    // Calculate expiry
-    let expiryDate = null;
+    // Calculate expiry - always set a value
+    let expiryDate: string;
     if (timingMode === 'specific' && date) {
-      // Expire day after the event
       const eventDate = new Date(date);
       eventDate.setDate(eventDate.getDate() + 1);
       expiryDate = eventDate.toISOString();
-    } else if (expiresAt) {
-      expiryDate = new Date(expiresAt).toISOString();
+    } else {
+      // Use the expiresAt value, or default if not set
+      const expiryValue = expiresAt || defaultExpiry;
+      expiryDate = new Date(expiryValue).toISOString();
     }
 
     const { error: insertError } = await supabase
@@ -127,23 +206,82 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
       return;
     }
 
-    // Reset form
-    setTitle('');
-    setLocation('');
-    setLatitude(null);
-    setLongitude(null);
-    setDate('');
-    setTimeDetails('');
-    setExpiresAt('');
-    setWhoCanRespond('anyone');
-    setNotes('');
-    
+    setLoading(false);
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmationClose = () => {
+    setShowConfirmation(false);
     onSuccess();
     onClose();
   };
 
-  // Set default expiry date (2 weeks from now)
-  const defaultExpiry = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  // Confirmation modal
+  if (showConfirmation) {
+    return (
+      <div 
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: '16px',
+        }}
+        onClick={handleConfirmationClose}
+      >
+        <div 
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '400px',
+            padding: '40px 32px',
+            textAlign: 'center',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            backgroundColor: '#f0fdf4',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            fontSize: '20px',
+            color: '#16a34a',
+          }}>
+            ✓
+          </div>
+          <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#000' }}>
+            Thanks
+          </h2>
+          <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>
+            We're checking this now. It should appear shortly.
+          </p>
+          <button
+            onClick={handleConfirmationClose}
+            style={{
+              background: '#000',
+              color: '#fff',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '24px',
+              fontWeight: 600,
+              fontSize: '14px',
+              cursor: 'pointer',
+            }}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -174,7 +312,7 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
         {/* Header */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid var(--border)',
+          borderBottom: '1px solid #e0e0e0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
@@ -188,7 +326,7 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
             <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>
               Share what you're doing
             </h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+            <p style={{ fontSize: '14px', color: '#666' }}>
               Open to company? Let others know
             </p>
           </div>
@@ -199,7 +337,7 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
               border: 'none',
               fontSize: '24px',
               cursor: 'pointer',
-              color: 'var(--text-tertiary)',
+              color: '#888',
               lineHeight: 1,
             }}
           >
@@ -210,7 +348,6 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
         {/* Form */}
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            
             {/* What */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
@@ -225,10 +362,11 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid var(--border)',
+                  border: '1px solid #e0e0e0',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
@@ -238,44 +376,65 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>
                 Where?
               </label>
-              <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px' }}>
-                This helps people find it
+              <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
+                Start typing and select from the suggestions
               </p>
               <input
+                ref={locationInputRef}
                 type="text"
                 value={location}
-                onChange={e => {
-                  setLocation(e.target.value);
-                  setLatitude(null);
-                  setLongitude(null);
-                  searchLocation(e.target.value);
-                }}
+                onChange={e => handleLocationChange(e.target.value)}
                 onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
-                placeholder="Start typing to search locations"
+                placeholder="Search for a location..."
                 required
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid var(--border)',
+                  border: `1px solid ${locationError ? '#dc2626' : '#e0e0e0'}`,
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
+                  boxSizing: 'border-box',
                 }}
               />
+              
+              {/* Location validation feedback */}
+              {latitude !== null && longitude !== null && (
+                <p style={{ fontSize: '12px', color: '#16a34a', marginTop: '6px' }}>
+                  ✓ Location selected
+                </p>
+              )}
+              {locationError && (
+                <p style={{ fontSize: '12px', color: '#dc2626', marginTop: '6px' }}>
+                  {locationError}
+                </p>
+              )}
+              {searchingLocation && (
+                <p style={{ fontSize: '12px', color: '#888', marginTop: '6px' }}>
+                  Searching...
+                </p>
+              )}
+
+              {/* Suggestions dropdown */}
               {showSuggestions && locationSuggestions.length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid var(--border)',
-                  borderRadius: '12px',
-                  marginTop: '4px',
-                  zIndex: 10,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  overflow: 'hidden',
-                }}>
+                <div
+                  ref={suggestionsRef}
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '12px',
+                    marginTop: '4px',
+                    zIndex: 20,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    overflow: 'hidden',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                  }}
+                >
                   {locationSuggestions.map((suggestion, index) => (
                     <div
                       key={index}
@@ -283,27 +442,18 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
                       style={{
                         padding: '12px 16px',
                         cursor: 'pointer',
-                        borderBottom: index < locationSuggestions.length - 1 ? '1px solid var(--border-light)' : 'none',
+                        borderBottom: index < locationSuggestions.length - 1 ? '1px solid #f0f0f0' : 'none',
                         fontSize: '14px',
-                        color: 'var(--text-secondary)',
+                        color: '#444',
+                        backgroundColor: '#fff',
                       }}
-                      onMouseEnter={e => (e.target as HTMLDivElement).style.backgroundColor = 'var(--background-subtle)'}
-                      onMouseLeave={e => (e.target as HTMLDivElement).style.backgroundColor = '#FFFFFF'}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
                     >
                       {suggestion.display_name}
                     </div>
                   ))}
                 </div>
-              )}
-              {searchingLocation && (
-                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                  Searching...
-                </p>
-              )}
-              {latitude && longitude && (
-                <p style={{ fontSize: '12px', color: 'var(--success)', marginTop: '4px' }}>
-                  ✓ Location selected
-                </p>
               )}
             </div>
 
@@ -322,8 +472,8 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
                     border: 'none',
                     fontSize: '14px',
                     cursor: 'pointer',
-                    backgroundColor: timingMode === 'specific' ? '#000' : 'var(--background-subtle)',
-                    color: timingMode === 'specific' ? '#FFF' : 'var(--text-secondary)',
+                    backgroundColor: timingMode === 'specific' ? '#000' : '#f5f5f5',
+                    color: timingMode === 'specific' ? '#FFF' : '#666',
                   }}
                 >
                   On a specific date
@@ -337,14 +487,14 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
                     border: 'none',
                     fontSize: '14px',
                     cursor: 'pointer',
-                    backgroundColor: timingMode === 'flexible' ? '#000' : 'var(--background-subtle)',
-                    color: timingMode === 'flexible' ? '#FFF' : 'var(--text-secondary)',
+                    backgroundColor: timingMode === 'flexible' ? '#000' : '#f5f5f5',
+                    color: timingMode === 'flexible' ? '#FFF' : '#666',
                   }}
                 >
                   Exact date is flexible
                 </button>
               </div>
-
+              
               {timingMode === 'specific' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <input
@@ -354,7 +504,7 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
                     required
                     style={{
                       padding: '12px 16px',
-                      border: '1px solid var(--border)',
+                      border: '1px solid #e0e0e0',
                       borderRadius: '12px',
                       fontSize: '14px',
                       outline: 'none',
@@ -369,10 +519,11 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid var(--border)',
+                      border: '1px solid #e0e0e0',
                       borderRadius: '12px',
                       fontSize: '14px',
                       outline: 'none',
+                      boxSizing: 'border-box',
                     }}
                   />
                 </div>
@@ -387,29 +538,30 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid var(--border)',
+                      border: '1px solid #e0e0e0',
                       borderRadius: '12px',
                       fontSize: '14px',
                       outline: 'none',
+                      boxSizing: 'border-box',
                     }}
                   />
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Post expires:</span>
+                      <span style={{ fontSize: '14px', color: '#666' }}>Post expires:</span>
                       <input
                         type="date"
-                        value={expiresAt || defaultExpiry}
+                        value={expiresAt}
                         onChange={e => setExpiresAt(e.target.value)}
                         style={{
                           padding: '12px 16px',
-                          border: '1px solid var(--border)',
+                          border: '1px solid #e0e0e0',
                           borderRadius: '12px',
                           fontSize: '14px',
                           outline: 'none',
                         }}
                       />
                     </div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
+                    <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
                       This controls how long your post stays visible.
                     </p>
                   </div>
@@ -434,8 +586,8 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
                       border: 'none',
                       fontSize: '14px',
                       cursor: 'pointer',
-                      backgroundColor: whoCanRespond === option.toLowerCase() ? '#000' : 'var(--background-subtle)',
-                      color: whoCanRespond === option.toLowerCase() ? '#FFF' : 'var(--text-secondary)',
+                      backgroundColor: whoCanRespond === option.toLowerCase() ? '#000' : '#f5f5f5',
+                      color: whoCanRespond === option.toLowerCase() ? '#FFF' : '#666',
                     }}
                   >
                     {option}
@@ -443,7 +595,7 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
                 ))}
               </div>
               {whoCanRespond !== 'anyone' && (
-                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
+                <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
                   This is shown as a preference, not a restriction.
                 </p>
               )}
@@ -452,7 +604,7 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
             {/* Notes */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-                Notes <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional but worthwhile)</span>
+                Notes <span style={{ fontWeight: 400, color: '#888' }}>(optional but worthwhile)</span>
               </label>
               <textarea
                 value={notes}
@@ -462,12 +614,13 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid var(--border)',
+                  border: '1px solid #e0e0e0',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
                   resize: 'vertical',
                   fontFamily: 'inherit',
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
@@ -480,21 +633,30 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
           {/* Footer */}
           <div style={{
             padding: '16px 24px',
-            borderTop: '1px solid var(--border)',
+            borderTop: '1px solid #e0e0e0',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: 'var(--background-subtle)',
+            backgroundColor: '#fafafa',
             borderRadius: '0 0 16px 16px',
           }}>
-            <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', maxWidth: '250px' }}>
+            <p style={{ fontSize: '12px', color: '#888', maxWidth: '250px' }}>
               Posts are reviewed before appearing to help keep things safe
             </p>
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary"
-              style={{ opacity: loading ? 0.7 : 1 }}
+              style={{
+                background: '#000',
+                color: '#fff',
+                border: 'none',
+                padding: '12px 24px',
+                borderRadius: '24px',
+                fontWeight: 600,
+                fontSize: '14px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+              }}
             >
               {loading ? 'Sharing...' : 'Share'}
             </button>

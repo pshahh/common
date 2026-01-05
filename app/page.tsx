@@ -1,6 +1,5 @@
 'use client';
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import Header from './components/Header';
@@ -9,8 +8,10 @@ import AuthModal from './components/AuthModal';
 import CreatePostModal from './components/CreatePostModal';
 import InterestedModal from './components/InterestedModal';
 import MessageSentModal from './components/MessageSentModal';
+import ProfileCompletionModal from './components/ProfileCompletionModal';
 import Sidebar from './components/Sidebar';
 import MessageThread from './components/MessageThread';
+import { sortByDistance, formatDistance, getDistanceToPost } from '@/lib/distance';
 
 interface Post {
   id: string;
@@ -25,54 +26,454 @@ interface Post {
   people_interested: number;
   user_id: string;
   created_at: string;
+  expires_at: string | null;
+}
+
+interface Profile {
+  id: string;
+  first_name: string;
+  avatar_url: string | null;
+  date_of_birth: string | null;
+}
+
+interface UserLocation {
+  latitude: number;
+  longitude: number;
+  source: 'browser' | 'manual';
+  name?: string;
+}
+
+interface LocationSuggestion {
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
+// Separate component to avoid re-render issues
+interface LocationSectionProps {
+  sortBy: string;
+  locationStatus: 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
+  userLocation: UserLocation | null;
+  showLocationInput: boolean;
+  setShowLocationInput: (show: boolean) => void;
+  locationQuery: string;
+  setLocationQuery: (query: string) => void;
+  locationSuggestions: LocationSuggestion[];
+  searchingLocation: boolean;
+  selectManualLocation: (suggestion: LocationSuggestion) => void;
+  requestBrowserLocation: () => void;
+}
+
+function LocationSection({
+  sortBy,
+  locationStatus,
+  userLocation,
+  showLocationInput,
+  setShowLocationInput,
+  locationQuery,
+  setLocationQuery,
+  locationSuggestions,
+  searchingLocation,
+  selectManualLocation,
+  requestBrowserLocation,
+}: LocationSectionProps) {
+  if (sortBy !== 'nearest') return null;
+
+  // Show requesting state
+  if (locationStatus === 'requesting') {
+    return (
+      <div style={{
+        padding: '12px 16px',
+        background: '#fafafa',
+        borderRadius: '12px',
+        marginBottom: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        fontSize: '14px',
+        color: '#666',
+      }}>
+        <div style={{
+          width: '16px',
+          height: '16px',
+          border: '2px solid #e0e0e0',
+          borderTopColor: '#666',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+        }} />
+        Getting your location...
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  // Show current location with option to change
+  if (userLocation && !showLocationInput) {
+    return (
+      <div style={{
+        padding: '12px 16px',
+        background: '#f0fdf4',
+        borderRadius: '12px',
+        marginBottom: '16px',
+        fontSize: '14px',
+        color: '#166534',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        <span>
+          📍 {userLocation.source === 'manual' && userLocation.name 
+            ? `Sorting from ${userLocation.name}` 
+            : 'Using your current location'}
+        </span>
+        <button
+          onClick={() => setShowLocationInput(true)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#166534',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            fontSize: '14px',
+          }}
+        >
+          Change
+        </button>
+      </div>
+    );
+  }
+
+  // Show location input
+  if (showLocationInput || locationStatus === 'denied' || locationStatus === 'unavailable') {
+    return (
+      <div style={{
+        padding: '16px',
+        background: '#fafafa',
+        borderRadius: '12px',
+        marginBottom: '16px',
+      }}>
+        <div style={{ 
+          fontSize: '14px', 
+          color: '#666', 
+          marginBottom: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <span>
+            {locationStatus === 'denied' 
+              ? 'Location access denied. Enter a location manually:' 
+              : locationStatus === 'unavailable'
+              ? 'Could not get your location. Enter one manually:'
+              : 'Enter your location:'}
+          </span>
+          {userLocation && (
+            <button
+              onClick={() => setShowLocationInput(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#666',
+                cursor: 'pointer',
+                fontSize: '18px',
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="Search for a location (e.g. Hackney, London)"
+            value={locationQuery}
+            onChange={(e) => setLocationQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              border: '1px solid #e0e0e0',
+              borderRadius: '12px',
+              fontSize: '14px',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+          {searchingLocation && (
+            <div style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: '12px',
+              color: '#888',
+            }}>
+              Searching...
+            </div>
+          )}
+          {locationSuggestions.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              background: '#fff',
+              border: '1px solid #e0e0e0',
+              borderRadius: '12px',
+              marginTop: '4px',
+              zIndex: 10,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              overflow: 'hidden',
+            }}>
+              {locationSuggestions.map((suggestion, index) => (
+                <div
+                  key={index}
+                  onClick={() => selectManualLocation(suggestion)}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    borderBottom: index < locationSuggestions.length - 1 ? '1px solid #f0f0f0' : 'none',
+                    fontSize: '14px',
+                    color: '#444',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#fafafa')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
+                >
+                  {suggestion.display_name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {locationStatus !== 'denied' && !userLocation && (
+          <button
+            onClick={requestBrowserLocation}
+            style={{
+              marginTop: '12px',
+              background: 'none',
+              border: 'none',
+              color: '#666',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              fontSize: '13px',
+            }}
+          >
+            Try using my current location instead
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInterestedModal, setShowInterestedModal] = useState(false);
   const [showMessageSentModal, setShowMessageSentModal] = useState(false);
+  const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'post' | 'interest' | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('nearest');
+
+  // Location state
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable'>('idle');
+  const [showLocationInput, setShowLocationInput] = useState(false);
+  const [locationQuery, setLocationQuery] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [searchingLocation, setSearchingLocation] = useState(false);
 
   // Check auth state
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch posts
+  // Fetch posts and profiles
   useEffect(() => {
-    async function fetchPosts() {
-      const { data, error } = await supabase
+    async function fetchPostsAndProfiles() {
+      const { data: postsData, error: postsError } = await supabase
         .from('posts')
         .select('*')
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching posts:', error);
-      } else {
-        setPosts(data || []);
+      if (postsError) {
+        console.error('Error fetching posts:', postsError);
+        setLoading(false);
+        return;
       }
+
+      setPosts(postsData || []);
+
+      // Fetch profiles for all post authors
+      if (postsData && postsData.length > 0) {
+        const userIds = [...new Set(postsData.map(p => p.user_id))];
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, first_name, avatar_url, date_of_birth')
+          .in('id', userIds);
+
+        if (profilesData) {
+          const profileMap: Record<string, Profile> = {};
+          profilesData.forEach(p => {
+            profileMap[p.id] = p;
+          });
+          setProfiles(profileMap);
+        }
+      }
+
       setLoading(false);
     }
-
-    fetchPosts();
+    fetchPostsAndProfiles();
   }, []);
+
+  // Fetch current user's profile when logged in
+  useEffect(() => {
+    async function fetchCurrentUserProfile() {
+      if (!user) {
+        setCurrentUserProfile(null);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, first_name, avatar_url, date_of_birth')
+        .eq('id', user.id)
+        .single();
+
+      if (data) {
+        setCurrentUserProfile(data);
+      }
+    }
+    fetchCurrentUserProfile();
+  }, [user]);
+
+  // Request browser location
+  const requestBrowserLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationStatus('unavailable');
+      setShowLocationInput(true);
+      return;
+    }
+
+    setLocationStatus('requesting');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          source: 'browser',
+        });
+        setLocationStatus('granted');
+        setShowLocationInput(false);
+      },
+      (err) => {
+        console.log('Geolocation error:', err.code, err.message);
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationStatus('denied');
+        } else {
+          setLocationStatus('unavailable');
+        }
+        setShowLocationInput(true);
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 30 * 60 * 1000,
+      }
+    );
+  }, []);
+
+  // Request location when sorting by nearest
+  useEffect(() => {
+    if (sortBy === 'nearest' && locationStatus === 'idle') {
+      requestBrowserLocation();
+    }
+  }, [sortBy, locationStatus, requestBrowserLocation]);
+
+  // Search for locations (debounced)
+  useEffect(() => {
+    if (locationQuery.length < 3) {
+      setLocationSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setSearchingLocation(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=5&countrycodes=gb`
+        );
+        const data = await response.json();
+        setLocationSuggestions(data);
+      } catch (err) {
+        console.error('Location search failed:', err);
+      }
+      setSearchingLocation(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [locationQuery]);
+
+  // Select a manual location
+  const selectManualLocation = useCallback((suggestion: LocationSuggestion) => {
+    const shortName = suggestion.display_name.split(',').slice(0, 2).join(',');
+    setUserLocation({
+      latitude: parseFloat(suggestion.lat),
+      longitude: parseFloat(suggestion.lon),
+      source: 'manual',
+      name: shortName,
+    });
+    setLocationStatus('granted');
+    setShowLocationInput(false);
+    setLocationQuery('');
+    setLocationSuggestions([]);
+  }, []);
+
+  // Sort posts based on selected sort option
+  const sortedPosts = useMemo(() => {
+    if (sortBy === 'nearest' && userLocation) {
+      return sortByDistance(posts, userLocation.latitude, userLocation.longitude);
+    } else if (sortBy === 'soon') {
+      // Sort by expires_at ascending (soonest first)
+      // Posts without expires_at go to the end
+      return [...posts].sort((a, b) => {
+        if (!a.expires_at && !b.expires_at) return 0;
+        if (!a.expires_at) return 1;
+        if (!b.expires_at) return -1;
+        return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
+      });
+    } else {
+      // Default: recently added - sort by created_at descending (newest first)
+      return [...posts].sort((a, b) => {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    }
+  }, [posts, sortBy, userLocation]);
+
+  // Get distance string for a post
+  const getPostDistance = useCallback((post: Post): string | null => {
+    if (sortBy !== 'nearest' || !userLocation) return null;
+    const distance = getDistanceToPost(post, userLocation.latitude, userLocation.longitude);
+    return distance !== null ? formatDistance(distance) : null;
+  }, [sortBy, userLocation]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -106,23 +507,76 @@ export default function Home() {
     setShowMessageSentModal(true);
     setSelectedThreadId(threadId);
     refreshPosts();
+    
+    // Check if profile is incomplete
+    if (currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
+      setPendingAction('interest');
+    }
+  };
+
+  const handleMessageSentClose = () => {
+    setShowMessageSentModal(false);
+    // Show profile completion modal after message sent if profile is incomplete
+    if (pendingAction === 'interest' && currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
+      setShowProfileCompletionModal(true);
+    }
+    setPendingAction(null);
   };
 
   const refreshPosts = async () => {
-    const { data, error } = await supabase
+    const { data: postsData, error } = await supabase
       .from('posts')
       .select('*')
       .eq('status', 'approved')
       .order('created_at', { ascending: false });
+    
+    if (!error && postsData) {
+      setPosts(postsData);
+      
+      // Refresh profiles for any new authors
+      const userIds = [...new Set(postsData.map(p => p.user_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, first_name, avatar_url, date_of_birth')
+        .in('id', userIds);
 
-    if (!error && data) {
-      setPosts(data);
+      if (profilesData) {
+        const profileMap: Record<string, Profile> = {};
+        profilesData.forEach(p => {
+          profileMap[p.id] = p;
+        });
+        setProfiles(profileMap);
+      }
     }
   };
 
   const handlePostCreated = () => {
     setShowCreateModal(false);
     refreshPosts();
+    
+    // Show profile completion modal after post creation if profile is incomplete
+    if (currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
+      setShowProfileCompletionModal(true);
+    }
+  };
+
+  const handleProfileComplete = async () => {
+    setShowProfileCompletionModal(false);
+    // Refresh current user's profile
+    if (user) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, first_name, avatar_url, date_of_birth')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setCurrentUserProfile(data);
+      }
+    }
+  };
+
+  const handleProfileSkip = () => {
+    setShowProfileCompletionModal(false);
   };
 
   const handleSelectThread = (threadId: string) => {
@@ -146,7 +600,6 @@ export default function Home() {
           user={user}
           onLogout={handleLogout}
         />
-
         <main className="main-content">
           <div className="guest-banner">
             <h1 className="page-title">Find people to do things with nearby</h1>
@@ -161,7 +614,6 @@ export default function Home() {
               to post or respond.
             </p>
           </div>
-
           <div className="feed-header">
             <button className="btn btn-primary" onClick={handleShareClick}>
               Share what I'm doing
@@ -176,7 +628,19 @@ export default function Home() {
               <option value="recent">Sort by: recently added</option>
             </select>
           </div>
-
+          <LocationSection
+            sortBy={sortBy}
+            locationStatus={locationStatus}
+            userLocation={userLocation}
+            showLocationInput={showLocationInput}
+            setShowLocationInput={setShowLocationInput}
+            locationQuery={locationQuery}
+            setLocationQuery={setLocationQuery}
+            locationSuggestions={locationSuggestions}
+            searchingLocation={searchingLocation}
+            selectManualLocation={selectManualLocation}
+            requestBrowserLocation={requestBrowserLocation}
+          />
           {loading ? (
             <div className="loading-state">Loading...</div>
           ) : posts.length === 0 ? (
@@ -188,27 +652,32 @@ export default function Home() {
             </div>
           ) : (
             <div className="feed">
-              {posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  id={post.id}
-                  title={post.title}
-                  location={post.location}
-                  latitude={post.latitude}
-                  longitude={post.longitude}
-                  time={post.time}
-                  notes={post.notes || undefined}
-                  name={post.name}
-                  peopleInterested={post.people_interested}
-                  preference={post.preference || undefined}
-                  isLoggedIn={false}
-                  onImInterested={() => handleInterestedClick(post)}
-                />
-              ))}
+              {sortedPosts.map((post) => {
+                const authorProfile = profiles[post.user_id];
+                return (
+                  <PostCard
+                    key={post.id}
+                    id={post.id}
+                    title={post.title}
+                    location={post.location}
+                    latitude={post.latitude}
+                    longitude={post.longitude}
+                    time={post.time}
+                    notes={post.notes || undefined}
+                    name={post.name}
+                    peopleInterested={post.people_interested}
+                    preference={post.preference || undefined}
+                    isLoggedIn={false}
+                    onImInterested={() => handleInterestedClick(post)}
+                    distance={getPostDistance(post)}
+                    authorAvatarUrl={authorProfile?.avatar_url}
+                    authorDateOfBirth={authorProfile?.date_of_birth}
+                  />
+                );
+              })}
             </div>
           )}
         </main>
-
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
@@ -231,7 +700,6 @@ export default function Home() {
         user={user}
         onLogout={handleLogout}
       />
-
       {/* Main layout */}
       <div style={{ 
         flex: 1, 
@@ -252,9 +720,9 @@ export default function Home() {
             selectedThreadId={selectedThreadId}
             onSelectThread={handleSelectThread}
             onNavigateToMyActivity={handleNavigateToMyActivity}
+            onLogout={handleLogout}
           />
         </div>
-
         {/* Feed - Scrollable */}
         <div 
           style={{ 
@@ -280,7 +748,19 @@ export default function Home() {
                 <option value="recent">Sort by: recently added</option>
               </select>
             </div>
-
+            <LocationSection
+              sortBy={sortBy}
+              locationStatus={locationStatus}
+              userLocation={userLocation}
+              showLocationInput={showLocationInput}
+              setShowLocationInput={setShowLocationInput}
+              locationQuery={locationQuery}
+              setLocationQuery={setLocationQuery}
+              locationSuggestions={locationSuggestions}
+              searchingLocation={searchingLocation}
+              selectManualLocation={selectManualLocation}
+              requestBrowserLocation={requestBrowserLocation}
+            />
             {loading ? (
               <div className="loading-state">Loading...</div>
             ) : posts.length === 0 ? (
@@ -292,28 +772,33 @@ export default function Home() {
               </div>
             ) : (
               <div className="feed">
-                {posts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    id={post.id}
-                    title={post.title}
-                    location={post.location}
-                    latitude={post.latitude}
-                    longitude={post.longitude}
-                    time={post.time}
-                    notes={post.notes || undefined}
-                    name={post.name}
-                    peopleInterested={post.people_interested}
-                    preference={post.preference || undefined}
-                    isLoggedIn={true}
-                    onImInterested={() => handleInterestedClick(post)}
-                  />
-                ))}
+                {sortedPosts.map((post) => {
+                  const authorProfile = profiles[post.user_id];
+                  return (
+                    <PostCard
+                      key={post.id}
+                      id={post.id}
+                      title={post.title}
+                      location={post.location}
+                      latitude={post.latitude}
+                      longitude={post.longitude}
+                      time={post.time}
+                      notes={post.notes || undefined}
+                      name={post.name}
+                      peopleInterested={post.people_interested}
+                      preference={post.preference || undefined}
+                      isLoggedIn={true}
+                      onImInterested={() => handleInterestedClick(post)}
+                      distance={getPostDistance(post)}
+                      authorAvatarUrl={authorProfile?.avatar_url}
+                      authorDateOfBirth={authorProfile?.date_of_birth}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
-
         {/* Message Thread - Fixed */}
         {selectedThreadId && (
           <div style={{
@@ -332,7 +817,6 @@ export default function Home() {
           </div>
         )}
       </div>
-
       {/* Modals */}
       <AuthModal
         isOpen={showAuthModal}
@@ -357,7 +841,17 @@ export default function Home() {
       )}
       {showMessageSentModal && (
         <MessageSentModal
-          onClose={() => setShowMessageSentModal(false)}
+          onClose={handleMessageSentClose}
+        />
+      )}
+      {showProfileCompletionModal && currentUserProfile && (
+        <ProfileCompletionModal
+          userId={user.id}
+          userName={currentUserProfile.first_name}
+          currentAvatarUrl={currentUserProfile.avatar_url}
+          currentDateOfBirth={currentUserProfile.date_of_birth}
+          onComplete={handleProfileComplete}
+          onSkip={handleProfileSkip}
         />
       )}
     </div>

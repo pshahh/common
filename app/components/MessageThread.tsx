@@ -1,7 +1,7 @@
 'use client';
-
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { calculateAge, getInitials } from '@/lib/profile';
 
 interface Message {
   id: string;
@@ -10,6 +10,8 @@ interface Message {
   content: string;
   created_at: string;
   sender_name?: string;
+  sender_avatar_url?: string | null;
+  sender_date_of_birth?: string | null;
 }
 
 interface Post {
@@ -31,6 +33,12 @@ interface Thread {
   post: Post | null;
 }
 
+interface ProfileData {
+  first_name: string;
+  avatar_url: string | null;
+  date_of_birth: string | null;
+}
+
 interface MessageThreadProps {
   threadId: string;
   currentUserId: string;
@@ -48,28 +56,32 @@ export default function MessageThread({
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [hoveredAvatarId, setHoveredAvatarId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [profileCache, setProfileCache] = useState<Record<string, string>>({});
+  const [profileCache, setProfileCache] = useState<Record<string, ProfileData>>({});
 
-  const getProfileName = async (userId: string): Promise<string> => {
+  const getProfileData = async (userId: string): Promise<ProfileData> => {
     if (profileCache[userId]) {
       return profileCache[userId];
     }
-    
     const { data } = await supabase
       .from('profiles')
-      .select('first_name')
+      .select('first_name, avatar_url, date_of_birth')
       .eq('id', userId)
       .single();
     
-    const name = data?.first_name || 'Unknown';
-    setProfileCache(prev => ({ ...prev, [userId]: name }));
-    return name;
+    const profile: ProfileData = {
+      first_name: data?.first_name || 'Unknown',
+      avatar_url: data?.avatar_url || null,
+      date_of_birth: data?.date_of_birth || null,
+    };
+    setProfileCache(prev => ({ ...prev, [userId]: profile }));
+    return profile;
   };
 
   useEffect(() => {
     let isMounted = true;
-    
     async function fetchThreadData() {
       setLoading(true);
       setMessages([]);
@@ -94,67 +106,61 @@ export default function MessageThread({
         `)
         .eq('id', threadId)
         .single();
-
+      
       if (!isMounted) return;
-
       if (threadError) {
         console.error('Error fetching thread:', threadError);
         setLoading(false);
         return;
       }
-
+      
       const postData = threadData.posts;
       const post: Post | null = Array.isArray(postData) ? postData[0] || null : postData;
-
       setThread({
         id: threadData.id,
         post_id: threadData.post_id,
         participant_ids: threadData.participant_ids,
         post: post,
       });
-
+      
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
         .select('id, thread_id, sender_id, content, created_at')
         .eq('thread_id', threadId)
         .order('created_at', { ascending: true });
-
+      
       if (!isMounted) return;
-
       if (messagesError) {
         console.error('Error fetching messages:', messagesError.message);
         setLoading(false);
         return;
       }
-
+      
       if (messagesData && messagesData.length > 0) {
         const senderIds = [...new Set(messagesData.map(m => m.sender_id))];
         const profilePromises = senderIds.map(async (senderId) => {
-          const name = await getProfileName(senderId);
-          return { senderId, name };
+          const profile = await getProfileData(senderId);
+          return { senderId, profile };
         });
-        
         const profiles = await Promise.all(profilePromises);
-        const profileMap: Record<string, string> = {};
-        profiles.forEach(p => { profileMap[p.senderId] = p.name; });
-
+        const profileMap: Record<string, ProfileData> = {};
+        profiles.forEach(p => { profileMap[p.senderId] = p.profile; });
+        
         const transformedMessages: Message[] = messagesData.map((msg) => ({
           id: msg.id,
           thread_id: msg.thread_id,
           sender_id: msg.sender_id,
           content: msg.content,
           created_at: msg.created_at,
-          sender_name: profileMap[msg.sender_id] || 'Unknown',
+          sender_name: profileMap[msg.sender_id]?.first_name || 'Unknown',
+          sender_avatar_url: profileMap[msg.sender_id]?.avatar_url,
+          sender_date_of_birth: profileMap[msg.sender_id]?.date_of_birth,
         }));
-        
         setMessages(transformedMessages);
       }
-
       setLoading(false);
     }
-
     fetchThreadData();
-    
     return () => {
       isMounted = false;
     };
@@ -162,7 +168,6 @@ export default function MessageThread({
 
   useEffect(() => {
     const channelName = `messages-thread-${threadId}`;
-    
     const channel = supabase
       .channel(channelName)
       .on(
@@ -181,18 +186,16 @@ export default function MessageThread({
             content: string;
             created_at: string;
           };
-
           if (newMsg.thread_id !== threadId) {
             return;
           }
-
-          const senderName = await getProfileName(newMsg.sender_id);
-
+          const profile = await getProfileData(newMsg.sender_id);
           const transformedMessage: Message = {
             ...newMsg,
-            sender_name: senderName,
+            sender_name: profile.first_name,
+            sender_avatar_url: profile.avatar_url,
+            sender_date_of_birth: profile.date_of_birth,
           };
-
           setMessages((prev) => {
             if (prev.some(m => m.id === newMsg.id)) {
               return prev;
@@ -202,7 +205,6 @@ export default function MessageThread({
         }
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
@@ -215,15 +217,12 @@ export default function MessageThread({
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
-
     setSending(true);
-    
     const { error } = await supabase.from('messages').insert({
       thread_id: threadId,
       sender_id: currentUserId,
       content: newMessage.trim(),
     }).select();
-
     if (error) {
       console.error('Error sending message:', error.message);
       alert('Failed to send message. Please try again.');
@@ -245,18 +244,96 @@ export default function MessageThread({
   const handleShare = async () => {
     if (!thread?.post) return;
     const url = `${window.location.origin}/post/${thread.post.id}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: thread.post.title, url });
-      } catch {
-        await navigator.clipboard.writeText(url);
-        alert('Link copied to clipboard');
-      }
-    } else {
-      await navigator.clipboard.writeText(url);
-      alert('Link copied to clipboard');
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Avatar component with hover tooltip
+  const MessageAvatar = ({ 
+    senderId, 
+    senderName, 
+    avatarUrl, 
+    dateOfBirth,
+    showAvatar 
+  }: { 
+    senderId: string;
+    senderName: string;
+    avatarUrl: string | null | undefined;
+    dateOfBirth: string | null | undefined;
+    showAvatar: boolean;
+  }) => {
+    if (!showAvatar) {
+      return <div style={{ width: '24px', height: '24px', flexShrink: 0 }} />;
     }
+
+    const age = calculateAge(dateOfBirth || null);
+    const displayName = age !== null ? `${senderName}, ${age}` : senderName;
+
+    return (
+      <div 
+        style={{ position: 'relative' }}
+        onMouseEnter={() => setHoveredAvatarId(senderId)}
+        onMouseLeave={() => setHoveredAvatarId(null)}
+      >
+        {avatarUrl ? (
+          <div style={{ 
+            width: '24px', 
+            height: '24px', 
+            borderRadius: '50%', 
+            backgroundImage: `url(${avatarUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            flexShrink: 0,
+            cursor: 'pointer',
+          }} />
+        ) : (
+          <div style={{ 
+            width: '24px', 
+            height: '24px', 
+            borderRadius: '50%', 
+            background: '#e0e0e0', 
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            fontWeight: 600,
+            color: '#888',
+            cursor: 'pointer',
+          }}>
+            {getInitials(senderName)}
+          </div>
+        )}
+        
+        {/* Hover tooltip */}
+        {hoveredAvatarId === senderId && (
+          <div style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: '0',
+            marginBottom: '8px',
+            background: '#000',
+            color: '#fff',
+            padding: '6px 10px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            fontWeight: 500,
+            whiteSpace: 'nowrap',
+            zIndex: 30,
+          }}>
+            {displayName}
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: '12px',
+              border: '5px solid transparent',
+              borderTopColor: '#000',
+            }} />
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -305,7 +382,7 @@ export default function MessageThread({
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Header - fixed at top */}
+      {/* Header */}
       <div style={{
         padding: '16px',
         borderBottom: '1px solid #f0f0f0',
@@ -347,7 +424,7 @@ export default function MessageThread({
         </div>
       </div>
 
-      {/* Scrollable area - includes post card AND messages */}
+      {/* Scrollable area */}
       <div style={{
         flex: 1,
         overflowY: 'auto',
@@ -355,7 +432,7 @@ export default function MessageThread({
         flexDirection: 'column',
         minHeight: 0,
       }}>
-        {/* Post summary - now scrolls with messages */}
+        {/* Post summary */}
         <div style={{
           margin: '16px',
           padding: '12px',
@@ -366,7 +443,19 @@ export default function MessageThread({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ fontSize: '14px', fontWeight: 500, color: '#000' }}>{post.title}</div>
-            <button onClick={handleShare} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer', padding: 0 }}>Share ↗</button>
+            <button 
+              onClick={handleShare} 
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                fontSize: '12px', 
+                color: copied ? '#4a9d6b' : '#888', 
+                cursor: 'pointer', 
+                padding: 0 
+              }}
+            >
+              {copied ? '✓ Copied!' : 'Share ↗'}
+            </button>
           </div>
           <div style={{ fontSize: '12px', color: '#444', marginTop: '4px' }}>
             <a href={getMapUrl()} target="_blank" rel="noopener noreferrer" style={{ color: '#444', textDecoration: 'underline' }}>{post.location}</a>
@@ -401,7 +490,7 @@ export default function MessageThread({
                 const nextMsg = messages[idx + 1];
                 const isLastFromSender = !nextMsg || nextMsg.sender_id !== msg.sender_id;
                 const isSelf = msg.sender_id === currentUserId;
-
+                
                 if (isSelf) {
                   return (
                     <div key={msg.id} style={{
@@ -421,11 +510,13 @@ export default function MessageThread({
                       display: 'flex', justifyContent: 'flex-start', gap: '8px',
                       alignItems: 'flex-end', marginBottom: isLastFromSender ? '12px' : '4px',
                     }}>
-                      {isLastFromSender ? (
-                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#e0e0e0', flexShrink: 0 }} />
-                      ) : (
-                        <div style={{ width: '24px', height: '24px', flexShrink: 0 }} />
-                      )}
+                      <MessageAvatar
+                        senderId={msg.sender_id}
+                        senderName={msg.sender_name || 'Unknown'}
+                        avatarUrl={msg.sender_avatar_url}
+                        dateOfBirth={msg.sender_date_of_birth}
+                        showAvatar={isLastFromSender}
+                      />
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {isLastFromSender && <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>{msg.sender_name}</div>}
                         <div style={{
@@ -444,7 +535,7 @@ export default function MessageThread({
         </div>
       </div>
 
-      {/* Input - fixed at bottom */}
+      {/* Input */}
       <div style={{
         padding: '16px',
         borderTop: '1px solid #f0f0f0',

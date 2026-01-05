@@ -1,6 +1,6 @@
 'use client';
-
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 interface ThreadPost {
@@ -22,6 +22,8 @@ interface SidebarProps {
   selectedThreadId: string | null;
   onSelectThread: (threadId: string) => void;
   onNavigateToMyActivity: () => void;
+  onLogout: () => void;
+  activeItem?: 'messages' | 'my-activity' | 'settings' | null;
 }
 
 export default function Sidebar({
@@ -29,7 +31,10 @@ export default function Sidebar({
   selectedThreadId,
   onSelectThread,
   onNavigateToMyActivity,
+  onLogout,
+  activeItem = null,
 }: SidebarProps) {
+  const router = useRouter();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,7 +64,6 @@ export default function Sidebar({
           const post: ThreadPost | null = Array.isArray(postData) 
             ? postData[0] || null 
             : postData;
-          
           return {
             id: thread.id,
             post_id: thread.post_id,
@@ -99,7 +103,6 @@ export default function Sidebar({
             created_at: string;
           };
           
-          // Only add if this user is a participant
           if (newThread.participant_ids.includes(userId)) {
             const { data: postData } = await supabase
               .from('posts')
@@ -115,9 +118,7 @@ export default function Sidebar({
                 created_at: newThread.created_at,
                 post: postData,
               };
-              
               setThreads((prev) => {
-                // Avoid duplicates
                 if (prev.some(t => t.id === newThread.id)) return prev;
                 return [transformedThread, ...prev];
               });
@@ -132,12 +133,16 @@ export default function Sidebar({
     };
   }, [userId]);
 
+  const handleMyActivityClick = () => {
+    router.push('/my-activity');
+    onNavigateToMyActivity();
+  };
+
   return (
     <div style={{
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      overflowY: 'auto',
     }}>
       {/* Toggle area */}
       <div style={{ padding: '16px', display: 'flex', justifyContent: 'flex-end' }}>
@@ -157,7 +162,7 @@ export default function Sidebar({
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 12px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 12px', overflowY: 'auto' }}>
         {/* Messages section */}
         <div style={{ marginBottom: '24px' }}>
           <div style={{
@@ -171,7 +176,6 @@ export default function Sidebar({
           }}>
             Messages
           </div>
-          
           {loading ? (
             <div style={{ fontSize: '13px', color: '#888', padding: '8px 12px' }}>
               Loading...
@@ -223,17 +227,63 @@ export default function Sidebar({
 
         {/* My activity link */}
         <div
-          onClick={onNavigateToMyActivity}
+          onClick={handleMyActivityClick}
           style={{
             fontSize: '14px',
-            color: '#444',
+            color: activeItem === 'my-activity' ? '#000' : '#444',
+            fontWeight: activeItem === 'my-activity' ? 500 : 400,
             padding: '10px 12px',
             borderRadius: '12px',
             cursor: 'pointer',
+            background: activeItem === 'my-activity' ? '#fff' : 'transparent',
+            boxShadow: activeItem === 'my-activity' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            transition: 'background 0.15s ease',
           }}
         >
           My activity
         </div>
+
+        {/* Settings link */}
+        <div
+          onClick={() => router.push('/settings')}
+          style={{
+            fontSize: '14px',
+            color: activeItem === 'settings' ? '#000' : '#444',
+            fontWeight: activeItem === 'settings' ? 500 : 400,
+            padding: '10px 12px',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            background: activeItem === 'settings' ? '#fff' : 'transparent',
+            boxShadow: activeItem === 'settings' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            transition: 'background 0.15s ease',
+            marginTop: '4px',
+          }}
+        >
+          Settings
+        </div>
+      </div>
+
+      {/* Logout at bottom */}
+      <div style={{ padding: '16px 12px', borderTop: '1px solid #f0f0f0' }}>
+        <button
+          onClick={onLogout}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '14px',
+            color: '#888',
+            cursor: 'pointer',
+            padding: '10px 12px',
+            width: '100%',
+            textAlign: 'left',
+            borderRadius: '12px',
+            transition: 'color 0.15s ease',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#444'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#888'}
+        >
+          Log out
+        </button>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
-
 import { useState } from 'react';
+import { calculateAge, getInitials } from '@/lib/profile';
 
 interface PostCardProps {
   id: string;
@@ -15,6 +15,10 @@ interface PostCardProps {
   preference?: string;
   isLoggedIn: boolean;
   onImInterested: () => void;
+  distance?: string | null;
+  // Profile info for the author
+  authorAvatarUrl?: string | null;
+  authorDateOfBirth?: string | null;
 }
 
 export default function PostCard({
@@ -30,34 +34,33 @@ export default function PostCard({
   preference,
   isLoggedIn,
   onImInterested,
+  distance,
+  authorAvatarUrl,
+  authorDateOfBirth,
 }: PostCardProps) {
   const [showNameTooltip, setShowNameTooltip] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const age = calculateAge(authorDateOfBirth ?? null);
 
   // Generate Google Maps URL
   const getMapUrl = () => {
     if (latitude && longitude) {
-      // If we have coordinates, link directly to them
       return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
     }
-    // Fallback to searching by location name
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
   };
 
   const handleShare = async () => {
     const url = `${window.location.origin}/post/${id}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, url });
-      } catch (err) {
-        // User cancelled or share failed, copy to clipboard instead
-        navigator.clipboard.writeText(url);
-      }
-    } else {
-      navigator.clipboard.writeText(url);
-      // Could add a toast notification here
-    }
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
+
+  // Format display name with age
+  const displayName = age !== null ? `${name}, ${age}` : name;
 
   return (
     <div className="card">
@@ -74,17 +77,27 @@ export default function PostCard({
             >
               {location}
             </a>
+            {distance && (
+              <>
+                <span className="meta-separator">·</span>
+                <span style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>{distance}</span>
+              </>
+            )}
             <span className="meta-separator">·</span>
             <span>{time}</span>
           </div>
           {notes && <p className="card-notes">{notes}</p>}
-          {preference && preference !== 'Anyone' && (
+          {preference && preference !== 'Anyone' && preference !== 'anyone' && (
             <span className="preference-badge">{preference}</span>
           )}
         </div>
         <div className="card-actions">
-          <button className="share-button" onClick={handleShare}>
-            Share ↗
+          <button 
+            className="share-button" 
+            onClick={handleShare}
+            style={{ color: copied ? 'var(--success)' : undefined }}
+          >
+            {copied ? '✓ Copied!' : 'Share ↗'}
           </button>
           <div className="menu-container">
             <button
@@ -129,10 +142,32 @@ export default function PostCard({
           {name}
           {showNameTooltip && (
             <div className="name-tooltip">
-              <div className="tooltip-avatar"></div>
+              {authorAvatarUrl ? (
+                <div 
+                  className="tooltip-avatar"
+                  style={{ 
+                    backgroundImage: `url(${authorAvatarUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                />
+              ) : (
+                <div 
+                  className="tooltip-avatar"
+                  style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#888',
+                  }}
+                >
+                  {getInitials(name)}
+                </div>
+              )}
               <div className="tooltip-info">
-                <span className="tooltip-name">{name}</span>
-                <span className="tooltip-since">Active since Jan 2025</span>
+                <span className="tooltip-name">{displayName}</span>
               </div>
             </div>
           )}
