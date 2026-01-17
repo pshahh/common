@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { calculateAge, getInitials } from '@/lib/profile';
@@ -43,12 +44,14 @@ interface MessageThreadProps {
   threadId: string;
   currentUserId: string;
   onClose: () => void;
+  onReport?: (postId: string, threadId: string) => void;
 }
 
 export default function MessageThread({
   threadId,
   currentUserId,
   onClose,
+  onReport,
 }: MessageThreadProps) {
   const [thread, setThread] = useState<Thread | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -58,6 +61,7 @@ export default function MessageThread({
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hoveredAvatarId, setHoveredAvatarId] = useState<string | null>(null);
+  const [expandedPhoto, setExpandedPhoto] = useState<{ url: string; name: string; age: number | null } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [profileCache, setProfileCache] = useState<Record<string, ProfileData>>({});
 
@@ -65,27 +69,30 @@ export default function MessageThread({
     if (profileCache[userId]) {
       return profileCache[userId];
     }
+
     const { data } = await supabase
       .from('profiles')
       .select('first_name, avatar_url, date_of_birth')
       .eq('id', userId)
       .single();
-    
+
     const profile: ProfileData = {
       first_name: data?.first_name || 'Unknown',
       avatar_url: data?.avatar_url || null,
       date_of_birth: data?.date_of_birth || null,
     };
+
     setProfileCache(prev => ({ ...prev, [userId]: profile }));
     return profile;
   };
 
   useEffect(() => {
     let isMounted = true;
+
     async function fetchThreadData() {
       setLoading(true);
       setMessages([]);
-      
+
       const { data: threadData, error: threadError } = await supabase
         .from('threads')
         .select(`
@@ -106,46 +113,50 @@ export default function MessageThread({
         `)
         .eq('id', threadId)
         .single();
-      
+
       if (!isMounted) return;
+
       if (threadError) {
         console.error('Error fetching thread:', threadError);
         setLoading(false);
         return;
       }
-      
+
       const postData = threadData.posts;
       const post: Post | null = Array.isArray(postData) ? postData[0] || null : postData;
+
       setThread({
         id: threadData.id,
         post_id: threadData.post_id,
         participant_ids: threadData.participant_ids,
         post: post,
       });
-      
+
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
         .select('id, thread_id, sender_id, content, created_at')
         .eq('thread_id', threadId)
         .order('created_at', { ascending: true });
-      
+
       if (!isMounted) return;
+
       if (messagesError) {
         console.error('Error fetching messages:', messagesError.message);
         setLoading(false);
         return;
       }
-      
+
       if (messagesData && messagesData.length > 0) {
         const senderIds = [...new Set(messagesData.map(m => m.sender_id))];
         const profilePromises = senderIds.map(async (senderId) => {
           const profile = await getProfileData(senderId);
           return { senderId, profile };
         });
+
         const profiles = await Promise.all(profilePromises);
         const profileMap: Record<string, ProfileData> = {};
         profiles.forEach(p => { profileMap[p.senderId] = p.profile; });
-        
+
         const transformedMessages: Message[] = messagesData.map((msg) => ({
           id: msg.id,
           thread_id: msg.thread_id,
@@ -156,11 +167,15 @@ export default function MessageThread({
           sender_avatar_url: profileMap[msg.sender_id]?.avatar_url,
           sender_date_of_birth: profileMap[msg.sender_id]?.date_of_birth,
         }));
+
         setMessages(transformedMessages);
       }
+
       setLoading(false);
     }
+
     fetchThreadData();
+
     return () => {
       isMounted = false;
     };
@@ -186,16 +201,20 @@ export default function MessageThread({
             content: string;
             created_at: string;
           };
+
           if (newMsg.thread_id !== threadId) {
             return;
           }
+
           const profile = await getProfileData(newMsg.sender_id);
+
           const transformedMessage: Message = {
             ...newMsg,
             sender_name: profile.first_name,
             sender_avatar_url: profile.avatar_url,
             sender_date_of_birth: profile.date_of_birth,
           };
+
           setMessages((prev) => {
             if (prev.some(m => m.id === newMsg.id)) {
               return prev;
@@ -205,6 +224,7 @@ export default function MessageThread({
         }
       )
       .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
     };
@@ -217,18 +237,22 @@ export default function MessageThread({
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
+
     setSending(true);
+
     const { error } = await supabase.from('messages').insert({
       thread_id: threadId,
       sender_id: currentUserId,
       content: newMessage.trim(),
     }).select();
+
     if (error) {
       console.error('Error sending message:', error.message);
       alert('Failed to send message. Please try again.');
     } else {
       setNewMessage('');
     }
+
     setSending(false);
   };
 
@@ -268,7 +292,12 @@ export default function MessageThread({
     }
 
     const age = calculateAge(dateOfBirth || null);
-    const displayName = age !== null ? `${senderName}, ${age}` : senderName;
+
+    const handleAvatarClick = () => {
+      if (avatarUrl) {
+        setExpandedPhoto({ url: avatarUrl, name: senderName, age });
+      }
+    };
 
     return (
       <div 
@@ -277,16 +306,19 @@ export default function MessageThread({
         onMouseLeave={() => setHoveredAvatarId(null)}
       >
         {avatarUrl ? (
-          <div style={{ 
-            width: '24px', 
-            height: '24px', 
-            borderRadius: '50%', 
-            backgroundImage: `url(${avatarUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            flexShrink: 0,
-            cursor: 'pointer',
-          }} />
+          <div 
+            onClick={handleAvatarClick}
+            style={{ 
+              width: '24px', 
+              height: '24px', 
+              borderRadius: '50%', 
+              backgroundImage: `url(${avatarUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              flexShrink: 0,
+              cursor: 'pointer',
+            }} 
+          />
         ) : (
           <div style={{ 
             width: '24px', 
@@ -300,38 +332,137 @@ export default function MessageThread({
             fontSize: '10px',
             fontWeight: 600,
             color: '#888',
-            cursor: 'pointer',
           }}>
             {getInitials(senderName)}
           </div>
         )}
-        
-        {/* Hover tooltip */}
+        {/* Hover tooltip - name only on first line, age on second line */}
         {hoveredAvatarId === senderId && (
           <div style={{
             position: 'absolute',
-            bottom: '100%',
+            bottom: 'calc(100% + 8px)',
             left: '0',
-            marginBottom: '8px',
-            background: '#000',
-            color: '#fff',
-            padding: '6px 10px',
-            borderRadius: '8px',
-            fontSize: '12px',
-            fontWeight: 500,
-            whiteSpace: 'nowrap',
+            background: '#fff',
+            border: '1px solid #e0e0e0',
+            borderRadius: '12px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+            padding: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
             zIndex: 30,
+            width: '200px',
           }}>
-            {displayName}
-            <div style={{
-              position: 'absolute',
-              top: '100%',
-              left: '12px',
-              border: '5px solid transparent',
-              borderTopColor: '#000',
-            }} />
+            {avatarUrl ? (
+              <div 
+                onClick={handleAvatarClick}
+                style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  backgroundImage: `url(${avatarUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  flexShrink: 0,
+                  cursor: 'pointer',
+                }} 
+              />
+            ) : (
+              <div style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '50%', 
+                background: '#e0e0e0', 
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#888',
+              }}>
+                {getInitials(senderName)}
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '14px', fontWeight: 500, color: '#000' }}>
+                {senderName}
+              </span>
+              {age !== null && (
+                <span style={{ fontSize: '12px', color: '#888' }}>
+                  {age} years old
+                </span>
+              )}
+            </div>
           </div>
         )}
+      </div>
+    );
+  };
+
+  // Expanded photo modal - name only on first line, age on second
+  const ExpandedPhotoModal = () => {
+    if (!expandedPhoto) return null;
+
+    return (
+      <div 
+        onClick={() => setExpandedPhoto(null)}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          cursor: 'pointer',
+        }}
+      >
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '90%',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{
+            width: '200px',
+            height: '200px',
+            borderRadius: '50%',
+            backgroundImage: `url(${expandedPhoto.url})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            margin: '0 auto 16px',
+          }} />
+          <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '4px' }}>
+            {expandedPhoto.name}
+          </h3>
+          {expandedPhoto.age !== null && (
+            <p style={{ fontSize: '14px', color: '#666' }}>
+              {expandedPhoto.age} years old
+            </p>
+          )}
+          <button
+            onClick={() => setExpandedPhoto(null)}
+            style={{
+              marginTop: '20px',
+              padding: '10px 24px',
+              background: '#000',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '24px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Close
+          </button>
+        </div>
       </div>
     );
   };
@@ -382,6 +513,7 @@ export default function MessageThread({
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <ExpandedPhotoModal />
       {/* Header */}
       <div style={{
         padding: '16px',
@@ -409,7 +541,7 @@ export default function MessageThread({
                 boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '176px',
                 zIndex: 20, overflow: 'hidden',
               }}>
-                <div onClick={() => setShowMenu(false)} style={{ padding: '12px 16px', fontSize: '14px', color: '#444', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}>Report post</div>
+                <div onClick={() => { setShowMenu(false); if (post) onReport?.(post.id, threadId); }} style={{ padding: '12px 16px', fontSize: '14px', color: '#444', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}>Report post</div>
                 <div onClick={() => setShowMenu(false)} style={{ padding: '12px 16px', fontSize: '14px', color: '#444', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}>Leave conversation</div>
                 <div onClick={() => setShowMenu(false)} style={{ padding: '12px 16px', fontSize: '14px', color: '#dc2626', cursor: 'pointer' }}>Block this person</div>
               </div>
@@ -490,7 +622,7 @@ export default function MessageThread({
                 const nextMsg = messages[idx + 1];
                 const isLastFromSender = !nextMsg || nextMsg.sender_id !== msg.sender_id;
                 const isSelf = msg.sender_id === currentUserId;
-                
+
                 if (isSelf) {
                   return (
                     <div key={msg.id} style={{

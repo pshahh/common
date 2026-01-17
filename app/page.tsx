@@ -1,5 +1,7 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+
+import { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import Header from './components/Header';
@@ -267,7 +269,7 @@ function LocationSection({
   return null;
 }
 
-export default function Home() {
+function HomeContent() {
   const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
@@ -283,6 +285,9 @@ export default function Home() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('nearest');
 
+  // Track posts user has expressed interest in
+  const [userInterestedPostIds, setUserInterestedPostIds] = useState<Set<string>>(new Set());
+
   // Location state
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable'>('idle');
@@ -291,16 +296,29 @@ export default function Home() {
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [searchingLocation, setSearchingLocation] = useState(false);
 
+  // Read thread ID from URL query params
+  const searchParams = useSearchParams();
+
+  // Open thread from URL query parameter (e.g., from email link)
+  useEffect(() => {
+    const threadId = searchParams.get('thread');
+    if (threadId && user) {
+      setSelectedThreadId(threadId);
+    }
+  }, [searchParams, user]);
+
   // Check auth state
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -340,8 +358,31 @@ export default function Home() {
 
       setLoading(false);
     }
+
     fetchPostsAndProfiles();
   }, []);
+
+  // Fetch posts the user has already expressed interest in (via threads)
+  useEffect(() => {
+    async function fetchUserInterestedPosts() {
+      if (!user) {
+        setUserInterestedPostIds(new Set());
+        return;
+      }
+
+      const { data: threads } = await supabase
+        .from('threads')
+        .select('post_id')
+        .contains('participant_ids', [user.id]);
+
+      if (threads) {
+        const postIds = new Set(threads.map(t => t.post_id));
+        setUserInterestedPostIds(postIds);
+      }
+    }
+
+    fetchUserInterestedPosts();
+  }, [user]);
 
   // Fetch current user's profile when logged in
   useEffect(() => {
@@ -361,6 +402,7 @@ export default function Home() {
         setCurrentUserProfile(data);
       }
     }
+
     fetchCurrentUserProfile();
   }, [user]);
 
@@ -447,14 +489,29 @@ export default function Home() {
     setLocationSuggestions([]);
   }, []);
 
+  // Filter out posts the user has already expressed interest in (and their own posts)
+  const filteredPosts = useMemo(() => {
+    if (!user) return posts;
+
+    return posts.filter(post => {
+      // Don't show user's own posts
+      if (post.user_id === user.id) return false;
+      // Don't show posts user has already expressed interest in
+      if (userInterestedPostIds.has(post.id)) return false;
+      return true;
+    });
+  }, [posts, user, userInterestedPostIds]);
+
   // Sort posts based on selected sort option
   const sortedPosts = useMemo(() => {
+    const postsToSort = user ? filteredPosts : posts;
+
     if (sortBy === 'nearest' && userLocation) {
-      return sortByDistance(posts, userLocation.latitude, userLocation.longitude);
+      return sortByDistance(postsToSort, userLocation.latitude, userLocation.longitude);
     } else if (sortBy === 'soon') {
       // Sort by expires_at ascending (soonest first)
       // Posts without expires_at go to the end
-      return [...posts].sort((a, b) => {
+      return [...postsToSort].sort((a, b) => {
         if (!a.expires_at && !b.expires_at) return 0;
         if (!a.expires_at) return 1;
         if (!b.expires_at) return -1;
@@ -462,11 +519,11 @@ export default function Home() {
       });
     } else {
       // Default: recently added - sort by created_at descending (newest first)
-      return [...posts].sort((a, b) => {
+      return [...postsToSort].sort((a, b) => {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
     }
-  }, [posts, sortBy, userLocation]);
+  }, [filteredPosts, posts, user, sortBy, userLocation]);
 
   // Get distance string for a post
   const getPostDistance = useCallback((post: Post): string | null => {
@@ -503,11 +560,17 @@ export default function Home() {
 
   const handleInterestedSuccess = (threadId: string) => {
     setShowInterestedModal(false);
-    setSelectedPost(null);
     setShowMessageSentModal(true);
     setSelectedThreadId(threadId);
+
+    // Add this post to the interested set so it disappears from feed immediately
+    if (selectedPost) {
+      setUserInterestedPostIds(prev => new Set([...prev, selectedPost.id]));
+    }
+
+    setSelectedPost(null);
     refreshPosts();
-    
+
     // Check if profile is incomplete
     if (currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
       setPendingAction('interest');
@@ -529,10 +592,10 @@ export default function Home() {
       .select('*')
       .eq('status', 'approved')
       .order('created_at', { ascending: false });
-    
+
     if (!error && postsData) {
       setPosts(postsData);
-      
+
       // Refresh profiles for any new authors
       const userIds = [...new Set(postsData.map(p => p.user_id))];
       const { data: profilesData } = await supabase
@@ -553,7 +616,6 @@ export default function Home() {
   const handlePostCreated = () => {
     setShowCreateModal(false);
     refreshPosts();
-    
     // Show profile completion modal after post creation if profile is incomplete
     if (currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
       setShowProfileCompletionModal(true);
@@ -614,6 +676,7 @@ export default function Home() {
               to post or respond.
             </p>
           </div>
+
           <div className="feed-header">
             <button className="btn btn-primary" onClick={handleShareClick}>
               Share what I'm doing
@@ -628,6 +691,7 @@ export default function Home() {
               <option value="recent">Sort by: recently added</option>
             </select>
           </div>
+
           <LocationSection
             sortBy={sortBy}
             locationStatus={locationStatus}
@@ -641,6 +705,7 @@ export default function Home() {
             selectManualLocation={selectManualLocation}
             requestBrowserLocation={requestBrowserLocation}
           />
+
           {loading ? (
             <div className="loading-state">Loading...</div>
           ) : posts.length === 0 ? (
@@ -678,6 +743,7 @@ export default function Home() {
             </div>
           )}
         </main>
+
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
@@ -700,6 +766,7 @@ export default function Home() {
         user={user}
         onLogout={handleLogout}
       />
+
       {/* Main layout */}
       <div style={{ 
         flex: 1, 
@@ -723,18 +790,37 @@ export default function Home() {
             onLogout={handleLogout}
           />
         </div>
-        {/* Feed - Scrollable */}
+
+        {/* Feed - Scrollable, clickable to close thread */}
         <div 
+          onClick={() => {
+            if (selectedThreadId) {
+              handleCloseThread();
+            }
+          }}
           style={{ 
             flex: 1, 
             overflowY: 'auto',
             opacity: selectedThreadId ? 0.4 : 1,
-            pointerEvents: selectedThreadId ? 'none' : 'auto',
+            pointerEvents: selectedThreadId ? 'auto' : 'auto',
             transition: 'opacity 0.2s ease',
+            cursor: selectedThreadId ? 'pointer' : 'default',
           }}
         >
-          <div style={{ maxWidth: '600px', width: '100%', margin: '0 auto', padding: '24px' }}>
-            <div className="feed-header">
+          <div 
+            style={{ maxWidth: '600px', width: '100%', margin: '0 auto', padding: '24px' }}
+            onClick={(e) => {
+              // Stop propagation when thread is not open so feed interactions work
+              if (!selectedThreadId) {
+                e.stopPropagation();
+              }
+            }}
+          >
+            <div 
+              className="feed-header"
+              onClick={(e) => e.stopPropagation()}
+              style={{ pointerEvents: selectedThreadId ? 'none' : 'auto' }}
+            >
               <button className="btn btn-primary" onClick={handleShareClick}>
                 Share what I'm doing
               </button>
@@ -748,30 +834,34 @@ export default function Home() {
                 <option value="recent">Sort by: recently added</option>
               </select>
             </div>
-            <LocationSection
-              sortBy={sortBy}
-              locationStatus={locationStatus}
-              userLocation={userLocation}
-              showLocationInput={showLocationInput}
-              setShowLocationInput={setShowLocationInput}
-              locationQuery={locationQuery}
-              setLocationQuery={setLocationQuery}
-              locationSuggestions={locationSuggestions}
-              searchingLocation={searchingLocation}
-              selectManualLocation={selectManualLocation}
-              requestBrowserLocation={requestBrowserLocation}
-            />
+
+            <div onClick={(e) => e.stopPropagation()} style={{ pointerEvents: selectedThreadId ? 'none' : 'auto' }}>
+              <LocationSection
+                sortBy={sortBy}
+                locationStatus={locationStatus}
+                userLocation={userLocation}
+                showLocationInput={showLocationInput}
+                setShowLocationInput={setShowLocationInput}
+                locationQuery={locationQuery}
+                setLocationQuery={setLocationQuery}
+                locationSuggestions={locationSuggestions}
+                searchingLocation={searchingLocation}
+                selectManualLocation={selectManualLocation}
+                requestBrowserLocation={requestBrowserLocation}
+              />
+            </div>
+
             {loading ? (
               <div className="loading-state">Loading...</div>
-            ) : posts.length === 0 ? (
-              <div className="empty-state">
+            ) : sortedPosts.length === 0 ? (
+              <div className="empty-state" onClick={(e) => e.stopPropagation()}>
                 <p>Nothing nearby yet. Be the first to share what you're doing.</p>
                 <button className="btn btn-primary" onClick={handleShareClick}>
                   Share what I'm doing
                 </button>
               </div>
             ) : (
-              <div className="feed">
+              <div className="feed" style={{ pointerEvents: selectedThreadId ? 'none' : 'auto' }}>
                 {sortedPosts.map((post) => {
                   const authorProfile = profiles[post.user_id];
                   return (
@@ -799,6 +889,7 @@ export default function Home() {
             )}
           </div>
         </div>
+
         {/* Message Thread - Fixed */}
         {selectedThreadId && (
           <div style={{
@@ -817,17 +908,20 @@ export default function Home() {
           </div>
         )}
       </div>
+
       {/* Modals */}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onSuccess={() => setShowAuthModal(false)}
       />
+
       <CreatePostModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={handlePostCreated}
       />
+
       {showInterestedModal && selectedPost && (
         <InterestedModal
           post={selectedPost}
@@ -839,11 +933,13 @@ export default function Home() {
           onSuccess={handleInterestedSuccess}
         />
       )}
+
       {showMessageSentModal && (
         <MessageSentModal
           onClose={handleMessageSentClose}
         />
       )}
+
       {showProfileCompletionModal && currentUserProfile && (
         <ProfileCompletionModal
           userId={user.id}
@@ -855,5 +951,13 @@ export default function Home() {
         />
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div style={{ padding: '24px', textAlign: 'center' }}>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

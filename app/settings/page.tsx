@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -19,7 +20,7 @@ export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Form state
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -27,16 +28,16 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Delete account state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
-  
+
   // Password change state
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [passwordSent, setPasswordSent] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check auth state
@@ -47,6 +48,7 @@ export default function SettingsPage() {
         router.push('/');
       }
     });
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -55,6 +57,7 @@ export default function SettingsPage() {
         router.push('/');
       }
     });
+
     return () => subscription.unsubscribe();
   }, [router]);
 
@@ -62,7 +65,7 @@ export default function SettingsPage() {
   useEffect(() => {
     async function fetchProfile() {
       if (!user) return;
-      
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -76,7 +79,7 @@ export default function SettingsPage() {
       }
       setLoading(false);
     }
-    
+
     if (user) {
       fetchProfile();
     }
@@ -114,7 +117,7 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     if (!user || !profile) return;
-    
+
     setSaving(true);
     setError(null);
     setSaveSuccess(false);
@@ -166,7 +169,7 @@ export default function SettingsPage() {
       setProfile({ ...profile, avatar_url: avatarUrl, date_of_birth: dateOfBirth || null });
       setAvatarFile(null);
       setSaveSuccess(true);
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
@@ -178,11 +181,11 @@ export default function SettingsPage() {
 
   const handlePasswordReset = async () => {
     if (!user?.email) return;
-    
+
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
       redirectTo: `${window.location.origin}/settings`,
     });
-    
+
     if (error) {
       setError('Failed to send password reset email');
     } else {
@@ -192,16 +195,16 @@ export default function SettingsPage() {
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE' || !user) return;
-    
+
     setDeleting(true);
-    
+
     try {
       // Delete user's posts
       await supabase.from('posts').delete().eq('user_id', user.id);
-      
+
       // Delete user's profile (will cascade or be handled by FK)
       await supabase.from('profiles').delete().eq('id', user.id);
-      
+
       // Delete avatar from storage
       if (profile?.avatar_url) {
         const avatarPath = profile.avatar_url.split('/avatars/')[1];
@@ -209,14 +212,14 @@ export default function SettingsPage() {
           await supabase.storage.from('avatars').remove([avatarPath]);
         }
       }
-      
+
       // Sign out
       await supabase.auth.signOut();
-      
+
       // Note: Full user deletion from auth.users requires admin access
       // For v1, we delete their data and sign them out
       // The auth record remains but is orphaned
-      
+
       router.push('/');
     } catch (err) {
       setError('Failed to delete account. Please try again.');
@@ -249,7 +252,7 @@ export default function SettingsPage() {
         user={user}
         onLogout={handleLogout}
       />
-      
+
       <div style={{ 
         flex: 1, 
         display: 'flex', 
@@ -286,7 +289,7 @@ export default function SettingsPage() {
               <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', color: '#000' }}>
                 Profile
               </h2>
-              
+
               {/* Avatar */}
               <div style={{ marginBottom: '24px' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
@@ -372,7 +375,7 @@ export default function SettingsPage() {
               {error && (
                 <p style={{ color: '#dc2626', fontSize: '14px', marginBottom: '16px' }}>{error}</p>
               )}
-              
+
               {saveSuccess && (
                 <p style={{ color: '#4a9d6b', fontSize: '14px', marginBottom: '16px' }}>✓ Changes saved</p>
               )}
@@ -401,7 +404,7 @@ export default function SettingsPage() {
               <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', color: '#000' }}>
                 Account
               </h2>
-              
+
               {/* Email */}
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>
@@ -464,95 +467,106 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
-            </section>
 
-            {/* Danger Zone */}
-            <section>
-              <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', color: '#dc2626' }}>
-                Danger zone
-              </h2>
-              
-              {!showDeleteConfirm ? (
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  style={{
-                    padding: '12px 24px',
-                    background: '#fff',
-                    color: '#dc2626',
-                    border: '1px solid #dc2626',
-                    borderRadius: '24px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
+              {/* Delete Account - More visible button using secondary style */}
+              <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #e0e0e0' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
                   Delete account
-                </button>
-              ) : (
-                <div style={{
-                  padding: '20px',
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  borderRadius: '12px',
-                }}>
-                  <p style={{ fontSize: '14px', color: '#991b1b', marginBottom: '16px', lineHeight: 1.5 }}>
-                    This will permanently delete your account, posts, and messages. This action cannot be undone.
-                  </p>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-                    Type DELETE to confirm
-                  </label>
-                  <input
-                    type="text"
-                    value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder="DELETE"
+                </label>
+                <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
+                  Permanently delete your account and all associated data.
+                </p>
+                {!showDeleteConfirm ? (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
                     style={{
-                      padding: '12px 16px',
+                      padding: '12px 24px',
+                      background: '#fff',
+                      color: '#444',
                       border: '1px solid #e0e0e0',
-                      borderRadius: '12px',
+                      borderRadius: '24px',
                       fontSize: '14px',
-                      outline: 'none',
-                      width: '200px',
-                      marginBottom: '16px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
                     }}
-                  />
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <button
-                      onClick={handleDeleteAccount}
-                      disabled={deleteConfirmText !== 'DELETE' || deleting}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#888';
+                      e.currentTarget.style.color = '#000';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e0e0e0';
+                      e.currentTarget.style.color = '#444';
+                    }}
+                  >
+                    Delete account
+                  </button>
+                ) : (
+                  <div style={{
+                    padding: '20px',
+                    background: '#fafafa',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '12px',
+                  }}>
+                    <p style={{ fontSize: '14px', color: '#444', marginBottom: '16px', lineHeight: 1.5 }}>
+                      This will permanently delete your account, posts, and messages. This action cannot be undone.
+                    </p>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
+                      Type DELETE to confirm
+                    </label>
+                    <input
+                      type="text"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder="DELETE"
                       style={{
-                        padding: '10px 20px',
-                        background: deleteConfirmText === 'DELETE' ? '#dc2626' : '#e0e0e0',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '20px',
+                        padding: '12px 16px',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '12px',
                         fontSize: '14px',
-                        fontWeight: 600,
-                        cursor: deleteConfirmText === 'DELETE' && !deleting ? 'pointer' : 'not-allowed',
+                        outline: 'none',
+                        width: '200px',
+                        marginBottom: '16px',
                       }}
-                    >
-                      {deleting ? 'Deleting...' : 'Delete my account'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowDeleteConfirm(false);
-                        setDeleteConfirmText('');
-                      }}
-                      style={{
-                        padding: '10px 20px',
-                        background: 'transparent',
-                        color: '#666',
-                        border: 'none',
-                        borderRadius: '20px',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Cancel
-                    </button>
+                    />
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={deleteConfirmText !== 'DELETE' || deleting}
+                        style={{
+                          padding: '10px 20px',
+                          background: deleteConfirmText === 'DELETE' ? '#000' : '#e0e0e0',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '20px',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          cursor: deleteConfirmText === 'DELETE' && !deleting ? 'pointer' : 'not-allowed',
+                        }}
+                      >
+                        {deleting ? 'Deleting...' : 'Delete my account'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowDeleteConfirm(false);
+                          setDeleteConfirmText('');
+                        }}
+                        style={{
+                          padding: '10px 20px',
+                          background: 'transparent',
+                          color: '#666',
+                          border: 'none',
+                          borderRadius: '20px',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </section>
           </div>
         </div>

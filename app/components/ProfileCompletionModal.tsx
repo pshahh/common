@@ -1,4 +1,5 @@
 'use client';
+
 import { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -24,6 +25,7 @@ export default function ProfileCompletionModal({
   const [dateOfBirth, setDateOfBirth] = useState(currentDateOfBirth ?? '');
   const [loading, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +98,6 @@ export default function ProfileCompletionModal({
       if (avatarUrl !== currentAvatarUrl) {
         updateData.avatar_url = avatarUrl ?? undefined;
       }
-      
       if (dateOfBirth && dateOfBirth !== currentDateOfBirth) {
         updateData.date_of_birth = dateOfBirth;
       }
@@ -112,7 +113,8 @@ export default function ProfileCompletionModal({
         }
       }
 
-      onComplete();
+      // Show confirmation
+      setShowConfirmation(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -128,6 +130,71 @@ export default function ProfileCompletionModal({
       .toUpperCase()
       .slice(0, 2);
   };
+
+  // Confirmation screen
+  if (showConfirmation) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: '16px',
+        }}
+      >
+        <div
+          style={{
+            background: '#fff',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '400px',
+            padding: '40px 32px',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            background: '#edf7f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            color: '#4a9d6b',
+            fontSize: '20px',
+          }}>
+            ✓
+          </div>
+          <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
+            Profile updated
+          </h2>
+          <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: 1.5 }}>
+            You can edit your details anytime in Settings.
+          </p>
+          <button
+            onClick={onComplete}
+            style={{
+              background: '#000',
+              color: '#fff',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '24px',
+              fontWeight: 600,
+              fontSize: '14px',
+              cursor: 'pointer',
+            }}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

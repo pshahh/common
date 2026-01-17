@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -64,6 +65,7 @@ export default function Sidebar({
           const post: ThreadPost | null = Array.isArray(postData) 
             ? postData[0] || null 
             : postData;
+
           return {
             id: thread.id,
             post_id: thread.post_id,
@@ -102,7 +104,7 @@ export default function Sidebar({
             post_id: string;
             created_at: string;
           };
-          
+
           if (newThread.participant_ids.includes(userId)) {
             const { data: postData } = await supabase
               .from('posts')
@@ -118,6 +120,7 @@ export default function Sidebar({
                 created_at: newThread.created_at,
                 post: postData,
               };
+
               setThreads((prev) => {
                 if (prev.some(t => t.id === newThread.id)) return prev;
                 return [transformedThread, ...prev];
@@ -176,6 +179,7 @@ export default function Sidebar({
           }}>
             Messages
           </div>
+
           {loading ? (
             <div style={{ fontSize: '13px', color: '#888', padding: '8px 12px' }}>
               Loading...
@@ -243,7 +247,10 @@ export default function Sidebar({
           My activity
         </div>
 
-        {/* Settings link */}
+        {/* Spacer to push settings and logout to bottom */}
+        <div style={{ flex: 1 }} />
+
+        {/* Settings link - now above logout */}
         <div
           onClick={() => router.push('/settings')}
           style={{
@@ -256,7 +263,6 @@ export default function Sidebar({
             background: activeItem === 'settings' ? '#fff' : 'transparent',
             boxShadow: activeItem === 'settings' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
             transition: 'background 0.15s ease',
-            marginTop: '4px',
           }}
         >
           Settings
@@ -264,7 +270,7 @@ export default function Sidebar({
       </div>
 
       {/* Logout at bottom */}
-      <div style={{ padding: '16px 12px', borderTop: '1px solid #f0f0f0' }}>
+      <div style={{ padding: '8px 12px 16px' }}>
         <button
           onClick={onLogout}
           style={{
