@@ -11,6 +11,8 @@ import CreatePostModal from './components/CreatePostModal';
 import InterestedModal from './components/InterestedModal';
 import MessageSentModal from './components/MessageSentModal';
 import ProfileCompletionModal from './components/ProfileCompletionModal';
+import ReportModal from './components/ReportModal';
+import ReportConfirmationModal from './components/ReportConfirmationModal';
 import Sidebar from './components/Sidebar';
 import MessageThread from './components/MessageThread';
 import { sortByDistance, formatDistance, getDistanceToPost } from '@/lib/distance';
@@ -285,6 +287,12 @@ function HomeContent() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('nearest');
 
+  // Report modal state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showReportConfirmation, setShowReportConfirmation] = useState(false);
+  const [reportPostId, setReportPostId] = useState<string | null>(null);
+  const [reportThreadId, setReportThreadId] = useState<string | null>(null);
+
   // Track posts user has expressed interest in
   const [userInterestedPostIds, setUserInterestedPostIds] = useState<Set<string>>(new Set());
 
@@ -558,6 +566,23 @@ function HomeContent() {
     }
   };
 
+  const handleReportClick = (postId: string, threadId?: string) => {
+    if (user) {
+      setReportPostId(postId);
+      setReportThreadId(threadId || null);
+      setShowReportModal(true);
+    } else {
+      setShowAuthModal(true);
+    }
+  };
+
+  const handleReportSuccess = () => {
+    setShowReportModal(false);
+    setReportPostId(null);
+    setReportThreadId(null);
+    setShowReportConfirmation(true);
+  };
+
   const handleInterestedSuccess = (threadId: string) => {
     setShowInterestedModal(false);
     setShowMessageSentModal(true);
@@ -734,6 +759,7 @@ function HomeContent() {
                     preference={post.preference || undefined}
                     isLoggedIn={false}
                     onImInterested={() => handleInterestedClick(post)}
+                    onReport={() => handleReportClick(post.id)}
                     distance={getPostDistance(post)}
                     authorAvatarUrl={authorProfile?.avatar_url}
                     authorDateOfBirth={authorProfile?.date_of_birth}
@@ -879,6 +905,7 @@ function HomeContent() {
                       preference={post.preference || undefined}
                       isLoggedIn={true}
                       onImInterested={() => handleInterestedClick(post)}
+                      onReport={() => handleReportClick(post.id)}
                       distance={getPostDistance(post)}
                       authorAvatarUrl={authorProfile?.avatar_url}
                       authorDateOfBirth={authorProfile?.date_of_birth}
@@ -904,6 +931,7 @@ function HomeContent() {
               threadId={selectedThreadId}
               currentUserId={user.id}
               onClose={handleCloseThread}
+              onReport={handleReportClick}
             />
           </div>
         )}
@@ -948,6 +976,26 @@ function HomeContent() {
           currentDateOfBirth={currentUserProfile.date_of_birth}
           onComplete={handleProfileComplete}
           onSkip={handleProfileSkip}
+        />
+      )}
+
+      {showReportModal && reportPostId && (
+        <ReportModal
+          postId={reportPostId}
+          threadId={reportThreadId || undefined}
+          reportedBy={user.id}
+          onClose={() => {
+            setShowReportModal(false);
+            setReportPostId(null);
+            setReportThreadId(null);
+          }}
+          onSuccess={handleReportSuccess}
+        />
+      )}
+
+      {showReportConfirmation && (
+        <ReportConfirmationModal
+          onClose={() => setShowReportConfirmation(false)}
         />
       )}
     </div>

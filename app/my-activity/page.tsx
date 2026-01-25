@@ -1,21 +1,14 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import Header from '../components/Header';
-import PostCard from '../components/PostCard';
-import AuthModal from '../components/AuthModal';
-import CreatePostModal from '../components/CreatePostModal';
-import InterestedModal from '../components/InterestedModal';
-import MessageSentModal from '../components/MessageSentModal';
-import ProfileCompletionModal from '../components/ProfileCompletionModal';
-import ReportModal from '../components/ReportModal';
-import ReportConfirmationModal from '../components/ReportConfirmationModal';
 import Sidebar from '../components/Sidebar';
-import MessageThread from '../components/MessageThread';
-import { sortByDistance, formatDistance, getDistanceToPost } from '@/lib/distance';
+import AuthModal from '../components/AuthModal';
+import EditPostModal from '../components/EditPostModal';
+import CreatePostModal from '../components/CreatePostModal';
 
 interface Post {
   id: string;
@@ -31,755 +24,179 @@ interface Post {
   user_id: string;
   created_at: string;
   expires_at: string | null;
+  status: string;
 }
 
-interface Profile {
-  id: string;
-  first_name: string;
-  avatar_url: string | null;
-  date_of_birth: string | null;
-}
-
-interface UserLocation {
-  latitude: number;
-  longitude: number;
-  source: 'browser' | 'manual';
-  name?: string;
-}
-
-interface LocationSuggestion {
-  display_name: string;
-  lat: string;
-  lon: string;
-}
-
-// Separate component to avoid re-render issues
-interface LocationSectionProps {
-  sortBy: string;
-  locationStatus: 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
-  userLocation: UserLocation | null;
-  showLocationInput: boolean;
-  setShowLocationInput: (show: boolean) => void;
-  locationQuery: string;
-  setLocationQuery: (query: string) => void;
-  locationSuggestions: LocationSuggestion[];
-  searchingLocation: boolean;
-  selectManualLocation: (suggestion: LocationSuggestion) => void;
-  requestBrowserLocation: () => void;
-}
-
-function LocationSection({
-  sortBy,
-  locationStatus,
-  userLocation,
-  showLocationInput,
-  setShowLocationInput,
-  locationQuery,
-  setLocationQuery,
-  locationSuggestions,
-  searchingLocation,
-  selectManualLocation,
-  requestBrowserLocation,
-}: LocationSectionProps) {
-  if (sortBy !== 'nearest') return null;
-
-  // Show requesting state
-  if (locationStatus === 'requesting') {
-    return (
-      <div style={{
-        padding: '12px 16px',
-        background: '#fafafa',
-        borderRadius: '12px',
-        marginBottom: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        fontSize: '14px',
-        color: '#666',
-      }}>
-        <div style={{
-          width: '16px',
-          height: '16px',
-          border: '2px solid #e0e0e0',
-          borderTopColor: '#666',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-        }} />
-        Getting your location...
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  // Show current location with option to change
-  if (userLocation && !showLocationInput) {
-    return (
-      <div style={{
-        padding: '12px 16px',
-        background: '#f0fdf4',
-        borderRadius: '12px',
-        marginBottom: '16px',
-        fontSize: '14px',
-        color: '#166534',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <span>
-          📍 {userLocation.source === 'manual' && userLocation.name 
-            ? `Sorting from ${userLocation.name}` 
-            : 'Using your current location'}
-        </span>
-        <button
-          onClick={() => setShowLocationInput(true)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#166534',
-            textDecoration: 'underline',
-            cursor: 'pointer',
-            fontSize: '14px',
-          }}
-        >
-          Change
-        </button>
-      </div>
-    );
-  }
-
-  // Show location input
-  if (showLocationInput || locationStatus === 'denied' || locationStatus === 'unavailable') {
-    return (
-      <div style={{
-        padding: '16px',
-        background: '#fafafa',
-        borderRadius: '12px',
-        marginBottom: '16px',
-      }}>
-        <div style={{ 
-          fontSize: '14px', 
-          color: '#666', 
-          marginBottom: '12px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <span>
-            {locationStatus === 'denied' 
-              ? 'Location access denied. Enter a location manually:' 
-              : locationStatus === 'unavailable'
-              ? 'Could not get your location. Enter one manually:'
-              : 'Enter your location:'}
-          </span>
-          {userLocation && (
-            <button
-              onClick={() => setShowLocationInput(false)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#666',
-                cursor: 'pointer',
-                fontSize: '18px',
-              }}
-            >
-              ×
-            </button>
-          )}
-        </div>
-        <div style={{ position: 'relative' }}>
-          <input
-            type="text"
-            placeholder="Search for a location (e.g. Hackney, London)"
-            value={locationQuery}
-            onChange={(e) => setLocationQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              border: '1px solid #e0e0e0',
-              borderRadius: '12px',
-              fontSize: '14px',
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
-          {searchingLocation && (
-            <div style={{
-              position: 'absolute',
-              right: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              fontSize: '12px',
-              color: '#888',
-            }}>
-              Searching...
-            </div>
-          )}
-          {locationSuggestions.length > 0 && (
-            <div style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              background: '#fff',
-              border: '1px solid #e0e0e0',
-              borderRadius: '12px',
-              marginTop: '4px',
-              zIndex: 10,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              overflow: 'hidden',
-            }}>
-              {locationSuggestions.map((suggestion, index) => (
-                <div
-                  key={index}
-                  onClick={() => selectManualLocation(suggestion)}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    borderBottom: index < locationSuggestions.length - 1 ? '1px solid #f0f0f0' : 'none',
-                    fontSize: '14px',
-                    color: '#444',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = '#fafafa')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
-                >
-                  {suggestion.display_name}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        {locationStatus !== 'denied' && !userLocation && (
-          <button
-            onClick={requestBrowserLocation}
-            style={{
-              marginTop: '12px',
-              background: 'none',
-              border: 'none',
-              color: '#666',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              fontSize: '13px',
-            }}
-          >
-            Try using my current location instead
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  return null;
-}
-
-function HomeContent() {
+export default function MyActivityPage() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
-  const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showInterestedModal, setShowInterestedModal] = useState(false);
-  const [showMessageSentModal, setShowMessageSentModal] = useState(false);
-  const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'post' | 'interest' | null>(null);
+  const [overflowMenuId, setOverflowMenuId] = useState<string | null>(null);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState('nearest');
-
-  // Report modal state
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [showReportConfirmation, setShowReportConfirmation] = useState(false);
-  const [reportPostId, setReportPostId] = useState<string | null>(null);
-  const [reportThreadId, setReportThreadId] = useState<string | null>(null);
-
-  // Track posts user has expressed interest in
-  const [userInterestedPostIds, setUserInterestedPostIds] = useState<Set<string>>(new Set());
-
-  // Location state
-  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
-  const [locationStatus, setLocationStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable'>('idle');
-  const [showLocationInput, setShowLocationInput] = useState(false);
-  const [locationQuery, setLocationQuery] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
-  const [searchingLocation, setSearchingLocation] = useState(false);
-
-  // Read thread ID from URL query params
-  const searchParams = useSearchParams();
-
-  // Open thread from URL query parameter (e.g., from email link)
-  useEffect(() => {
-    const threadId = searchParams.get('thread');
-    if (threadId && user) {
-      setSelectedThreadId(threadId);
-    }
-  }, [searchParams, user]);
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Check auth state
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (!session?.user) {
+        router.push('/');
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (!session?.user) {
+        router.push('/');
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [router]);
 
-  // Fetch posts and profiles
+  // Fetch user's posts
   useEffect(() => {
-    async function fetchPostsAndProfiles() {
-      const { data: postsData, error: postsError } = await supabase
+    async function fetchMyPosts() {
+      if (!user) return;
+
+      const { data, error } = await supabase
         .from('posts')
         .select('*')
-        .eq('status', 'approved')
+        .eq('user_id', user.id)
+        .in('status', ['approved', 'pending'])
         .order('created_at', { ascending: false });
 
-      if (postsError) {
-        console.error('Error fetching posts:', postsError);
-        setLoading(false);
-        return;
+      if (error) {
+        console.error('Error fetching posts:', error);
+      } else {
+        setPosts(data || []);
       }
-
-      setPosts(postsData || []);
-
-      // Fetch profiles for all post authors
-      if (postsData && postsData.length > 0) {
-        const userIds = [...new Set(postsData.map(p => p.user_id))];
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, first_name, avatar_url, date_of_birth')
-          .in('id', userIds);
-
-        if (profilesData) {
-          const profileMap: Record<string, Profile> = {};
-          profilesData.forEach(p => {
-            profileMap[p.id] = p;
-          });
-          setProfiles(profileMap);
-        }
-      }
-
       setLoading(false);
     }
 
-    fetchPostsAndProfiles();
-  }, []);
-
-  // Fetch posts the user has already expressed interest in (via threads)
-  useEffect(() => {
-    async function fetchUserInterestedPosts() {
-      if (!user) {
-        setUserInterestedPostIds(new Set());
-        return;
-      }
-
-      const { data: threads } = await supabase
-        .from('threads')
-        .select('post_id')
-        .contains('participant_ids', [user.id]);
-
-      if (threads) {
-        const postIds = new Set(threads.map(t => t.post_id));
-        setUserInterestedPostIds(postIds);
-      }
+    if (user) {
+      fetchMyPosts();
     }
-
-    fetchUserInterestedPosts();
   }, [user]);
-
-  // Fetch current user's profile when logged in
-  useEffect(() => {
-    async function fetchCurrentUserProfile() {
-      if (!user) {
-        setCurrentUserProfile(null);
-        return;
-      }
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, first_name, avatar_url, date_of_birth')
-        .eq('id', user.id)
-        .single();
-
-      if (data) {
-        setCurrentUserProfile(data);
-      }
-    }
-
-    fetchCurrentUserProfile();
-  }, [user]);
-
-  // Request browser location
-  const requestBrowserLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setLocationStatus('unavailable');
-      setShowLocationInput(true);
-      return;
-    }
-
-    setLocationStatus('requesting');
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          source: 'browser',
-        });
-        setLocationStatus('granted');
-        setShowLocationInput(false);
-      },
-      (err) => {
-        console.log('Geolocation error:', err.code, err.message);
-        if (err.code === err.PERMISSION_DENIED) {
-          setLocationStatus('denied');
-        } else {
-          setLocationStatus('unavailable');
-        }
-        setShowLocationInput(true);
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: 30 * 60 * 1000,
-      }
-    );
-  }, []);
-
-  // Request location when sorting by nearest
-  useEffect(() => {
-    if (sortBy === 'nearest' && locationStatus === 'idle') {
-      requestBrowserLocation();
-    }
-  }, [sortBy, locationStatus, requestBrowserLocation]);
-
-  // Search for locations (debounced)
-  useEffect(() => {
-    if (locationQuery.length < 3) {
-      setLocationSuggestions([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setSearchingLocation(true);
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=5&countrycodes=gb`
-        );
-        const data = await response.json();
-        setLocationSuggestions(data);
-      } catch (err) {
-        console.error('Location search failed:', err);
-      }
-      setSearchingLocation(false);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [locationQuery]);
-
-  // Select a manual location
-  const selectManualLocation = useCallback((suggestion: LocationSuggestion) => {
-    const shortName = suggestion.display_name.split(',').slice(0, 2).join(',');
-    setUserLocation({
-      latitude: parseFloat(suggestion.lat),
-      longitude: parseFloat(suggestion.lon),
-      source: 'manual',
-      name: shortName,
-    });
-    setLocationStatus('granted');
-    setShowLocationInput(false);
-    setLocationQuery('');
-    setLocationSuggestions([]);
-  }, []);
-
-  // Filter out posts the user has already expressed interest in (and their own posts)
-  const filteredPosts = useMemo(() => {
-    if (!user) return posts;
-
-    return posts.filter(post => {
-      // Don't show user's own posts
-      if (post.user_id === user.id) return false;
-      // Don't show posts user has already expressed interest in
-      if (userInterestedPostIds.has(post.id)) return false;
-      return true;
-    });
-  }, [posts, user, userInterestedPostIds]);
-
-  // Sort posts based on selected sort option
-  const sortedPosts = useMemo(() => {
-    const postsToSort = user ? filteredPosts : posts;
-
-    if (sortBy === 'nearest' && userLocation) {
-      return sortByDistance(postsToSort, userLocation.latitude, userLocation.longitude);
-    } else if (sortBy === 'soon') {
-      // Sort by expires_at ascending (soonest first)
-      // Posts without expires_at go to the end
-      return [...postsToSort].sort((a, b) => {
-        if (!a.expires_at && !b.expires_at) return 0;
-        if (!a.expires_at) return 1;
-        if (!b.expires_at) return -1;
-        return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
-      });
-    } else {
-      // Default: recently added - sort by created_at descending (newest first)
-      return [...postsToSort].sort((a, b) => {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-    }
-  }, [filteredPosts, posts, user, sortBy, userLocation]);
-
-  // Get distance string for a post
-  const getPostDistance = useCallback((post: Post): string | null => {
-    if (sortBy !== 'nearest' || !userLocation) return null;
-    const distance = getDistanceToPost(post, userLocation.latitude, userLocation.longitude);
-    return distance !== null ? formatDistance(distance) : null;
-  }, [sortBy, userLocation]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setSelectedThreadId(null);
+    router.push('/');
   };
 
-  const handleShareClick = () => {
-    if (user) {
-      setShowCreateModal(true);
+  const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
+
+  const handleShare = async (post: Post) => {
+    const url = `${window.location.origin}/post/${post.id}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedPostId(post.id);
+    setTimeout(() => setCopiedPostId(null), 2000);
+  };
+
+  const handleClosePost = async () => {
+    if (!selectedPostId) return;
+    setActionLoading(true);
+
+    const { error } = await supabase
+      .from('posts')
+      .update({ status: 'closed' })
+      .eq('id', selectedPostId);
+
+    if (error) {
+      console.error('Error closing post:', error);
+      alert('Failed to close post. Please try again.');
     } else {
-      setShowAuthModal(true);
+      setPosts(posts.filter(p => p.id !== selectedPostId));
     }
+
+    setActionLoading(false);
+    setShowCloseModal(false);
+    setSelectedPostId(null);
   };
 
-  const handleInterestedClick = (post: Post) => {
-    if (user) {
-      if (post.user_id === user.id) {
-        alert("You can't express interest in your own post");
-        return;
-      }
-      setSelectedPost(post);
-      setShowInterestedModal(true);
+  const handleDeletePost = async () => {
+    if (!selectedPostId) return;
+    setActionLoading(true);
+
+    const { error } = await supabase
+      .from('posts')
+      .update({ status: 'deleted' })
+      .eq('id', selectedPostId);
+
+    if (error) {
+      console.error('Error deleting post:', error);
+      alert('Failed to delete post. Please try again.');
     } else {
-      setShowAuthModal(true);
+      setPosts(posts.filter(p => p.id !== selectedPostId));
     }
+
+    setActionLoading(false);
+    setShowDeleteModal(false);
+    setSelectedPostId(null);
   };
 
-  const handleReportClick = (postId: string, threadId?: string) => {
-    if (user) {
-      setReportPostId(postId);
-      setReportThreadId(threadId || null);
-      setShowReportModal(true);
-    } else {
-      setShowAuthModal(true);
-    }
+  const openCloseModal = (postId: string) => {
+    setSelectedPostId(postId);
+    setOverflowMenuId(null);
+    setShowCloseModal(true);
   };
 
-  const handleReportSuccess = () => {
-    setShowReportModal(false);
-    setReportPostId(null);
-    setReportThreadId(null);
-    setShowReportConfirmation(true);
+  const openDeleteModal = (postId: string) => {
+    setSelectedPostId(postId);
+    setOverflowMenuId(null);
+    setShowDeleteModal(true);
   };
 
-  const handleInterestedSuccess = (threadId: string) => {
-    setShowInterestedModal(false);
-    setShowMessageSentModal(true);
-    setSelectedThreadId(threadId);
-
-    // Add this post to the interested set so it disappears from feed immediately
-    if (selectedPost) {
-      setUserInterestedPostIds(prev => new Set([...prev, selectedPost.id]));
-    }
-
-    setSelectedPost(null);
-    refreshPosts();
-
-    // Check if profile is incomplete
-    if (currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
-      setPendingAction('interest');
-    }
-  };
-
-  const handleMessageSentClose = () => {
-    setShowMessageSentModal(false);
-    // Show profile completion modal after message sent if profile is incomplete
-    if (pendingAction === 'interest' && currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
-      setShowProfileCompletionModal(true);
-    }
-    setPendingAction(null);
+  const openEditModal = (post: Post) => {
+    setSelectedPost(post);
+    setOverflowMenuId(null);
+    setShowEditModal(true);
   };
 
   const refreshPosts = async () => {
-    const { data: postsData, error } = await supabase
+    if (!user) return;
+
+    const { data, error } = await supabase
       .from('posts')
       .select('*')
-      .eq('status', 'approved')
+      .eq('user_id', user.id)
+      .in('status', ['approved', 'pending'])
       .order('created_at', { ascending: false });
 
-    if (!error && postsData) {
-      setPosts(postsData);
-
-      // Refresh profiles for any new authors
-      const userIds = [...new Set(postsData.map(p => p.user_id))];
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, first_name, avatar_url, date_of_birth')
-        .in('id', userIds);
-
-      if (profilesData) {
-        const profileMap: Record<string, Profile> = {};
-        profilesData.forEach(p => {
-          profileMap[p.id] = p;
-        });
-        setProfiles(profileMap);
-      }
+    if (!error && data) {
+      setPosts(data);
     }
   };
 
-  const handlePostCreated = () => {
-    setShowCreateModal(false);
-    refreshPosts();
-    // Show profile completion modal after post creation if profile is incomplete
-    if (currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
-      setShowProfileCompletionModal(true);
+  const getMapUrl = (post: Post) => {
+    if (post.latitude && post.longitude) {
+      return `https://www.google.com/maps/search/?api=1&query=${post.latitude},${post.longitude}`;
     }
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(post.location)}`;
   };
 
-  const handleProfileComplete = async () => {
-    setShowProfileCompletionModal(false);
-    // Refresh current user's profile
-    if (user) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, first_name, avatar_url, date_of_birth')
-        .eq('id', user.id)
-        .single();
-      if (data) {
-        setCurrentUserProfile(data);
-      }
+  // Close overflow menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOverflowMenuId(null);
+    if (overflowMenuId) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
     }
-  };
+  }, [overflowMenuId]);
 
-  const handleProfileSkip = () => {
-    setShowProfileCompletionModal(false);
-  };
-
-  const handleSelectThread = (threadId: string) => {
-    setSelectedThreadId(threadId);
-  };
-
-  const handleCloseThread = () => {
-    setSelectedThreadId(null);
-  };
-
-  const handleNavigateToMyActivity = () => {
-    console.log('Navigate to My Activity');
-  };
-
-  // Logged out view (no sidebar)
   if (!user) {
-    return (
-      <div className="app">
-        <Header
-          onLoginClick={() => setShowAuthModal(true)}
-          user={user}
-          onLogout={handleLogout}
-        />
-        <main className="main-content">
-          <div className="guest-banner">
-            <h1 className="page-title">Find people to do things with nearby</h1>
-            <p className="page-subtitle">
-              Browsing as a guest.{' '}
-              <button
-                className="text-link"
-                onClick={() => setShowAuthModal(true)}
-              >
-                Log in
-              </button>{' '}
-              to post or respond.
-            </p>
-          </div>
-
-          <div className="feed-header">
-            <button className="btn btn-primary" onClick={handleShareClick}>
-              Share what I'm doing
-            </button>
-            <select
-              className="sort-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="nearest">Sort by: nearest</option>
-              <option value="soon">Sort by: happening soon</option>
-              <option value="recent">Sort by: recently added</option>
-            </select>
-          </div>
-
-          <LocationSection
-            sortBy={sortBy}
-            locationStatus={locationStatus}
-            userLocation={userLocation}
-            showLocationInput={showLocationInput}
-            setShowLocationInput={setShowLocationInput}
-            locationQuery={locationQuery}
-            setLocationQuery={setLocationQuery}
-            locationSuggestions={locationSuggestions}
-            searchingLocation={searchingLocation}
-            selectManualLocation={selectManualLocation}
-            requestBrowserLocation={requestBrowserLocation}
-          />
-
-          {loading ? (
-            <div className="loading-state">Loading...</div>
-          ) : posts.length === 0 ? (
-            <div className="empty-state">
-              <p>Nothing nearby yet. Be the first to share what you're doing.</p>
-              <button className="btn btn-primary" onClick={handleShareClick}>
-                Share what I'm doing
-              </button>
-            </div>
-          ) : (
-            <div className="feed">
-              {sortedPosts.map((post) => {
-                const authorProfile = profiles[post.user_id];
-                return (
-                  <PostCard
-                    key={post.id}
-                    id={post.id}
-                    title={post.title}
-                    location={post.location}
-                    latitude={post.latitude}
-                    longitude={post.longitude}
-                    time={post.time}
-                    notes={post.notes || undefined}
-                    name={post.name}
-                    peopleInterested={post.people_interested}
-                    preference={post.preference || undefined}
-                    isLoggedIn={false}
-                    onImInterested={() => handleInterestedClick(post)}
-                    onReport={() => handleReportClick(post.id)}
-                    distance={getPostDistance(post)}
-                    authorAvatarUrl={authorProfile?.avatar_url}
-                    authorDateOfBirth={authorProfile?.date_of_birth}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </main>
-
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={() => setShowAuthModal(false)}
-        />
-      </div>
-    );
+    return null;
   }
 
-  // Logged in view (with fixed sidebars)
   return (
     <div style={{ 
       height: '100vh', 
@@ -793,14 +210,13 @@ function HomeContent() {
         onLogout={handleLogout}
       />
 
-      {/* Main layout */}
       <div style={{ 
         flex: 1, 
         display: 'flex', 
         flexDirection: 'row',
         overflow: 'hidden',
       }}>
-        {/* Left Sidebar - Fixed */}
+        {/* Sidebar */}
         <div style={{
           width: '224px',
           flexShrink: 0,
@@ -810,134 +226,389 @@ function HomeContent() {
         }}>
           <Sidebar
             userId={user.id}
-            selectedThreadId={selectedThreadId}
-            onSelectThread={handleSelectThread}
-            onNavigateToMyActivity={handleNavigateToMyActivity}
+            selectedThreadId={null}
+            onSelectThread={(threadId) => router.push(`/?thread=${threadId}`)}
+            onNavigateToMyActivity={() => {}}
             onLogout={handleLogout}
+            activeItem="my-activity"
           />
         </div>
 
-        {/* Feed - Scrollable, clickable to close thread */}
-        <div 
-          onClick={() => {
-            if (selectedThreadId) {
-              handleCloseThread();
-            }
-          }}
-          style={{ 
-            flex: 1, 
-            overflowY: 'auto',
-            opacity: selectedThreadId ? 0.4 : 1,
-            pointerEvents: selectedThreadId ? 'auto' : 'auto',
-            transition: 'opacity 0.2s ease',
-            cursor: selectedThreadId ? 'pointer' : 'default',
-          }}
-        >
-          <div 
-            style={{ maxWidth: '600px', width: '100%', margin: '0 auto', padding: '24px' }}
-            onClick={(e) => {
-              // Stop propagation when thread is not open so feed interactions work
-              if (!selectedThreadId) {
-                e.stopPropagation();
-              }
-            }}
-          >
-            <div 
-              className="feed-header"
-              onClick={(e) => e.stopPropagation()}
-              style={{ pointerEvents: selectedThreadId ? 'none' : 'auto' }}
-            >
-              <button className="btn btn-primary" onClick={handleShareClick}>
-                Share what I'm doing
-              </button>
-              <select
-                className="sort-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="nearest">Sort by: nearest</option>
-                <option value="soon">Sort by: happening soon</option>
-                <option value="recent">Sort by: recently added</option>
-              </select>
-            </div>
-
-            <div onClick={(e) => e.stopPropagation()} style={{ pointerEvents: selectedThreadId ? 'none' : 'auto' }}>
-              <LocationSection
-                sortBy={sortBy}
-                locationStatus={locationStatus}
-                userLocation={userLocation}
-                showLocationInput={showLocationInput}
-                setShowLocationInput={setShowLocationInput}
-                locationQuery={locationQuery}
-                setLocationQuery={setLocationQuery}
-                locationSuggestions={locationSuggestions}
-                searchingLocation={searchingLocation}
-                selectManualLocation={selectManualLocation}
-                requestBrowserLocation={requestBrowserLocation}
-              />
-            </div>
+        {/* Main content */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ maxWidth: '600px', width: '100%', margin: '0 auto', padding: '24px' }}>
+            <h1 style={{ 
+              fontSize: '20px', 
+              fontWeight: 600, 
+              color: '#000',
+              marginBottom: '8px',
+            }}>
+              My activity
+            </h1>
+            <p style={{ 
+              fontSize: '14px', 
+              color: '#666',
+              marginBottom: '24px',
+            }}>
+              Posts you've shared that are still visible to others
+            </p>
 
             {loading ? (
-              <div className="loading-state">Loading...</div>
-            ) : sortedPosts.length === 0 ? (
-              <div className="empty-state" onClick={(e) => e.stopPropagation()}>
-                <p>Nothing nearby yet. Be the first to share what you're doing.</p>
-                <button className="btn btn-primary" onClick={handleShareClick}>
+              <div style={{ textAlign: 'center', padding: '48px', color: '#888' }}>
+                Loading...
+              </div>
+            ) : posts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px' }}>
+                <p style={{ color: '#666', marginBottom: '16px' }}>
+                  You haven't shared any activities yet.
+                </p>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  style={{
+                    background: '#000',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '24px',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                  }}
+                >
                   Share what I'm doing
                 </button>
               </div>
             ) : (
-              <div className="feed" style={{ pointerEvents: selectedThreadId ? 'none' : 'auto' }}>
-                {sortedPosts.map((post) => {
-                  const authorProfile = profiles[post.user_id];
-                  return (
-                    <PostCard
-                      key={post.id}
-                      id={post.id}
-                      title={post.title}
-                      location={post.location}
-                      latitude={post.latitude}
-                      longitude={post.longitude}
-                      time={post.time}
-                      notes={post.notes || undefined}
-                      name={post.name}
-                      peopleInterested={post.people_interested}
-                      preference={post.preference || undefined}
-                      isLoggedIn={true}
-                      onImInterested={() => handleInterestedClick(post)}
-                      onReport={() => handleReportClick(post.id)}
-                      distance={getPostDistance(post)}
-                      authorAvatarUrl={authorProfile?.avatar_url}
-                      authorDateOfBirth={authorProfile?.date_of_birth}
-                    />
-                  );
-                })}
+              <div>
+                {posts.map((post) => (
+                  <div
+                    key={post.id}
+                    style={{
+                      background: '#fff',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      marginBottom: '16px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      position: 'relative',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#000', margin: 0 }}>
+                            {post.title}
+                          </h3>
+                          {post.status === 'pending' && (
+                            <span style={{
+                              fontSize: '11px',
+                              color: '#92400e',
+                              background: '#fef3c7',
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                            }}>
+                              Pending review
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0' }}>
+                          <a
+                            href={getMapUrl(post)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#666', textDecoration: 'underline' }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {post.location}
+                          </a>
+                          <span style={{ margin: '0 8px', color: '#888' }}>·</span>
+                          {post.time}
+                        </p>
+                        {post.notes && (
+                          <p style={{ fontSize: '13px', color: '#888', margin: '6px 0 0 0' }}>
+                            {post.notes}
+                          </p>
+                        )}
+                        {post.preference && post.preference !== 'anyone' && (
+                          <span style={{
+                            display: 'inline-block',
+                            fontSize: '12px',
+                            color: '#888',
+                            background: '#fafafa',
+                            border: '1px solid #e0e0e0',
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            marginTop: '8px',
+                          }}>
+                            {post.preference}
+                          </span>
+                        )}
+                        {post.people_interested > 0 && (
+                          <p style={{ fontSize: '13px', color: '#666', marginTop: '12px' }}>
+                            {post.people_interested} interested
+                          </p>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          onClick={() => handleShare(post)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '12px',
+                            color: copiedPostId === post.id ? '#4a9d6b' : '#888',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'color 0.15s ease',
+                          }}
+                        >
+                          {copiedPostId === post.id ? '✓ Copied!' : 'Share ↗'}
+                        </button>
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOverflowMenuId(overflowMenuId === post.id ? null : post.id);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              fontSize: '18px',
+                              color: '#888',
+                              cursor: 'pointer',
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            ⋯
+                          </button>
+                          {overflowMenuId === post.id && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                position: 'absolute',
+                                right: 0,
+                                top: '36px',
+                                background: '#fff',
+                                border: '1px solid #e0e0e0',
+                                borderRadius: '12px',
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                                overflow: 'hidden',
+                                zIndex: 10,
+                                minWidth: '140px',
+                              }}
+                            >
+                              <button
+                                onClick={() => openEditModal(post)}
+                                style={{
+                                  display: 'block',
+                                  width: '100%',
+                                  padding: '12px 16px',
+                                  fontSize: '14px',
+                                  color: '#444',
+                                  background: 'none',
+                                  border: 'none',
+                                  textAlign: 'left',
+                                  cursor: 'pointer',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#fafafa'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => openCloseModal(post.id)}
+                                style={{
+                                  display: 'block',
+                                  width: '100%',
+                                  padding: '12px 16px',
+                                  fontSize: '14px',
+                                  color: '#444',
+                                  background: 'none',
+                                  border: 'none',
+                                  borderTop: '1px solid #f0f0f0',
+                                  textAlign: 'left',
+                                  cursor: 'pointer',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#fafafa'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                              >
+                                Close
+                              </button>
+                              <button
+                                onClick={() => openDeleteModal(post.id)}
+                                style={{
+                                  display: 'block',
+                                  width: '100%',
+                                  padding: '12px 16px',
+                                  fontSize: '14px',
+                                  color: '#dc2626',
+                                  background: 'none',
+                                  border: 'none',
+                                  borderTop: '1px solid #f0f0f0',
+                                  textAlign: 'left',
+                                  cursor: 'pointer',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#fef2f2'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
-
-        {/* Message Thread - Fixed */}
-        {selectedThreadId && (
-          <div style={{
-            width: '384px',
-            flexShrink: 0,
-            borderLeft: '1px solid #f0f0f0',
-            background: '#fff',
-            overflow: 'hidden',
-          }}>
-            <MessageThread
-              key={selectedThreadId}
-              threadId={selectedThreadId}
-              currentUserId={user.id}
-              onClose={handleCloseThread}
-              onReport={handleReportClick}
-            />
-          </div>
-        )}
       </div>
 
-      {/* Modals */}
+      {/* Close Confirmation Modal */}
+      {showCloseModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+            padding: '16px',
+          }}
+          onClick={() => setShowCloseModal(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>
+              Close this post?
+            </h3>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px', lineHeight: 1.5 }}>
+              Close a post if you've received enough replies and want to hide it from the feed. People you're already chatting with can still see it.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                onClick={() => setShowCloseModal(false)}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '20px',
+                  background: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClosePost}
+                disabled={actionLoading}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  border: 'none',
+                  borderRadius: '20px',
+                  background: '#000',
+                  color: '#fff',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  opacity: actionLoading ? 0.7 : 1,
+                }}
+              >
+                {actionLoading ? 'Closing...' : 'Close post'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+            padding: '16px',
+          }}
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>
+              Delete this post?
+            </h3>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px', lineHeight: 1.5 }}>
+              The post will not be viewable by anyone. It will be obscured from any existing message threads. This can't be undone.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '20px',
+                  background: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeletePost}
+                disabled={actionLoading}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  border: 'none',
+                  borderRadius: '20px',
+                  background: '#000',
+                  color: '#fff',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  opacity: actionLoading ? 0.7 : 1,
+                }}
+              >
+                {actionLoading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
@@ -947,65 +618,26 @@ function HomeContent() {
       <CreatePostModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onSuccess={handlePostCreated}
+        onSuccess={() => {
+          setShowCreateModal(false);
+          refreshPosts();
+        }}
       />
 
-      {showInterestedModal && selectedPost && (
-        <InterestedModal
+      {showEditModal && selectedPost && (
+        <EditPostModal
           post={selectedPost}
-          currentUserId={user.id}
           onClose={() => {
-            setShowInterestedModal(false);
+            setShowEditModal(false);
             setSelectedPost(null);
           }}
-          onSuccess={handleInterestedSuccess}
-        />
-      )}
-
-      {showMessageSentModal && (
-        <MessageSentModal
-          onClose={handleMessageSentClose}
-        />
-      )}
-
-      {showProfileCompletionModal && currentUserProfile && (
-        <ProfileCompletionModal
-          userId={user.id}
-          userName={currentUserProfile.first_name}
-          currentAvatarUrl={currentUserProfile.avatar_url}
-          currentDateOfBirth={currentUserProfile.date_of_birth}
-          onComplete={handleProfileComplete}
-          onSkip={handleProfileSkip}
-        />
-      )}
-
-      {showReportModal && reportPostId && (
-        <ReportModal
-          postId={reportPostId}
-          threadId={reportThreadId || undefined}
-          reportedBy={user.id}
-          onClose={() => {
-            setShowReportModal(false);
-            setReportPostId(null);
-            setReportThreadId(null);
+          onSuccess={() => {
+            setShowEditModal(false);
+            setSelectedPost(null);
+            refreshPosts();
           }}
-          onSuccess={handleReportSuccess}
-        />
-      )}
-
-      {showReportConfirmation && (
-        <ReportConfirmationModal
-          onClose={() => setShowReportConfirmation(false)}
         />
       )}
     </div>
-  );
-}
-
-export default function Home() {
-  return (
-    <Suspense fallback={<div style={{ padding: '24px', textAlign: 'center' }}>Loading...</div>}>
-      <HomeContent />
-    </Suspense>
   );
 }
