@@ -7,50 +7,64 @@ import { User } from '@supabase/supabase-js';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 
-interface Report {
+interface Post {
   id: string;
-  post_id: string | null;
-  thread_id: string | null;
-  reported_by: string;
-  reason: string;
-  status: 'pending' | 'reviewed' | 'dismissed';
+  title: string;
+  location: string;
+  time: string;
+  notes: string | null;
+  name: string;
+  preference: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'hidden';
   created_at: string;
-  posts?: {
-    id: string;
-    title: string;
-    location: string;
-    time: string;
-    notes: string | null;
-    name: string;
-    user_id: string;
-    status: string;
-  } | null;
+  user_id: string;
+  user_email?: string;
 }
 
-export default function AdminReportsPage() {
+export default function AdminPostsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [reports, setReports] = useState<Report[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'reviewed'>('pending');
-  const [actioningReport, setActioningReport] = useState<string | null>(null);
-  const [confirmRemove, setConfirmRemove] = useState<{
-    reportId: string;
+  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [actioningPost, setActioningPost] = useState<string | null>(null);
+  const [confirmReject, setConfirmReject] = useState<{
     postId: string;
     postTitle: string;
+    userId: string;
   } | null>(null);
 
-  // Check auth
+  // Check auth and admin status
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session?.user) {
         router.push('/');
+        return;
       }
-    });
+      
+      setUser(session.user);
+
+      // Check if user is admin
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile?.is_admin) {
+        router.push('/');
+        return;
+      }
+
+      setIsAdmin(true);
+    }
+
+    checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
       if (!session?.user) {
         router.push('/');
       }
@@ -59,127 +73,123 @@ export default function AdminReportsPage() {
     return () => subscription.unsubscribe();
   }, [router]);
 
-  // Fetch reports
+  // Fetch posts
   useEffect(() => {
-    async function fetchReports() {
-      if (!user) return;
+    async function fetchPosts() {
+      if (!isAdmin) return;
 
-      const query = supabase
-        .from('reports')
-        .select(`
-          id,
-          post_id,
-          thread_id,
-          reported_by,
-          reason,
-          status,
-          created_at,
-          posts (
-            id,
-            title,
-            location,
-            time,
-            notes,
-            name,
-            user_id,
-            status
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (filter !== 'all') {
-        query.eq('status', filter);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('status', filter)
+        .order('created_at', { ascending: filter === 'pending' }); // Oldest first for pending
 
       if (error) {
-        console.error('Error fetching reports:', error);
+        console.error('Error fetching posts:', error);
         setLoading(false);
         return;
       }
 
-      setReports(data?.map(report => ({
-        ...report,
-        posts: Array.isArray(report.posts) ? report.posts[0] || null : report.posts
-      })) || []);
+      setPosts(data || []);
       setLoading(false);
     }
 
-    if (user) {
-      fetchReports();
+    if (isAdmin) {
+      setLoading(true);
+      fetchPosts();
     }
-  }, [user, filter]);
+  }, [isAdmin, filter]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/');
   };
 
-  const handleDismiss = async (reportId: string) => {
-    setActioningReport(reportId);
+  const handleApprove = async (postId: string, userId: string, postTitle: string) => {
+    setActioningPost(postId);
+
     const { error } = await supabase
-      .from('reports')
-      .update({ status: 'dismissed' })
-      .eq('id', reportId);
-
-    if (error) {
-      console.error('Error dismissing report:', error);
-      alert('Failed to dismiss report');
-    } else {
-      setReports(prev => prev.map(r => 
-        r.id === reportId ? { ...r, status: 'dismissed' as const } : r
-      ));
-    }
-    setActioningReport(null);
-  };
-
-  const handleRemovePost = async (reportId: string, postId: string) => {
-    setActioningReport(reportId);
-    
-    // Soft delete - set status to 'hidden'
-    const { error: postError } = await supabase
       .from('posts')
-      .update({ status: 'hidden' })
+      .update({ status: 'approved' })
       .eq('id', postId);
 
-    if (postError) {
-      console.error('Error removing post:', postError);
-      alert('Failed to remove post');
-      setActioningReport(null);
+    if (error) {
+      console.error('Error approving post:', error);
+      alert('Failed to approve post');
+      setActioningPost(null);
       return;
     }
 
-    // Mark report as reviewed
-    await supabase
-      .from('reports')
-      .update({ status: 'reviewed' })
-      .eq('id', reportId);
+    // Send approval email
+    try {
+      const response = await supabase.functions.invoke('post-moderation-notification', {
+        body: {
+          postId,
+          userId,
+          postTitle,
+          action: 'approved',
+        },
+      });
+      console.log('Email function response:', response);
+    } catch (emailError) {
+      console.error('Failed to send approval email:', emailError);
+      // Don't block on email failure
+    }
 
-    setReports(prev => prev.map(r => {
-      if (r.id === reportId) {
-        return {
-          ...r,
-          status: 'reviewed' as const,
-          posts: r.posts ? { ...r.posts, status: 'hidden' } : null
-        };
-      }
-      return r;
-    }));
-    
-    setActioningReport(null);
-    setConfirmRemove(null);
+    // Update local state
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    setActioningPost(null);
+  };
+
+  const handleReject = async (postId: string, userId: string, postTitle: string) => {
+    setActioningPost(postId);
+
+    const { error } = await supabase
+      .from('posts')
+      .update({ status: 'rejected' })
+      .eq('id', postId);
+
+    if (error) {
+      console.error('Error rejecting post:', error);
+      alert('Failed to reject post');
+      setActioningPost(null);
+      return;
+    }
+
+    // Send rejection email
+    try {
+      const response = await supabase.functions.invoke('post-moderation-notification', {
+        body: {
+          postId,
+          userId,
+          postTitle,
+          action: 'rejected',
+        },
+      });
+      console.log('Email function response:', response);
+    } catch (emailError) {
+      console.error('Failed to send rejection email:', emailError);
+      // Don't block on email failure
+    }
+
+    // Update local state
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    setActioningPost(null);
+    setConfirmReject(null);
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffHours < 1) {
+    if (diffMins < 1) {
       return 'Just now';
+    } else if (diffMins < 60) {
+      return `${diffMins}m ago`;
     } else if (diffHours < 24) {
       return `${diffHours}h ago`;
     } else if (diffDays < 7) {
@@ -192,18 +202,9 @@ export default function AdminReportsPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, { bg: string; color: string; label: string }> = {
-      pending: { bg: '#FBEEED', color: '#D4594F', label: 'Pending' },
-      reviewed: { bg: '#EDF7F0', color: '#4A9D6B', label: 'Removed' },
-      dismissed: { bg: '#F5F5F5', color: '#888888', label: 'Dismissed' },
-    };
-    return styles[status] || styles.dismissed;
-  };
+  const pendingCount = posts.length;
 
-  const pendingCount = reports.filter(r => r.status === 'pending').length;
-
-  if (!user || loading) {
+  if (!user || !isAdmin || loading) {
     return (
       <div style={{ 
         height: '100vh', 
@@ -253,7 +254,7 @@ export default function AdminReportsPage() {
             onSelectThread={(threadId) => router.push(`/?thread=${threadId}`)}
             onNavigateToMyActivity={() => router.push('/my-activity')}
             onLogout={handleLogout}
-            activeItem="admin-reports"
+            activeItem="admin-posts"
           />
         </div>
 
@@ -284,7 +285,7 @@ export default function AdminReportsPage() {
                   letterSpacing: '-0.5px',
                   margin: 0,
                 }}>
-                  Reports
+                  Post approval
                 </h1>
                 {filter === 'pending' && pendingCount > 0 && (
                   <span style={{
@@ -304,7 +305,7 @@ export default function AdminReportsPage() {
                 color: '#888', 
                 margin: 0,
               }}>
-                Review and take action on reported content
+                Review and approve new posts before they go live
               </p>
             </div>
 
@@ -318,8 +319,8 @@ export default function AdminReportsPage() {
             }}>
               {[
                 { key: 'pending', label: 'Pending' },
-                { key: 'reviewed', label: 'Actioned' },
-                { key: 'all', label: 'All' },
+                { key: 'approved', label: 'Approved' },
+                { key: 'rejected', label: 'Rejected' },
               ].map(tab => (
                 <button
                   key={tab.key}
@@ -341,8 +342,8 @@ export default function AdminReportsPage() {
               ))}
             </div>
 
-            {/* Reports list */}
-            {reports.length === 0 ? (
+            {/* Posts list */}
+            {posts.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: '64px 24px',
@@ -353,26 +354,25 @@ export default function AdminReportsPage() {
                   marginBottom: '16px',
                   opacity: 0.5,
                 }}>
-                  ✓
+                  {filter === 'pending' ? '✓' : '📭'}
                 </div>
                 <p style={{ fontSize: '16px', fontWeight: 500, color: '#444', marginBottom: '4px' }}>
-                  {filter === 'pending' ? 'All clear' : `No ${filter === 'reviewed' ? 'actioned' : filter} reports`}
+                  {filter === 'pending' ? 'All caught up' : `No ${filter} posts`}
                 </p>
                 <p style={{ fontSize: '14px', color: '#888' }}>
                   {filter === 'pending' 
-                    ? 'No reports waiting for review' 
+                    ? 'No posts waiting for approval' 
                     : 'Nothing to show here'}
                 </p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {reports.map(report => {
-                  const statusBadge = getStatusBadge(report.status);
-                  const isActioning = actioningReport === report.id;
+                {posts.map(post => {
+                  const isActioning = actioningPost === post.id;
                   
                   return (
                     <div
-                      key={report.id}
+                      key={post.id}
                       style={{
                         background: '#fff',
                         border: '1px solid #E0E0E0',
@@ -381,135 +381,82 @@ export default function AdminReportsPage() {
                         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                       }}
                     >
-                      {/* Report header */}
-                      <div style={{ 
-                        padding: '16px 20px',
-                        borderBottom: '1px solid #F0F0F0',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              padding: '4px 12px',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              background: statusBadge.bg,
-                              color: statusBadge.color,
-                            }}
-                          >
-                            {statusBadge.label}
-                          </span>
-                          <span style={{ 
-                            fontSize: '14px', 
-                            fontWeight: 500,
-                            color: '#444',
-                          }}>
-                            {report.reason}
-                          </span>
-                        </div>
-                        <span style={{ 
-                          fontSize: '13px', 
-                          color: '#888',
+                      {/* Post content */}
+                      <div style={{ padding: '20px' }}>
+                        {/* Header with time */}
+                        <div style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'flex-start',
+                          marginBottom: '12px',
                         }}>
-                          {formatDate(report.created_at)}
-                        </span>
-                      </div>
-
-                      {/* Reported post preview */}
-                      {report.posts && (
-                        <div style={{ padding: '20px' }}>
-                          <div style={{
-                            background: '#FAFAFA',
-                            borderRadius: '12px',
-                            padding: '16px',
-                            border: '1px solid #F0F0F0',
-                          }}>
-                            <div style={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between', 
-                              alignItems: 'flex-start',
-                              marginBottom: '8px',
+                          <div>
+                            <h3 style={{ 
+                              fontSize: '16px', 
+                              fontWeight: 600, 
+                              color: '#000',
+                              margin: '0 0 4px 0',
                             }}>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ 
-                                  fontSize: '16px', 
-                                  fontWeight: 600, 
-                                  color: '#000',
-                                  marginBottom: '4px',
-                                }}>
-                                  {report.posts.title}
-                                </div>
-                                <div style={{ 
-                                  fontSize: '14px', 
-                                  color: '#666',
-                                }}>
-                                  {report.posts.location} · {report.posts.time}
-                                </div>
-                              </div>
-                              {report.posts.status === 'hidden' && (
-                                <span style={{
-                                  padding: '4px 10px',
-                                  borderRadius: '12px',
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  background: '#FBEEED',
-                                  color: '#D4594F',
-                                  flexShrink: 0,
-                                }}>
-                                  Removed
-                                </span>
-                              )}
+                              {post.title}
+                            </h3>
+                            <div style={{ fontSize: '14px', color: '#666' }}>
+                              {post.location}
                             </div>
-                            
-                            {report.posts.notes && (
-                              <p style={{ 
-                                fontSize: '14px', 
-                                color: '#666', 
-                                margin: '8px 0',
-                                lineHeight: 1.5,
-                              }}>
-                                {report.posts.notes}
-                              </p>
-                            )}
-                            
-                            <div style={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between', 
-                              alignItems: 'center',
-                              marginTop: '12px',
-                              paddingTop: '12px',
-                              borderTop: '1px solid #E0E0E0',
-                            }}>
-                              <span style={{ 
-                                fontSize: '13px', 
-                                color: '#888',
-                              }}>
-                                Posted by {report.posts.name}
-                              </span>
-                              <a
-                                href={`/post/${report.posts.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  fontSize: '13px',
-                                  color: '#444',
-                                  textDecoration: 'underline',
-                                  textUnderlineOffset: '2px',
-                                }}
-                              >
-                                View post →
-                              </a>
+                            <div style={{ fontSize: '14px', color: '#666' }}>
+                              {post.time}
                             </div>
                           </div>
+                          <span style={{ 
+                            fontSize: '13px', 
+                            color: '#888',
+                            flexShrink: 0,
+                          }}>
+                            {formatDate(post.created_at)}
+                          </span>
                         </div>
-                      )}
 
-                      {/* Actions - only show for pending reports */}
-                      {report.status === 'pending' && report.posts && (
+                        {/* Notes */}
+                        {post.notes && (
+                          <p style={{ 
+                            fontSize: '15px', 
+                            fontStyle: 'italic',
+                            color: '#666', 
+                            margin: '12px 0',
+                            lineHeight: 1.5,
+                          }}>
+                            "{post.notes}"
+                          </p>
+                        )}
+
+                        {/* Preference badge */}
+                        {post.preference && post.preference !== 'Anyone' && post.preference !== 'anyone' && (
+                          <span style={{
+                            display: 'inline-block',
+                            fontSize: '12px',
+                            color: '#888',
+                            background: '#fafafa',
+                            border: '1px solid #e0e0e0',
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            marginBottom: '12px',
+                          }}>
+                            {post.preference}
+                          </span>
+                        )}
+
+                        {/* Posted by */}
+                        <div style={{ 
+                          fontSize: '13px', 
+                          color: '#888',
+                          paddingTop: '12px',
+                          borderTop: '1px solid #F0F0F0',
+                        }}>
+                          Posted by {post.name}
+                        </div>
+                      </div>
+
+                      {/* Actions - only for pending posts */}
+                      {filter === 'pending' && (
                         <div style={{ 
                           padding: '16px 20px',
                           borderTop: '1px solid #F0F0F0',
@@ -519,17 +466,13 @@ export default function AdminReportsPage() {
                           alignItems: 'center',
                         }}>
                           <button
-                            onClick={() => setConfirmRemove({ 
-                              reportId: report.id, 
-                              postId: report.posts!.id,
-                              postTitle: report.posts!.title,
-                            })}
+                            onClick={() => handleApprove(post.id, post.user_id, post.title)}
                             disabled={isActioning}
                             style={{
-                              padding: '10px 20px',
+                              padding: '10px 24px',
                               border: 'none',
                               borderRadius: '24px',
-                              background: '#D4594F',
+                              background: '#000',
                               color: '#fff',
                               fontSize: '14px',
                               fontWeight: 600,
@@ -538,14 +481,18 @@ export default function AdminReportsPage() {
                               transition: 'all 0.15s ease',
                             }}
                           >
-                            Remove post
+                            Approve
                           </button>
 
                           <button
-                            onClick={() => handleDismiss(report.id)}
+                            onClick={() => setConfirmReject({
+                              postId: post.id,
+                              postTitle: post.title,
+                              userId: post.user_id,
+                            })}
                             disabled={isActioning}
                             style={{
-                              padding: '10px 20px',
+                              padding: '10px 24px',
                               border: '1px solid #E0E0E0',
                               borderRadius: '24px',
                               background: '#fff',
@@ -557,7 +504,7 @@ export default function AdminReportsPage() {
                               transition: 'all 0.15s ease',
                             }}
                           >
-                            Dismiss
+                            Reject
                           </button>
                         </div>
                       )}
@@ -570,8 +517,8 @@ export default function AdminReportsPage() {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {confirmRemove && (
+      {/* Rejection Confirmation Modal */}
+      {confirmReject && (
         <div 
           style={{
             position: 'fixed',
@@ -585,7 +532,7 @@ export default function AdminReportsPage() {
             justifyContent: 'center',
             zIndex: 1000,
           }}
-          onClick={() => setConfirmRemove(null)}
+          onClick={() => setConfirmReject(null)}
         >
           <div 
             style={{
@@ -604,7 +551,7 @@ export default function AdminReportsPage() {
               color: '#000',
               marginBottom: '12px',
             }}>
-              Remove this post?
+              Reject this post?
             </h2>
             <p style={{ 
               fontSize: '14px', 
@@ -612,7 +559,7 @@ export default function AdminReportsPage() {
               lineHeight: 1.6,
               marginBottom: '8px',
             }}>
-              "{confirmRemove.postTitle}" will no longer be visible to users.
+              "{confirmReject.postTitle}" will not be published.
             </p>
             <p style={{ 
               fontSize: '13px', 
@@ -620,11 +567,11 @@ export default function AdminReportsPage() {
               lineHeight: 1.5,
               marginBottom: '24px',
             }}>
-              The post data will be retained in case you need to review it later.
+              The user will be notified by email with a link to our community guidelines.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setConfirmRemove(null)}
+                onClick={() => setConfirmReject(null)}
                 style={{
                   padding: '10px 20px',
                   border: '1px solid #E0E0E0',
@@ -639,7 +586,7 @@ export default function AdminReportsPage() {
                 Cancel
               </button>
               <button
-                onClick={() => handleRemovePost(confirmRemove.reportId, confirmRemove.postId)}
+                onClick={() => handleReject(confirmReject.postId, confirmReject.userId, confirmReject.postTitle)}
                 style={{
                   padding: '10px 20px',
                   border: 'none',
@@ -651,7 +598,7 @@ export default function AdminReportsPage() {
                   cursor: 'pointer',
                 }}
               >
-                Remove post
+                Reject post
               </button>
             </div>
           </div>

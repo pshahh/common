@@ -321,12 +321,18 @@ export default function MyActivityPage() {
                           >
                             {post.location}
                           </a>
-                          <span style={{ margin: '0 8px', color: '#888' }}>·</span>
+                        </p>
+                        <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0' }}>
                           {post.time}
                         </p>
                         {post.notes && (
-                          <p style={{ fontSize: '13px', color: '#888', margin: '6px 0 0 0' }}>
-                            {post.notes}
+                          <p style={{ 
+                            fontSize: '15px', 
+                            fontStyle: 'italic',
+                            color: '#666', 
+                            margin: '8px 0 0 0',
+                          }}>
+                            "{post.notes}"
                           </p>
                         )}
                         {post.preference && post.preference !== 'anyone' && (
@@ -349,6 +355,7 @@ export default function MyActivityPage() {
                           </p>
                         )}
                       </div>
+
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <button
                           onClick={() => handleShare(post)}
@@ -366,6 +373,7 @@ export default function MyActivityPage() {
                         >
                           {copiedPostId === post.id ? '✓ Copied!' : 'Share ↗'}
                         </button>
+
                         <div style={{ position: 'relative' }}>
                           <button
                             onClick={(e) => {
@@ -388,6 +396,7 @@ export default function MyActivityPage() {
                           >
                             ⋯
                           </button>
+
                           {overflowMenuId === post.id && (
                             <div
                               onClick={(e) => e.stopPropagation()}
@@ -404,43 +413,50 @@ export default function MyActivityPage() {
                                 minWidth: '140px',
                               }}
                             >
-                              <button
-                                onClick={() => openEditModal(post)}
-                                style={{
-                                  display: 'block',
-                                  width: '100%',
-                                  padding: '12px 16px',
-                                  fontSize: '14px',
-                                  color: '#444',
-                                  background: 'none',
-                                  border: 'none',
-                                  textAlign: 'left',
-                                  cursor: 'pointer',
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = '#fafafa'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => openCloseModal(post.id)}
-                                style={{
-                                  display: 'block',
-                                  width: '100%',
-                                  padding: '12px 16px',
-                                  fontSize: '14px',
-                                  color: '#444',
-                                  background: 'none',
-                                  border: 'none',
-                                  borderTop: '1px solid #f0f0f0',
-                                  textAlign: 'left',
-                                  cursor: 'pointer',
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = '#fafafa'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                              >
-                                Close
-                              </button>
+                              {/* Only show Edit for pending posts */}
+                              {post.status === 'pending' && (
+                                <button
+                                  onClick={() => openEditModal(post)}
+                                  style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    fontSize: '14px',
+                                    color: '#444',
+                                    background: 'none',
+                                    border: 'none',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = '#fafafa'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                >
+                                  Edit
+                                </button>
+                              )}
+
+                              {/* Only show Close for approved posts */}
+                              {post.status === 'approved' && (
+                                <button
+                                  onClick={() => openCloseModal(post.id)}
+                                  style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    fontSize: '14px',
+                                    color: '#444',
+                                    background: 'none',
+                                    border: 'none',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = '#fafafa'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                >
+                                  Close
+                                </button>
+                              )}
+
                               <button
                                 onClick={() => openDeleteModal(post.id)}
                                 style={{

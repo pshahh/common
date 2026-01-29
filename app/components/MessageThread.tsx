@@ -25,12 +25,14 @@ interface Post {
   notes: string | null;
   name: string;
   preference: string | null;
+  expires_at: string | null;
 }
 
 interface Thread {
   id: string;
   post_id: string;
   participant_ids: string[];
+  closed_at: string | null;
   post: Post | null;
 }
 
@@ -64,6 +66,23 @@ export default function MessageThread({
   const [expandedPhoto, setExpandedPhoto] = useState<{ url: string; name: string; age: number | null } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [profileCache, setProfileCache] = useState<Record<string, ProfileData>>({});
+
+  // Check if thread is closed
+  const isThreadClosed = (): boolean => {
+    if (!thread) return false;
+    
+    // If closed_at is set, thread is closed
+    if (thread.closed_at) return true;
+    
+    // Also check if post has expired + 24 hours (client-side check for real-time feel)
+    if (thread.post?.expires_at) {
+      const expiresAt = new Date(thread.post.expires_at);
+      const closeTime = new Date(expiresAt.getTime() + 24 * 60 * 60 * 1000); // +24 hours
+      if (new Date() > closeTime) return true;
+    }
+    
+    return false;
+  };
 
   const getProfileData = async (userId: string): Promise<ProfileData> => {
     if (profileCache[userId]) {
@@ -99,6 +118,7 @@ export default function MessageThread({
           id,
           post_id,
           participant_ids,
+          closed_at,
           posts (
             id,
             title,
@@ -108,7 +128,8 @@ export default function MessageThread({
             time,
             notes,
             name,
-            preference
+            preference,
+            expires_at
           )
         `)
         .eq('id', threadId)
@@ -129,6 +150,7 @@ export default function MessageThread({
         id: threadData.id,
         post_id: threadData.post_id,
         participant_ids: threadData.participant_ids,
+        closed_at: threadData.closed_at,
         post: post,
       });
 
@@ -236,7 +258,7 @@ export default function MessageThread({
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || sending) return;
+    if (!newMessage.trim() || sending || isThreadClosed()) return;
 
     setSending(true);
 
@@ -336,7 +358,8 @@ export default function MessageThread({
             {getInitials(senderName)}
           </div>
         )}
-        {/* Hover tooltip - name only on first line, age on second line */}
+
+        {/* Hover tooltip */}
         {hoveredAvatarId === senderId && (
           <div style={{
             position: 'absolute',
@@ -400,7 +423,7 @@ export default function MessageThread({
     );
   };
 
-  // Expanded photo modal - name only on first line, age on second
+  // Expanded photo modal
   const ExpandedPhotoModal = () => {
     if (!expandedPhoto) return null;
 
@@ -510,10 +533,12 @@ export default function MessageThread({
   }
 
   const post = thread.post;
+  const threadClosed = isThreadClosed();
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <ExpandedPhotoModal />
+
       {/* Header */}
       <div style={{
         padding: '16px',
@@ -614,7 +639,7 @@ export default function MessageThread({
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '14px', color: '#888', textAlign: 'center', minHeight: '100px',
             }}>
-              Start the conversation when you're ready.
+              {threadClosed ? 'This conversation has ended.' : 'Start the conversation when you\'re ready.'}
             </div>
           ) : (
             <>
@@ -667,38 +692,53 @@ export default function MessageThread({
         </div>
       </div>
 
-      {/* Input */}
+      {/* Input area */}
       <div style={{
         padding: '16px',
         borderTop: '1px solid #f0f0f0',
         flexShrink: 0,
-        background: '#fff',
+        background: threadClosed ? '#fafafa' : '#fff',
       }}>
-        <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px', lineHeight: 1.4 }}>
-          Conversations close 24 hours after the activity ends. You can still read past messages.
-        </div>
-        <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px' }}>
-          <input
-            type="text"
-            placeholder="Type your message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            style={{
-              flex: 1, border: '1px solid #e0e0e0', borderRadius: '12px',
-              padding: '10px 16px', fontSize: '14px', outline: 'none',
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!newMessage.trim() || sending}
-            style={{
-              background: 'none', border: 'none', fontSize: '18px',
-              color: newMessage.trim() && !sending ? '#000' : '#888',
-              cursor: newMessage.trim() && !sending ? 'pointer' : 'not-allowed',
-              padding: '0 8px',
-            }}
-          >→</button>
-        </form>
+        {threadClosed ? (
+          // Closed thread state
+          <div style={{ 
+            fontSize: '13px', 
+            color: '#888', 
+            textAlign: 'center',
+            padding: '8px 0',
+          }}>
+            This conversation closed 24 hours after the activity ended.
+          </div>
+        ) : (
+          // Active thread state
+          <>
+            <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px', lineHeight: 1.4 }}>
+              Conversations close 24 hours after the activity ends. You can still read past messages.
+            </div>
+            <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px' }}>
+              <input
+                type="text"
+                placeholder="Type your message..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                style={{
+                  flex: 1, border: '1px solid #e0e0e0', borderRadius: '12px',
+                  padding: '10px 16px', fontSize: '14px', outline: 'none',
+                }}
+              />
+              <button
+                type="submit"
+                disabled={!newMessage.trim() || sending}
+                style={{
+                  background: 'none', border: 'none', fontSize: '18px',
+                  color: newMessage.trim() && !sending ? '#000' : '#888',
+                  cursor: newMessage.trim() && !sending ? 'pointer' : 'not-allowed',
+                  padding: '0 8px',
+                }}
+              >→</button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );

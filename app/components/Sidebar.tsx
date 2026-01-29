@@ -8,6 +8,7 @@ interface ThreadPost {
   id: string;
   title: string;
   location: string;
+  expires_at: string | null;
 }
 
 interface Thread {
@@ -15,6 +16,7 @@ interface Thread {
   post_id: string;
   participant_ids: string[];
   created_at: string;
+  closed_at: string | null;
   post: ThreadPost | null;
 }
 
@@ -24,7 +26,7 @@ interface SidebarProps {
   onSelectThread: (threadId: string) => void;
   onNavigateToMyActivity: () => void;
   onLogout: () => void;
-  activeItem?: 'messages' | 'my-activity' | 'settings' | null;
+  activeItem?: 'messages' | 'my-activity' | 'settings' | 'admin-reports' | 'admin-posts' | null;
 }
 
 export default function Sidebar({
@@ -38,6 +40,44 @@ export default function Sidebar({
   const router = useRouter();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
+
+  // Check if user is admin and fetch pending counts
+  useEffect(() => {
+    async function checkAdminStatus() {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .single();
+
+      if (!error && data?.is_admin) {
+        setIsAdmin(true);
+        
+        // Fetch pending reports count
+        const { count: reportsCount } = await supabase
+          .from('reports')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        
+        setPendingReportsCount(reportsCount || 0);
+
+        // Fetch pending posts count
+        const { count: postsCount } = await supabase
+          .from('posts')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        
+        setPendingPostsCount(postsCount || 0);
+      }
+    }
+
+    if (userId) {
+      checkAdminStatus();
+    }
+  }, [userId]);
 
   useEffect(() => {
     async function fetchThreads() {
@@ -48,10 +88,12 @@ export default function Sidebar({
           post_id,
           participant_ids,
           created_at,
+          closed_at,
           posts (
             id,
             title,
-            location
+            location,
+            expires_at
           )
         `)
         .contains('participant_ids', [userId])
@@ -71,6 +113,7 @@ export default function Sidebar({
             post_id: thread.post_id,
             participant_ids: thread.participant_ids,
             created_at: thread.created_at,
+            closed_at: thread.closed_at,
             post: post,
           };
         });
@@ -103,12 +146,13 @@ export default function Sidebar({
             participant_ids: string[]; 
             post_id: string;
             created_at: string;
+            closed_at: string | null;
           };
 
           if (newThread.participant_ids.includes(userId)) {
             const { data: postData } = await supabase
               .from('posts')
-              .select('id, title, location')
+              .select('id, title, location, expires_at')
               .eq('id', newThread.post_id)
               .single();
 
@@ -118,6 +162,7 @@ export default function Sidebar({
                 post_id: newThread.post_id,
                 participant_ids: newThread.participant_ids,
                 created_at: newThread.created_at,
+                closed_at: newThread.closed_at,
                 post: postData,
               };
 
@@ -140,6 +185,66 @@ export default function Sidebar({
     router.push('/my-activity');
     onNavigateToMyActivity();
   };
+
+  // Check if a thread is closed
+  const isThreadClosed = (thread: Thread): boolean => {
+    if (thread.closed_at) return true;
+    
+    // Client-side check: if post expired + 24 hours has passed
+    if (thread.post?.expires_at) {
+      const expiresAt = new Date(thread.post.expires_at);
+      const closeTime = new Date(expiresAt.getTime() + 24 * 60 * 60 * 1000);
+      if (new Date() > closeTime) return true;
+    }
+    
+    return false;
+  };
+
+  const NavItem = ({ 
+    onClick, 
+    isActive, 
+    children,
+    badge,
+  }: { 
+    onClick: () => void; 
+    isActive: boolean; 
+    children: React.ReactNode;
+    badge?: number;
+  }) => (
+    <div
+      onClick={onClick}
+      style={{
+        fontSize: '14px',
+        color: isActive ? '#000' : '#444',
+        fontWeight: isActive ? 500 : 400,
+        padding: '10px 12px',
+        borderRadius: '12px',
+        cursor: 'pointer',
+        background: isActive ? '#fff' : 'transparent',
+        boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+        transition: 'background 0.15s ease',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}
+    >
+      <span>{children}</span>
+      {badge !== undefined && badge > 0 && (
+        <span style={{
+          fontSize: '11px',
+          fontWeight: 600,
+          color: '#D4594F',
+          background: '#FBEEED',
+          padding: '2px 8px',
+          borderRadius: '10px',
+          minWidth: '20px',
+          textAlign: 'center',
+        }}>
+          {badge}
+        </span>
+      )}
+    </div>
+  );
 
   return (
     <div style={{
@@ -190,83 +295,110 @@ export default function Sidebar({
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {threads.map((thread) => (
-                <div
-                  key={thread.id}
-                  onClick={() => onSelectThread(thread.id)}
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    background: selectedThreadId === thread.id ? '#fff' : 'transparent',
-                    boxShadow: selectedThreadId === thread.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'background 0.15s ease',
-                  }}
-                >
-                  <div style={{
-                    fontSize: '14px',
-                    color: selectedThreadId === thread.id ? '#000' : '#444',
-                    fontWeight: selectedThreadId === thread.id ? 500 : 400,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    marginBottom: '2px',
-                  }}>
-                    {thread.post?.title || 'Unknown post'}
-                  </div>
-                  <div style={{
-                    fontSize: '12px',
-                    color: '#888',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}>
-                    {thread.post?.location || ''}
-                  </div>
-                </div>
-              ))}
+              {[...threads]
+                .sort((a, b) => {
+                  // Sort open threads above closed ones
+                  const aIsClosed = isThreadClosed(a);
+                  const bIsClosed = isThreadClosed(b);
+                  if (aIsClosed && !bIsClosed) return 1;
+                  if (!aIsClosed && bIsClosed) return -1;
+                  return 0;
+                })
+                .map((thread) => {
+                  const closed = isThreadClosed(thread);
+                  return (
+                    <div
+                      key={thread.id}
+                      onClick={() => onSelectThread(thread.id)}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        background: selectedThreadId === thread.id ? '#fff' : 'transparent',
+                        boxShadow: selectedThreadId === thread.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                        transition: 'background 0.15s ease',
+                        opacity: closed ? 0.5 : 1,
+                      }}
+                    >
+                      <div style={{
+                        fontSize: '14px',
+                        color: closed 
+                          ? '#888' 
+                          : selectedThreadId === thread.id ? '#000' : '#444',
+                        fontWeight: selectedThreadId === thread.id ? 500 : 400,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        marginBottom: '2px',
+                      }}>
+                        {thread.post?.title || 'Unknown post'}
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#888',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>
+                        {thread.post?.location || ''}
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>
 
         {/* My activity link */}
-        <div
-          onClick={handleMyActivityClick}
-          style={{
-            fontSize: '14px',
-            color: activeItem === 'my-activity' ? '#000' : '#444',
-            fontWeight: activeItem === 'my-activity' ? 500 : 400,
-            padding: '10px 12px',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            background: activeItem === 'my-activity' ? '#fff' : 'transparent',
-            boxShadow: activeItem === 'my-activity' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-            transition: 'background 0.15s ease',
-          }}
+        <NavItem 
+          onClick={handleMyActivityClick} 
+          isActive={activeItem === 'my-activity'}
         >
           My activity
-        </div>
+        </NavItem>
+
+        {/* Admin section - only show for admins */}
+        {isAdmin && (
+          <>
+            <div style={{
+              fontSize: '11px',
+              fontWeight: 500,
+              color: '#888',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              padding: '0 12px',
+              marginTop: '24px',
+              marginBottom: '12px',
+            }}>
+              Admin
+            </div>
+            <NavItem 
+              onClick={() => router.push('/admin/posts')} 
+              isActive={activeItem === 'admin-posts'}
+              badge={pendingPostsCount}
+            >
+              Post approval
+            </NavItem>
+            <NavItem 
+              onClick={() => router.push('/admin/reports')} 
+              isActive={activeItem === 'admin-reports'}
+              badge={pendingReportsCount}
+            >
+              Reports
+            </NavItem>
+          </>
+        )}
 
         {/* Spacer to push settings and logout to bottom */}
         <div style={{ flex: 1 }} />
 
-        {/* Settings link - now above logout */}
-        <div
-          onClick={() => router.push('/settings')}
-          style={{
-            fontSize: '14px',
-            color: activeItem === 'settings' ? '#000' : '#444',
-            fontWeight: activeItem === 'settings' ? 500 : 400,
-            padding: '10px 12px',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            background: activeItem === 'settings' ? '#fff' : 'transparent',
-            boxShadow: activeItem === 'settings' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-            transition: 'background 0.15s ease',
-          }}
+        {/* Settings link */}
+        <NavItem 
+          onClick={() => router.push('/settings')} 
+          isActive={activeItem === 'settings'}
         >
           Settings
-        </div>
+        </NavItem>
       </div>
 
       {/* Logout at bottom */}

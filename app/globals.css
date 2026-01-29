@@ -238,10 +238,18 @@ body {
   color: var(--text-tertiary);
 }
 
-.card-notes {
+.card-time {
   font-size: 14px;
   color: var(--text-secondary);
-  margin: 8px 0;
+  margin-bottom: 8px;
+}
+
+.card-notes {
+  font-size: 15px;
+  font-style: italic;
+  color: #666;
+  margin: 12px 0;
+  line-height: 1.5;
 }
 
 .card-actions {

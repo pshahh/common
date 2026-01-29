@@ -337,6 +337,7 @@ function HomeContent() {
         .from('posts')
         .select('*')
         .eq('status', 'approved')
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .order('created_at', { ascending: false });
 
       if (postsError) {

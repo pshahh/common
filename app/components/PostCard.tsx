@@ -141,6 +141,8 @@ export default function PostCard({
         <div className="card-header">
           <div className="card-content">
             <h3 className="card-title">{title}</h3>
+            
+            {/* Location line */}
             <div className="card-meta">
               <a
                 href={getMapUrl()}
@@ -157,14 +159,21 @@ export default function PostCard({
                   <span style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>{distance}</span>
                 </>
               )}
-              <span className="meta-separator">·</span>
-              <span>{time}</span>
             </div>
-            {notes && <p className="card-notes">{notes}</p>}
+            
+            {/* Time on separate line */}
+            <div className="card-time">{time}</div>
+            
+            {/* Notes - styled as personal message */}
+            {notes && (
+              <p className="card-notes">"{notes}"</p>
+            )}
+            
             {preference && preference !== 'Anyone' && preference !== 'anyone' && (
               <span className="preference-badge">{preference}</span>
             )}
           </div>
+
           <div className="card-actions">
             <button 
               className="share-button" 
@@ -196,6 +205,7 @@ export default function PostCard({
             </div>
           </div>
         </div>
+
         <div className="card-footer">
           <div className="footer-left">
             {!hideInterestButton && (
