@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -27,6 +27,7 @@ interface SidebarProps {
   onNavigateToMyActivity: () => void;
   onLogout: () => void;
   activeItem?: 'messages' | 'my-activity' | 'settings' | 'admin-reports' | 'admin-posts' | null;
+  refreshTrigger?: number; // Increment this to trigger a refresh
 }
 
 export default function Sidebar({
@@ -36,6 +37,7 @@ export default function Sidebar({
   onNavigateToMyActivity,
   onLogout,
   activeItem = null,
+  refreshTrigger = 0,
 }: SidebarProps) {
   const router = useRouter();
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -55,13 +57,13 @@ export default function Sidebar({
 
       if (!error && data?.is_admin) {
         setIsAdmin(true);
-        
+
         // Fetch pending reports count
         const { count: reportsCount } = await supabase
           .from('reports')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'pending');
-        
+
         setPendingReportsCount(reportsCount || 0);
 
         // Fetch pending posts count
@@ -69,7 +71,7 @@ export default function Sidebar({
           .from('posts')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'pending');
-        
+
         setPendingPostsCount(postsCount || 0);
       }
     }
@@ -79,53 +81,55 @@ export default function Sidebar({
     }
   }, [userId]);
 
-  useEffect(() => {
-    async function fetchThreads() {
-      const { data, error } = await supabase
-        .from('threads')
-        .select(`
+  const fetchThreads = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('threads')
+      .select(`
+        id,
+        post_id,
+        participant_ids,
+        created_at,
+        closed_at,
+        posts (
           id,
-          post_id,
-          participant_ids,
-          created_at,
-          closed_at,
-          posts (
-            id,
-            title,
-            location,
-            expires_at
-          )
-        `)
-        .contains('participant_ids', [userId])
-        .order('created_at', { ascending: false });
+          title,
+          location,
+          expires_at
+        )
+      `)
+      .contains('participant_ids', [userId])
+      .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching threads:', error);
-      } else if (data) {
-        const transformedThreads: Thread[] = data.map((thread) => {
-          const postData = thread.posts;
-          const post: ThreadPost | null = Array.isArray(postData) 
-            ? postData[0] || null 
-            : postData;
+    if (error) {
+      console.error('Error fetching threads:', error);
+    } else if (data) {
+      const transformedThreads: Thread[] = data.map((thread) => {
+        const postData = thread.posts;
+        const post: ThreadPost | null = Array.isArray(postData) 
+          ? postData[0] || null 
+          : postData;
 
-          return {
-            id: thread.id,
-            post_id: thread.post_id,
-            participant_ids: thread.participant_ids,
-            created_at: thread.created_at,
-            closed_at: thread.closed_at,
-            post: post,
-          };
-        });
-        setThreads(transformedThreads);
-      }
-      setLoading(false);
+        return {
+          id: thread.id,
+          post_id: thread.post_id,
+          participant_ids: thread.participant_ids,
+          created_at: thread.created_at,
+          closed_at: thread.closed_at,
+          post: post,
+        };
+      });
+
+      setThreads(transformedThreads);
     }
 
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => {
     if (userId) {
       fetchThreads();
     }
-  }, [userId]);
+  }, [userId, fetchThreads, refreshTrigger]);
 
   // Subscribe to new threads for this user
   useEffect(() => {
@@ -189,14 +193,12 @@ export default function Sidebar({
   // Check if a thread is closed
   const isThreadClosed = (thread: Thread): boolean => {
     if (thread.closed_at) return true;
-    
     // Client-side check: if post expired + 24 hours has passed
     if (thread.post?.expires_at) {
       const expiresAt = new Date(thread.post.expires_at);
       const closeTime = new Date(expiresAt.getTime() + 24 * 60 * 60 * 1000);
       if (new Date() > closeTime) return true;
     }
-    
     return false;
   };
 
@@ -247,30 +249,13 @@ export default function Sidebar({
   );
 
   return (
-    <div style={{
+    <div className="sidebar-container" style={{
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
     }}>
-      {/* Toggle area */}
-      <div style={{ padding: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '16px',
-            color: '#888',
-            cursor: 'pointer',
-            padding: '4px 8px',
-            borderRadius: '6px',
-          }}
-        >
-          «
-        </button>
-      </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 12px', overflowY: 'auto' }}>
+      {/* Content - removed the toggle button area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 12px 0', overflowY: 'auto' }}>
         {/* Messages section */}
         <div style={{ marginBottom: '24px' }}>
           <div style={{

@@ -15,6 +15,8 @@ import ReportModal from './components/ReportModal';
 import ReportConfirmationModal from './components/ReportConfirmationModal';
 import Sidebar from './components/Sidebar';
 import MessageThread from './components/MessageThread';
+import BottomNav from './components/BottomNav';
+import MobileMessageList from './components/MobileMessageList';
 import { sortByDistance, formatDistance, getDistanceToPost } from '@/lib/distance';
 
 interface Post {
@@ -304,6 +306,34 @@ function HomeContent() {
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [searchingLocation, setSearchingLocation] = useState(false);
 
+  // Mobile state
+  const [mobileTab, setMobileTab] = useState<'home' | 'messages' | 'activity' | 'menu'>('home');
+  const [showMobileMessages, setShowMobileMessages] = useState(false);
+  const [showMobileThread, setShowMobileThread] = useState(false);
+
+  // Sidebar refresh trigger (increment to refresh)
+  const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+
+  // Admin state for mobile nav
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
+
+  // Thread count for mobile nav badge
+  const [threadCount, setThreadCount] = useState(0);
+
+  // Check for mobile viewport
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Read thread ID from URL query params
   const searchParams = useSearchParams();
 
@@ -312,8 +342,11 @@ function HomeContent() {
     const threadId = searchParams.get('thread');
     if (threadId && user) {
       setSelectedThreadId(threadId);
+      if (isMobile) {
+        setShowMobileThread(true);
+      }
     }
-  }, [searchParams, user]);
+  }, [searchParams, user, isMobile]);
 
   // Check auth state
   useEffect(() => {
@@ -330,9 +363,70 @@ function HomeContent() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Check admin status and fetch counts
+  useEffect(() => {
+    async function checkAdminAndCounts() {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+
+      if (!error && data?.is_admin) {
+        setIsAdmin(true);
+
+        const { count: reportsCount } = await supabase
+          .from('reports')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        setPendingReportsCount(reportsCount || 0);
+
+        const { count: postsCount } = await supabase
+          .from('posts')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        setPendingPostsCount(postsCount || 0);
+      }
+
+      // Fetch thread count for badge
+      const { count: threads } = await supabase
+        .from('threads')
+        .select('*', { count: 'exact', head: true })
+        .contains('participant_ids', [user.id]);
+      setThreadCount(threads || 0);
+    }
+
+    checkAdminAndCounts();
+  }, [user]);
+
   // Fetch posts and profiles
   useEffect(() => {
     async function fetchPostsAndProfiles() {
+      // Fetch blocked users first if logged in
+      let blockedUserIds: string[] = [];
+      if (user) {
+        const { data: blockedData } = await supabase
+          .from('blocked_users')
+          .select('blocked_user_id')
+          .eq('user_id', user.id);
+        
+        if (blockedData) {
+          blockedUserIds = blockedData.map(b => b.blocked_user_id);
+        }
+
+        // Also get users who blocked the current user
+        const { data: blockedByData } = await supabase
+          .from('blocked_users')
+          .select('user_id')
+          .eq('blocked_user_id', user.id);
+        
+        if (blockedByData) {
+          blockedUserIds = [...blockedUserIds, ...blockedByData.map(b => b.user_id)];
+        }
+      }
+
       const { data: postsData, error: postsError } = await supabase
         .from('posts')
         .select('*')
@@ -346,11 +440,13 @@ function HomeContent() {
         return;
       }
 
-      setPosts(postsData || []);
+      // Filter out posts from blocked users
+      const filteredPosts = postsData?.filter(post => !blockedUserIds.includes(post.user_id)) || [];
+      setPosts(filteredPosts);
 
       // Fetch profiles for all post authors
-      if (postsData && postsData.length > 0) {
-        const userIds = [...new Set(postsData.map(p => p.user_id))];
+      if (filteredPosts.length > 0) {
+        const userIds = [...new Set(filteredPosts.map(p => p.user_id))];
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('id, first_name, avatar_url, date_of_birth')
@@ -369,7 +465,7 @@ function HomeContent() {
     }
 
     fetchPostsAndProfiles();
-  }, []);
+  }, [user]);
 
   // Fetch posts the user has already expressed interest in (via threads)
   useEffect(() => {
@@ -501,7 +597,6 @@ function HomeContent() {
   // Filter out posts the user has already expressed interest in (and their own posts)
   const filteredPosts = useMemo(() => {
     if (!user) return posts;
-
     return posts.filter(post => {
       // Don't show user's own posts
       if (post.user_id === user.id) return false;
@@ -544,6 +639,8 @@ function HomeContent() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setSelectedThreadId(null);
+    setShowMobileThread(false);
+    setShowMobileMessages(false);
   };
 
   const handleShareClick = () => {
@@ -593,13 +690,17 @@ function HomeContent() {
     if (selectedPost) {
       setUserInterestedPostIds(prev => new Set([...prev, selectedPost.id]));
     }
-
     setSelectedPost(null);
     refreshPosts();
 
     // Check if profile is incomplete
     if (currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
       setPendingAction('interest');
+    }
+
+    // On mobile, show the thread
+    if (isMobile) {
+      setShowMobileThread(true);
     }
   };
 
@@ -613,6 +714,28 @@ function HomeContent() {
   };
 
   const refreshPosts = async () => {
+    // Fetch blocked users
+    let blockedUserIds: string[] = [];
+    if (user) {
+      const { data: blockedData } = await supabase
+        .from('blocked_users')
+        .select('blocked_user_id')
+        .eq('user_id', user.id);
+      
+      if (blockedData) {
+        blockedUserIds = blockedData.map(b => b.blocked_user_id);
+      }
+
+      const { data: blockedByData } = await supabase
+        .from('blocked_users')
+        .select('user_id')
+        .eq('blocked_user_id', user.id);
+      
+      if (blockedByData) {
+        blockedUserIds = [...blockedUserIds, ...blockedByData.map(b => b.user_id)];
+      }
+    }
+
     const { data: postsData, error } = await supabase
       .from('posts')
       .select('*')
@@ -620,10 +743,11 @@ function HomeContent() {
       .order('created_at', { ascending: false });
 
     if (!error && postsData) {
-      setPosts(postsData);
+      const filteredPosts = postsData.filter(post => !blockedUserIds.includes(post.user_id));
+      setPosts(filteredPosts);
 
       // Refresh profiles for any new authors
-      const userIds = [...new Set(postsData.map(p => p.user_id))];
+      const userIds = [...new Set(filteredPosts.map(p => p.user_id))];
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, first_name, avatar_url, date_of_birth')
@@ -657,6 +781,7 @@ function HomeContent() {
         .select('id, first_name, avatar_url, date_of_birth')
         .eq('id', user.id)
         .single();
+
       if (data) {
         setCurrentUserProfile(data);
       }
@@ -669,14 +794,38 @@ function HomeContent() {
 
   const handleSelectThread = (threadId: string) => {
     setSelectedThreadId(threadId);
+    if (isMobile) {
+      setShowMobileMessages(false);
+      setShowMobileThread(true);
+    }
   };
 
   const handleCloseThread = () => {
     setSelectedThreadId(null);
+    if (isMobile) {
+      setShowMobileThread(false);
+    }
+  };
+
+  const handleLeaveThread = () => {
+    // Refresh sidebar to remove the thread
+    setSidebarRefreshTrigger(prev => prev + 1);
+    // Also refresh posts in case blocking affected what's visible
+    refreshPosts();
   };
 
   const handleNavigateToMyActivity = () => {
     console.log('Navigate to My Activity');
+  };
+
+  // Mobile tab handler
+  const handleMobileTabChange = (tab: 'home' | 'messages' | 'activity' | 'menu') => {
+    setMobileTab(tab);
+    if (tab === 'messages') {
+      setShowMobileMessages(true);
+    } else {
+      setShowMobileMessages(false);
+    }
   };
 
   // Logged out view (no sidebar)
@@ -780,10 +929,10 @@ function HomeContent() {
     );
   }
 
-  // Logged in view (with fixed sidebars)
+  // Logged in view (with fixed sidebars on desktop, bottom nav on mobile)
   return (
-    <div style={{ 
-      height: '100vh', 
+    <div style={{
+      height: '100dvh',
       display: 'flex', 
       flexDirection: 'column',
       overflow: 'hidden',
@@ -801,44 +950,49 @@ function HomeContent() {
         flexDirection: 'row',
         overflow: 'hidden',
       }}>
-        {/* Left Sidebar - Fixed */}
-        <div style={{
-          width: '224px',
-          flexShrink: 0,
-          borderRight: '1px solid #f0f0f0',
-          background: 'rgba(250, 250, 250, 0.5)',
-          overflow: 'hidden',
-        }}>
+        {/* Left Sidebar - Desktop only */}
+        <div 
+          className="desktop-sidebar"
+          style={{
+            width: '224px',
+            flexShrink: 0,
+            borderRight: '1px solid #f0f0f0',
+            background: 'rgba(250, 250, 250, 0.5)',
+            overflow: 'hidden',
+          }}
+        >
           <Sidebar
             userId={user.id}
             selectedThreadId={selectedThreadId}
             onSelectThread={handleSelectThread}
             onNavigateToMyActivity={handleNavigateToMyActivity}
             onLogout={handleLogout}
+            refreshTrigger={sidebarRefreshTrigger}
           />
         </div>
 
         {/* Feed - Scrollable, clickable to close thread */}
         <div 
           onClick={() => {
-            if (selectedThreadId) {
+            if (selectedThreadId && !isMobile) {
               handleCloseThread();
             }
           }}
           style={{ 
             flex: 1, 
             overflowY: 'auto',
-            opacity: selectedThreadId ? 0.4 : 1,
-            pointerEvents: selectedThreadId ? 'auto' : 'auto',
+            opacity: selectedThreadId && !isMobile ? 0.4 : 1,
+            pointerEvents: selectedThreadId && !isMobile ? 'auto' : 'auto',
             transition: 'opacity 0.2s ease',
-            cursor: selectedThreadId ? 'pointer' : 'default',
+            cursor: selectedThreadId && !isMobile ? 'pointer' : 'default',
+            paddingBottom: isMobile ? 'calc(64px + env(safe-area-inset-bottom))' : '0',
           }}
         >
           <div 
-            style={{ maxWidth: '600px', width: '100%', margin: '0 auto', padding: '24px' }}
+            style={{ maxWidth: '600px', width: '100%', margin: '0 auto', padding: isMobile ? '16px' : '24px' }}
             onClick={(e) => {
               // Stop propagation when thread is not open so feed interactions work
-              if (!selectedThreadId) {
+              if (!selectedThreadId || isMobile) {
                 e.stopPropagation();
               }
             }}
@@ -846,7 +1000,7 @@ function HomeContent() {
             <div 
               className="feed-header"
               onClick={(e) => e.stopPropagation()}
-              style={{ pointerEvents: selectedThreadId ? 'none' : 'auto' }}
+              style={{ pointerEvents: selectedThreadId && !isMobile ? 'none' : 'auto' }}
             >
               <button className="btn btn-primary" onClick={handleShareClick}>
                 Share what I'm doing
@@ -862,7 +1016,7 @@ function HomeContent() {
               </select>
             </div>
 
-            <div onClick={(e) => e.stopPropagation()} style={{ pointerEvents: selectedThreadId ? 'none' : 'auto' }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ pointerEvents: selectedThreadId && !isMobile ? 'none' : 'auto' }}>
               <LocationSection
                 sortBy={sortBy}
                 locationStatus={locationStatus}
@@ -888,7 +1042,7 @@ function HomeContent() {
                 </button>
               </div>
             ) : (
-              <div className="feed" style={{ pointerEvents: selectedThreadId ? 'none' : 'auto' }}>
+              <div className="feed" style={{ pointerEvents: selectedThreadId && !isMobile ? 'none' : 'auto' }}>
                 {sortedPosts.map((post) => {
                   const authorProfile = profiles[post.user_id];
                   return (
@@ -918,25 +1072,72 @@ function HomeContent() {
           </div>
         </div>
 
-        {/* Message Thread - Fixed */}
-        {selectedThreadId && (
-          <div style={{
-            width: '384px',
-            flexShrink: 0,
-            borderLeft: '1px solid #f0f0f0',
-            background: '#fff',
-            overflow: 'hidden',
-          }}>
+        {/* Message Thread - Desktop only */}
+        {selectedThreadId && !isMobile && (
+          <div 
+            className="desktop-message-thread"
+            style={{
+              width: '384px',
+              flexShrink: 0,
+              borderLeft: '1px solid #f0f0f0',
+              background: '#fff',
+              overflow: 'hidden',
+            }}
+          >
             <MessageThread
               key={selectedThreadId}
               threadId={selectedThreadId}
               currentUserId={user.id}
               onClose={handleCloseThread}
               onReport={handleReportClick}
+              onLeaveThread={handleLeaveThread}
             />
           </div>
         )}
       </div>
+
+      {/* Mobile Bottom Nav */}
+      {isMobile && (
+        <BottomNav
+          activeTab={mobileTab}
+          onTabChange={handleMobileTabChange}
+          messageCount={threadCount}
+          onLogout={handleLogout}
+          isAdmin={isAdmin}
+          pendingPostsCount={pendingPostsCount}
+          pendingReportsCount={pendingReportsCount}
+        />
+      )}
+
+      {/* Mobile Message List */}
+      {isMobile && showMobileMessages && (
+        <MobileMessageList
+          userId={user.id}
+          onSelectThread={handleSelectThread}
+          onClose={() => {
+            setShowMobileMessages(false);
+            setMobileTab('home');
+          }}
+          refreshTrigger={sidebarRefreshTrigger}
+        />
+      )}
+
+      {/* Mobile Message Thread */}
+      {isMobile && showMobileThread && selectedThreadId && (
+        <div className="mobile-message-overlay open">
+          <MessageThread
+            key={selectedThreadId}
+            threadId={selectedThreadId}
+            currentUserId={user.id}
+            onClose={() => {
+              setShowMobileThread(false);
+              setSelectedThreadId(null);
+            }}
+            onReport={handleReportClick}
+            onLeaveThread={handleLeaveThread}
+          />
+        </div>
+      )}
 
       {/* Modals */}
       <AuthModal

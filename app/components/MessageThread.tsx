@@ -26,6 +26,7 @@ interface Post {
   name: string;
   preference: string | null;
   expires_at: string | null;
+  user_id: string;
 }
 
 interface Thread {
@@ -47,6 +48,7 @@ interface MessageThreadProps {
   currentUserId: string;
   onClose: () => void;
   onReport?: (postId: string, threadId: string) => void;
+  onLeaveThread?: () => void;
 }
 
 export default function MessageThread({
@@ -54,6 +56,7 @@ export default function MessageThread({
   currentUserId,
   onClose,
   onReport,
+  onLeaveThread,
 }: MessageThreadProps) {
   const [thread, setThread] = useState<Thread | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -66,41 +69,45 @@ export default function MessageThread({
   const [expandedPhoto, setExpandedPhoto] = useState<{ url: string; name: string; age: number | null } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [profileCache, setProfileCache] = useState<Record<string, ProfileData>>({});
+  
+  // Modal states for Leave/Block
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Check if thread is closed
   const isThreadClosed = (): boolean => {
     if (!thread) return false;
-    
-    // If closed_at is set, thread is closed
     if (thread.closed_at) return true;
-    
-    // Also check if post has expired + 24 hours (client-side check for real-time feel)
     if (thread.post?.expires_at) {
       const expiresAt = new Date(thread.post.expires_at);
-      const closeTime = new Date(expiresAt.getTime() + 24 * 60 * 60 * 1000); // +24 hours
+      const closeTime = new Date(expiresAt.getTime() + 24 * 60 * 60 * 1000);
       if (new Date() > closeTime) return true;
     }
-    
     return false;
+  };
+
+  // Get the other participant(s) for blocking
+  const getOtherParticipantId = (): string | null => {
+    if (!thread) return null;
+    const others = thread.participant_ids.filter(id => id !== currentUserId);
+    return others[0] || null;
   };
 
   const getProfileData = async (userId: string): Promise<ProfileData> => {
     if (profileCache[userId]) {
       return profileCache[userId];
     }
-
     const { data } = await supabase
       .from('profiles')
       .select('first_name, avatar_url, date_of_birth')
       .eq('id', userId)
       .single();
-
     const profile: ProfileData = {
       first_name: data?.first_name || 'Unknown',
       avatar_url: data?.avatar_url || null,
       date_of_birth: data?.date_of_birth || null,
     };
-
     setProfileCache(prev => ({ ...prev, [userId]: profile }));
     return profile;
   };
@@ -129,7 +136,8 @@ export default function MessageThread({
             notes,
             name,
             preference,
-            expires_at
+            expires_at,
+            user_id
           )
         `)
         .eq('id', threadId)
@@ -229,7 +237,6 @@ export default function MessageThread({
           }
 
           const profile = await getProfileData(newMsg.sender_id);
-
           const transformedMessage: Message = {
             ...newMsg,
             sender_name: profile.first_name,
@@ -293,6 +300,58 @@ export default function MessageThread({
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Leave conversation handler
+  const handleLeaveConversation = async () => {
+    setActionLoading(true);
+    try {
+      const { error } = await supabase.rpc('leave_thread', {
+        thread_id_param: threadId
+      });
+
+      if (error) {
+        console.error('Error leaving thread:', error);
+        alert('Failed to leave conversation. Please try again.');
+      } else {
+        setShowLeaveModal(false);
+        onLeaveThread?.();
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error leaving thread:', err);
+      alert('Failed to leave conversation. Please try again.');
+    }
+    setActionLoading(false);
+  };
+
+  // Block user handler
+  const handleBlockUser = async () => {
+    const otherUserId = getOtherParticipantId();
+    if (!otherUserId) {
+      alert('Could not identify user to block.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const { error } = await supabase.rpc('block_user', {
+        blocked_id: otherUserId
+      });
+
+      if (error) {
+        console.error('Error blocking user:', error);
+        alert('Failed to block user. Please try again.');
+      } else {
+        setShowBlockModal(false);
+        onLeaveThread?.();
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error blocking user:', err);
+      alert('Failed to block user. Please try again.');
+    }
+    setActionLoading(false);
   };
 
   // Avatar component with hover tooltip
@@ -490,6 +549,176 @@ export default function MessageThread({
     );
   };
 
+  // Leave Conversation Modal
+  const LeaveConversationModal = () => {
+    if (!showLeaveModal) return null;
+
+    return (
+      <div 
+        onClick={() => !actionLoading && setShowLeaveModal(false)}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+        }}
+      >
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '380px',
+            width: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
+          }}
+        >
+          <h3 style={{ 
+            fontSize: '16px', 
+            fontWeight: 600, 
+            color: '#000',
+            marginBottom: '12px',
+          }}>
+            Leave this conversation?
+          </h3>
+          <p style={{ 
+            fontSize: '14px', 
+            color: '#666',
+            lineHeight: 1.5,
+            marginBottom: '24px',
+          }}>
+            You'll no longer receive messages from this thread. Others will see that you've left.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setShowLeaveModal(false)}
+              disabled={actionLoading}
+              style={{
+                padding: '10px 20px',
+                background: 'transparent',
+                border: '1px solid #e0e0e0',
+                borderRadius: '24px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: actionLoading ? 'not-allowed' : 'pointer',
+                color: '#444',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleLeaveConversation}
+              disabled={actionLoading}
+              style={{
+                padding: '10px 20px',
+                background: '#000',
+                border: 'none',
+                borderRadius: '24px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: actionLoading ? 'not-allowed' : 'pointer',
+                color: '#fff',
+                opacity: actionLoading ? 0.6 : 1,
+              }}
+            >
+              {actionLoading ? 'Leaving...' : 'Leave'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Block User Modal
+  const BlockUserModal = () => {
+    if (!showBlockModal) return null;
+
+    return (
+      <div 
+        onClick={() => !actionLoading && setShowBlockModal(false)}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+        }}
+      >
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '380px',
+            width: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
+          }}
+        >
+          <h3 style={{ 
+            fontSize: '16px', 
+            fontWeight: 600, 
+            color: '#000',
+            marginBottom: '12px',
+          }}>
+            Block this person?
+          </h3>
+          <p style={{ 
+            fontSize: '14px', 
+            color: '#666',
+            lineHeight: 1.5,
+            marginBottom: '24px',
+          }}>
+            You won't see their posts and will be removed from any shared conversations. They won't be notified that you've blocked them.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setShowBlockModal(false)}
+              disabled={actionLoading}
+              style={{
+                padding: '10px 20px',
+                background: 'transparent',
+                border: '1px solid #e0e0e0',
+                borderRadius: '24px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: actionLoading ? 'not-allowed' : 'pointer',
+                color: '#444',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleBlockUser}
+              disabled={actionLoading}
+              style={{
+                padding: '10px 20px',
+                background: '#000',
+                border: 'none',
+                borderRadius: '24px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: actionLoading ? 'not-allowed' : 'pointer',
+                color: '#fff',
+                opacity: actionLoading ? 0.6 : 1,
+              }}
+            >
+              {actionLoading ? 'Blocking...' : 'Block'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -538,6 +767,8 @@ export default function MessageThread({
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <ExpandedPhotoModal />
+      <LeaveConversationModal />
+      <BlockUserModal />
 
       {/* Header */}
       <div style={{
@@ -566,9 +797,24 @@ export default function MessageThread({
                 boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '176px',
                 zIndex: 20, overflow: 'hidden',
               }}>
-                <div onClick={() => { setShowMenu(false); if (post) onReport?.(post.id, threadId); }} style={{ padding: '12px 16px', fontSize: '14px', color: '#444', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}>Report post</div>
-                <div onClick={() => setShowMenu(false)} style={{ padding: '12px 16px', fontSize: '14px', color: '#444', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}>Leave conversation</div>
-                <div onClick={() => setShowMenu(false)} style={{ padding: '12px 16px', fontSize: '14px', color: '#dc2626', cursor: 'pointer' }}>Block this person</div>
+                <div 
+                  onClick={() => { setShowMenu(false); if (post) onReport?.(post.id, threadId); }} 
+                  style={{ padding: '12px 16px', fontSize: '14px', color: '#444', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}
+                >
+                  Report post
+                </div>
+                <div 
+                  onClick={() => { setShowMenu(false); setShowLeaveModal(true); }} 
+                  style={{ padding: '12px 16px', fontSize: '14px', color: '#444', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}
+                >
+                  Leave conversation
+                </div>
+                <div 
+                  onClick={() => { setShowMenu(false); setShowBlockModal(true); }} 
+                  style={{ padding: '12px 16px', fontSize: '14px', color: '#dc2626', cursor: 'pointer' }}
+                >
+                  Block this person
+                </div>
               </div>
             )}
           </div>
@@ -700,7 +946,6 @@ export default function MessageThread({
         background: threadClosed ? '#fafafa' : '#fff',
       }}>
         {threadClosed ? (
-          // Closed thread state
           <div style={{ 
             fontSize: '13px', 
             color: '#888', 
@@ -710,7 +955,6 @@ export default function MessageThread({
             This conversation closed 24 hours after the activity ended.
           </div>
         ) : (
-          // Active thread state
           <>
             <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px', lineHeight: 1.4 }}>
               Conversations close 24 hours after the activity ends. You can still read past messages.
