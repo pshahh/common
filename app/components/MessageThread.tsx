@@ -311,7 +311,10 @@ export default function MessageThread({
       });
 
       if (error) {
-        console.error('Error leaving thread:', error);
+        console.error('Error leaving thread:', JSON.stringify(error, null, 2));
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Error details:', error.details);
         alert('Failed to leave conversation. Please try again.');
       } else {
         setShowLeaveModal(false);

@@ -6,9 +6,12 @@ import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import BottomNav from '../components/BottomNav';
 import AuthModal from '../components/AuthModal';
 import EditPostModal from '../components/EditPostModal';
 import CreatePostModal from '../components/CreatePostModal';
+import MobileMessageList from '../components/MobileMessageList';
+import MessageThread from '../components/MessageThread';
 
 interface Post {
   id: string;
@@ -41,6 +44,24 @@ export default function MyActivityPage() {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [mobileTab, setMobileTab] = useState<'home' | 'messages' | 'activity' | 'menu'>('activity');
+  
+  // Mobile message states
+  const [showMobileMessages, setShowMobileMessages] = useState(false);
+  const [mobileSelectedThreadId, setMobileSelectedThreadId] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Check screen size
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Check auth state
   useEffect(() => {
@@ -62,6 +83,34 @@ export default function MyActivityPage() {
 
     return () => subscription.unsubscribe();
   }, [router]);
+
+  // Check if user is admin and fetch counts
+  useEffect(() => {
+    async function checkAdmin() {
+      if (!user) return;
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.is_admin) {
+        setIsAdmin(true);
+        
+        // Fetch pending counts
+        const [postsRes, reportsRes] = await Promise.all([
+          supabase.from('posts').select('id', { count: 'exact' }).eq('status', 'pending'),
+          supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
+        ]);
+        
+        setPendingPostsCount(postsRes.count || 0);
+        setPendingReportsCount(reportsRes.count || 0);
+      }
+    }
+    
+    checkAdmin();
+  }, [user]);
 
   // Fetch user's posts
   useEffect(() => {
@@ -164,7 +213,6 @@ export default function MyActivityPage() {
 
   const refreshPosts = async () => {
     if (!user) return;
-
     const { data, error } = await supabase
       .from('posts')
       .select('*')
@@ -182,6 +230,40 @@ export default function MyActivityPage() {
       return `https://www.google.com/maps/search/?api=1&query=${post.latitude},${post.longitude}`;
     }
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(post.location)}`;
+  };
+
+  // Handle mobile tab change
+  const handleMobileTabChange = (tab: 'home' | 'messages' | 'activity' | 'menu') => {
+    setMobileTab(tab);
+    if (tab === 'home') {
+      router.push('/');
+    } else if (tab === 'messages') {
+      // Open messages overlay instead of navigating away
+      setShowMobileMessages(true);
+      setMobileSelectedThreadId(null);
+    } else if (tab === 'activity') {
+      // Already on activity page
+      setShowMobileMessages(false);
+      setMobileSelectedThreadId(null);
+    }
+    // 'menu' is handled by BottomNav
+  };
+
+  // Handle selecting a thread from the message list
+  const handleSelectThread = (threadId: string) => {
+    setMobileSelectedThreadId(threadId);
+  };
+
+  // Handle closing the message thread
+  const handleCloseThread = () => {
+    setMobileSelectedThreadId(null);
+  };
+
+  // Handle closing the message list
+  const handleCloseMessageList = () => {
+    setShowMobileMessages(false);
+    setMobileSelectedThreadId(null);
+    setMobileTab('activity');
   };
 
   // Close overflow menu when clicking outside
@@ -216,27 +298,38 @@ export default function MyActivityPage() {
         flexDirection: 'row',
         overflow: 'hidden',
       }}>
-        {/* Sidebar */}
-        <div style={{
-          width: '224px',
-          flexShrink: 0,
-          borderRight: '1px solid #f0f0f0',
-          background: 'rgba(250, 250, 250, 0.5)',
-          overflow: 'hidden',
-        }}>
-          <Sidebar
-            userId={user.id}
-            selectedThreadId={null}
-            onSelectThread={(threadId) => router.push(`/?thread=${threadId}`)}
-            onNavigateToMyActivity={() => {}}
-            onLogout={handleLogout}
-            activeItem="my-activity"
-          />
-        </div>
+        {/* Sidebar - Hidden on mobile */}
+        {!isMobile && (
+          <div style={{
+            width: '224px',
+            flexShrink: 0,
+            borderRight: '1px solid #f0f0f0',
+            background: 'rgba(250, 250, 250, 0.5)',
+            overflow: 'hidden',
+          }}>
+            <Sidebar
+              userId={user.id}
+              selectedThreadId={null}
+              onSelectThread={(threadId) => router.push(`/?thread=${threadId}`)}
+              onNavigateToMyActivity={() => {}}
+              onLogout={handleLogout}
+              activeItem="my-activity"
+            />
+          </div>
+        )}
 
         {/* Main content */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div style={{ maxWidth: '600px', width: '100%', margin: '0 auto', padding: '24px' }}>
+        <div style={{ 
+          flex: 1, 
+          overflowY: 'auto',
+          paddingBottom: isMobile ? '80px' : '0',
+        }}>
+          <div style={{ 
+            maxWidth: '600px', 
+            width: '100%', 
+            margin: '0 auto', 
+            padding: isMobile ? '16px' : '24px',
+          }}>
             <h1 style={{ 
               fontSize: '20px', 
               fontWeight: 600, 
@@ -295,7 +388,7 @@ export default function MyActivityPage() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
                           <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#000', margin: 0 }}>
                             {post.title}
                           </h3>
@@ -311,6 +404,7 @@ export default function MyActivityPage() {
                             </span>
                           )}
                         </div>
+
                         <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0' }}>
                           <a
                             href={getMapUrl(post)}
@@ -325,6 +419,7 @@ export default function MyActivityPage() {
                         <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0' }}>
                           {post.time}
                         </p>
+
                         {post.notes && (
                           <p style={{ 
                             fontSize: '15px', 
@@ -335,6 +430,7 @@ export default function MyActivityPage() {
                             "{post.notes}"
                           </p>
                         )}
+
                         {post.preference && post.preference !== 'anyone' && (
                           <span style={{
                             display: 'inline-block',
@@ -349,6 +445,7 @@ export default function MyActivityPage() {
                             {post.preference}
                           </span>
                         )}
+
                         {post.people_interested > 0 && (
                           <p style={{ fontSize: '13px', color: '#666', marginTop: '12px' }}>
                             {post.people_interested} interested
@@ -413,7 +510,6 @@ export default function MyActivityPage() {
                                 minWidth: '140px',
                               }}
                             >
-                              {/* Only show Edit for pending posts */}
                               {post.status === 'pending' && (
                                 <button
                                   onClick={() => openEditModal(post)}
@@ -428,14 +524,10 @@ export default function MyActivityPage() {
                                     textAlign: 'left',
                                     cursor: 'pointer',
                                   }}
-                                  onMouseEnter={(e) => e.currentTarget.style.background = '#fafafa'}
-                                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                                 >
                                   Edit
                                 </button>
                               )}
-
-                              {/* Only show Close for approved posts */}
                               {post.status === 'approved' && (
                                 <button
                                   onClick={() => openCloseModal(post.id)}
@@ -450,13 +542,10 @@ export default function MyActivityPage() {
                                     textAlign: 'left',
                                     cursor: 'pointer',
                                   }}
-                                  onMouseEnter={(e) => e.currentTarget.style.background = '#fafafa'}
-                                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                                 >
-                                  Close
+                                  Close post
                                 </button>
                               )}
-
                               <button
                                 onClick={() => openDeleteModal(post.id)}
                                 style={{
@@ -467,12 +556,9 @@ export default function MyActivityPage() {
                                   color: '#dc2626',
                                   background: 'none',
                                   border: 'none',
-                                  borderTop: '1px solid #f0f0f0',
                                   textAlign: 'left',
                                   cursor: 'pointer',
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = '#fef2f2'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                               >
                                 Delete
                               </button>
@@ -489,13 +575,93 @@ export default function MyActivityPage() {
         </div>
       </div>
 
-      {/* Close Confirmation Modal */}
+      {/* Mobile Message List Overlay */}
+      {isMobile && showMobileMessages && !mobileSelectedThreadId && (
+        <MobileMessageList
+          userId={user.id}
+          onSelectThread={handleSelectThread}
+          onClose={handleCloseMessageList}
+          refreshTrigger={refreshTrigger}
+        />
+      )}
+
+      {/* Mobile Message Thread Overlay */}
+      {isMobile && mobileSelectedThreadId && (
+        <div style={{
+          position: 'fixed',
+          top: '56px',
+          left: 0,
+          right: 0,
+          bottom: '64px',
+          background: '#FFFFFF',
+          zIndex: 46,
+        }}>
+          <MessageThread
+            threadId={mobileSelectedThreadId}
+            currentUserId={user.id}
+            onClose={handleCloseThread}
+            onLeaveThread={() => {
+              setRefreshTrigger(prev => prev + 1);
+              handleCloseThread();
+            }}
+          />
+        </div>
+      )}
+
+      {/* Bottom Nav - Mobile only */}
+      {isMobile && (
+        <BottomNav
+          activeTab={showMobileMessages ? 'messages' : mobileTab}
+          onTabChange={handleMobileTabChange}
+          onLogout={handleLogout}
+          isAdmin={isAdmin}
+          pendingPostsCount={pendingPostsCount}
+          pendingReportsCount={pendingReportsCount}
+        />
+      )}
+
+      {/* Modals */}
+      {showAuthModal && (
+        <AuthModal 
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)} 
+          onSuccess={() => setShowAuthModal(false)}
+        />
+      )}
+
+      {showCreateModal && (
+        <CreatePostModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            setShowCreateModal(false);
+            refreshPosts();
+          }}
+        />
+      )}
+
+      {showEditModal && selectedPost && (
+        <EditPostModal
+          post={selectedPost}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedPost(null);
+          }}
+          onSuccess={() => {
+            setShowEditModal(false);
+            setSelectedPost(null);
+            refreshPosts();
+          }}
+        />
+      )}
+
+      {/* Close Post Modal */}
       {showCloseModal && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.4)',
+            background: 'rgba(0, 0, 0, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -517,10 +683,10 @@ export default function MyActivityPage() {
             <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>
               Close this post?
             </h3>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px', lineHeight: 1.5 }}>
-              Close a post if you've received enough replies and want to hide it from the feed. People you're already chatting with can still see it.
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>
+              This post will no longer be visible to others. You can't undo this action.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowCloseModal(false)}
                 style={{
@@ -528,7 +694,7 @@ export default function MyActivityPage() {
                   fontSize: '14px',
                   fontWeight: 500,
                   border: '1px solid #e0e0e0',
-                  borderRadius: '20px',
+                  borderRadius: '24px',
                   background: '#fff',
                   cursor: 'pointer',
                 }}
@@ -543,11 +709,11 @@ export default function MyActivityPage() {
                   fontSize: '14px',
                   fontWeight: 600,
                   border: 'none',
-                  borderRadius: '20px',
+                  borderRadius: '24px',
                   background: '#000',
                   color: '#fff',
                   cursor: actionLoading ? 'not-allowed' : 'pointer',
-                  opacity: actionLoading ? 0.7 : 1,
+                  opacity: actionLoading ? 0.6 : 1,
                 }}
               >
                 {actionLoading ? 'Closing...' : 'Close post'}
@@ -557,13 +723,13 @@ export default function MyActivityPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Post Modal */}
       {showDeleteModal && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.4)',
+            background: 'rgba(0, 0, 0, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -585,10 +751,10 @@ export default function MyActivityPage() {
             <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>
               Delete this post?
             </h3>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px', lineHeight: 1.5 }}>
-              The post will not be viewable by anyone. It will be obscured from any existing message threads. This can't be undone.
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>
+              This will permanently delete this post. You can't undo this action.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowDeleteModal(false)}
                 style={{
@@ -596,7 +762,7 @@ export default function MyActivityPage() {
                   fontSize: '14px',
                   fontWeight: 500,
                   border: '1px solid #e0e0e0',
-                  borderRadius: '20px',
+                  borderRadius: '24px',
                   background: '#fff',
                   cursor: 'pointer',
                 }}
@@ -611,11 +777,11 @@ export default function MyActivityPage() {
                   fontSize: '14px',
                   fontWeight: 600,
                   border: 'none',
-                  borderRadius: '20px',
-                  background: '#000',
+                  borderRadius: '24px',
+                  background: '#dc2626',
                   color: '#fff',
                   cursor: actionLoading ? 'not-allowed' : 'pointer',
-                  opacity: actionLoading ? 0.7 : 1,
+                  opacity: actionLoading ? 0.6 : 1,
                 }}
               >
                 {actionLoading ? 'Deleting...' : 'Delete'}
@@ -623,36 +789,6 @@ export default function MyActivityPage() {
             </div>
           </div>
         </div>
-      )}
-
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={() => setShowAuthModal(false)}
-      />
-
-      <CreatePostModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={() => {
-          setShowCreateModal(false);
-          refreshPosts();
-        }}
-      />
-
-      {showEditModal && selectedPost && (
-        <EditPostModal
-          post={selectedPost}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedPost(null);
-          }}
-          onSuccess={() => {
-            setShowEditModal(false);
-            setSelectedPost(null);
-            refreshPosts();
-          }}
-        />
       )}
     </div>
   );

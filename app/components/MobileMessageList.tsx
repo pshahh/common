@@ -29,7 +29,6 @@ interface MobileMessageListProps {
 export default function MobileMessageList({
   userId,
   onSelectThread,
-  onClose,
   refreshTrigger = 0,
 }: MobileMessageListProps) {
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -63,7 +62,6 @@ export default function MobileMessageList({
           const post: ThreadPost | null = Array.isArray(postData) 
             ? postData[0] || null 
             : postData;
-
           return {
             id: thread.id,
             post_id: thread.post_id,
@@ -73,10 +71,8 @@ export default function MobileMessageList({
             post: post,
           };
         });
-
         setThreads(transformedThreads);
       }
-
       setLoading(false);
     }
 
@@ -106,88 +102,84 @@ export default function MobileMessageList({
   });
 
   return (
-    <div className="mobile-message-overlay open">
-      {/* Header */}
-      <div className="mobile-thread-header">
-        <button 
-          className="mobile-thread-back"
-          onClick={onClose}
-        >
-          ←
-        </button>
-        <span className="mobile-thread-title">Messages</span>
-        <div style={{ width: '40px' }} /> {/* Spacer for alignment */}
-      </div>
-
-      {/* Thread list */}
-      <div className="mobile-thread-content" style={{ padding: '16px' }}>
-        {loading ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '48px 24px', 
-            color: '#888',
-            fontSize: '14px',
-          }}>
-            Loading...
-          </div>
-        ) : sortedThreads.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '48px 24px', 
-            color: '#888',
-            fontSize: '14px',
-            lineHeight: 1.5,
-          }}>
-            Messages appear here when it's time to coordinate.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {sortedThreads.map((thread) => {
-              const closed = isThreadClosed(thread);
-              return (
-                <div
-                  key={thread.id}
-                  onClick={() => onSelectThread(thread.id)}
-                  style={{
-                    padding: '16px',
-                    background: '#fff',
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    opacity: closed ? 0.5 : 1,
-                    transition: 'background 0.15s ease',
-                  }}
-                >
-                  <div style={{
-                    fontSize: '15px',
-                    fontWeight: 500,
-                    color: closed ? '#888' : '#000',
-                    marginBottom: '4px',
-                  }}>
-                    {thread.post?.title || 'Unknown post'}
-                  </div>
-                  <div style={{
-                    fontSize: '13px',
-                    color: '#888',
-                  }}>
-                    {thread.post?.location || ''}
-                  </div>
-                  {closed && (
-                    <div style={{
-                      fontSize: '11px',
-                      color: '#888',
-                      marginTop: '8px',
-                      fontStyle: 'italic',
-                    }}>
-                      Conversation closed
-                    </div>
-                  )}
+    <div style={{
+      position: 'fixed',
+      top: '56px', // Below header
+      left: 0,
+      right: 0,
+      bottom: '64px', // Above bottom nav
+      background: '#FFFFFF',
+      zIndex: 45,
+      display: 'flex',
+      flexDirection: 'column',
+      overflowY: 'auto',
+      padding: '16px',
+    }}>
+      {loading ? (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '48px 24px', 
+          color: '#888888',
+          fontSize: '14px',
+        }}>
+          Loading...
+        </div>
+      ) : sortedThreads.length === 0 ? (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '48px 24px', 
+          color: '#888888',
+          fontSize: '14px',
+          lineHeight: 1.5,
+        }}>
+          Messages appear here when it's time to coordinate.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {sortedThreads.map((thread) => {
+            const closed = isThreadClosed(thread);
+            return (
+              <div
+                key={thread.id}
+                onClick={() => onSelectThread(thread.id)}
+                style={{
+                  padding: '16px',
+                  background: '#FFFFFF',
+                  border: '1px solid #E0E0E0',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  opacity: closed ? 0.5 : 1,
+                }}
+              >
+                <div style={{
+                  fontSize: '15px',
+                  fontWeight: 500,
+                  color: closed ? '#888888' : '#000000',
+                  marginBottom: '4px',
+                }}>
+                  {thread.post?.title || 'Unknown post'}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                <div style={{
+                  fontSize: '13px',
+                  color: '#888888',
+                }}>
+                  {thread.post?.location || ''}
+                </div>
+                {closed && (
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#888888',
+                    marginTop: '8px',
+                    fontStyle: 'italic',
+                  }}>
+                    Conversation closed
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import BottomNav from '../components/BottomNav';
 import { calculateAge } from '@/lib/profile';
 
 interface Profile {
@@ -20,6 +21,11 @@ export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [mobileTab, setMobileTab] = useState<'home' | 'messages' | 'activity' | 'menu'>('menu');
 
   // Form state
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -39,6 +45,14 @@ export default function SettingsPage() {
   const [passwordSent, setPasswordSent] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check screen size
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Check auth state
   useEffect(() => {
@@ -60,6 +74,34 @@ export default function SettingsPage() {
 
     return () => subscription.unsubscribe();
   }, [router]);
+
+  // Check if user is admin and fetch counts
+  useEffect(() => {
+    async function checkAdmin() {
+      if (!user) return;
+      
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileData?.is_admin) {
+        setIsAdmin(true);
+        
+        // Fetch pending counts
+        const [postsRes, reportsRes] = await Promise.all([
+          supabase.from('posts').select('id', { count: 'exact' }).eq('status', 'pending'),
+          supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
+        ]);
+        
+        setPendingPostsCount(postsRes.count || 0);
+        setPendingReportsCount(reportsRes.count || 0);
+      }
+    }
+    
+    checkAdmin();
+  }, [user]);
 
   // Fetch profile
   useEffect(() => {
@@ -172,6 +214,7 @@ export default function SettingsPage() {
 
       // Clear success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -216,11 +259,8 @@ export default function SettingsPage() {
       // Sign out
       await supabase.auth.signOut();
 
-      // Note: Full user deletion from auth.users requires admin access
-      // For v1, we delete their data and sign them out
-      // The auth record remains but is orphaned
-
       router.push('/');
+
     } catch (err) {
       setError('Failed to delete account. Please try again.');
       setDeleting(false);
@@ -234,6 +274,19 @@ export default function SettingsPage() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  // Handle mobile tab change
+  const handleMobileTabChange = (tab: 'home' | 'messages' | 'activity' | 'menu') => {
+    setMobileTab(tab);
+    if (tab === 'home') {
+      router.push('/');
+    } else if (tab === 'messages') {
+      router.push('/?messages=open');
+    } else if (tab === 'activity') {
+      router.push('/my-activity');
+    }
+    // 'menu' stays or opens overlay (handled by BottomNav)
   };
 
   if (!user || loading) {
@@ -259,27 +312,38 @@ export default function SettingsPage() {
         flexDirection: 'row',
         overflow: 'hidden',
       }}>
-        {/* Sidebar */}
-        <div style={{
-          width: '224px',
-          flexShrink: 0,
-          borderRight: '1px solid #f0f0f0',
-          background: 'rgba(250, 250, 250, 0.5)',
-          overflow: 'hidden',
-        }}>
-          <Sidebar
-            userId={user.id}
-            selectedThreadId={null}
-            onSelectThread={(threadId) => router.push(`/?thread=${threadId}`)}
-            onNavigateToMyActivity={() => router.push('/my-activity')}
-            onLogout={handleLogout}
-            activeItem="settings"
-          />
-        </div>
+        {/* Sidebar - Hidden on mobile */}
+        {!isMobile && (
+          <div style={{
+            width: '224px',
+            flexShrink: 0,
+            borderRight: '1px solid #f0f0f0',
+            background: 'rgba(250, 250, 250, 0.5)',
+            overflow: 'hidden',
+          }}>
+            <Sidebar
+              userId={user.id}
+              selectedThreadId={null}
+              onSelectThread={(threadId) => router.push(`/?thread=${threadId}`)}
+              onNavigateToMyActivity={() => router.push('/my-activity')}
+              onLogout={handleLogout}
+              activeItem="settings"
+            />
+          </div>
+        )}
 
         {/* Main content */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div style={{ maxWidth: '500px', width: '100%', margin: '0 auto', padding: '24px' }}>
+        <div style={{ 
+          flex: 1, 
+          overflowY: 'auto',
+          paddingBottom: isMobile ? '80px' : '0',
+        }}>
+          <div style={{ 
+            maxWidth: '500px', 
+            width: '100%', 
+            margin: '0 auto', 
+            padding: isMobile ? '16px' : '24px',
+          }}>
             <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '32px' }}>
               Settings
             </h1>
@@ -295,7 +359,7 @@ export default function SettingsPage() {
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
                   Profile photo
                 </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     style={{
@@ -362,7 +426,8 @@ export default function SettingsPage() {
                     borderRadius: '12px',
                     fontSize: '14px',
                     outline: 'none',
-                    width: '200px',
+                    width: '100%',
+                    maxWidth: '200px',
                   }}
                 />
                 {dateOfBirth && (
@@ -438,7 +503,7 @@ export default function SettingsPage() {
                     ✓ Password reset email sent to {user.email}
                   </p>
                 ) : (
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button
                       onClick={handlePasswordReset}
                       style={{
@@ -468,7 +533,7 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              {/* Delete Account - More visible button using secondary style */}
+              {/* Delete Account */}
               <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #e0e0e0' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
                   Delete account
@@ -488,15 +553,6 @@ export default function SettingsPage() {
                       fontSize: '14px',
                       fontWeight: 500,
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#888';
-                      e.currentTarget.style.color = '#000';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#e0e0e0';
-                      e.currentTarget.style.color = '#444';
                     }}
                   >
                     Delete account
@@ -525,11 +581,12 @@ export default function SettingsPage() {
                         borderRadius: '12px',
                         fontSize: '14px',
                         outline: 'none',
-                        width: '200px',
+                        width: '100%',
+                        maxWidth: '200px',
                         marginBottom: '16px',
                       }}
                     />
-                    <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                       <button
                         onClick={handleDeleteAccount}
                         disabled={deleteConfirmText !== 'DELETE' || deleting}
@@ -571,6 +628,18 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Bottom Nav - Mobile only */}
+      {isMobile && (
+        <BottomNav
+          activeTab={mobileTab}
+          onTabChange={handleMobileTabChange}
+          onLogout={handleLogout}
+          isAdmin={isAdmin}
+          pendingPostsCount={pendingPostsCount}
+          pendingReportsCount={pendingReportsCount}
+        />
+      )}
     </div>
   );
 }

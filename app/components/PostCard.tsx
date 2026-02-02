@@ -141,7 +141,6 @@ export default function PostCard({
         <div className="card-header">
           <div className="card-content">
             <h3 className="card-title">{title}</h3>
-            
             {/* Location line */}
             <div className="card-meta">
               <a
@@ -160,20 +159,16 @@ export default function PostCard({
                 </>
               )}
             </div>
-            
             {/* Time on separate line */}
             <div className="card-time">{time}</div>
-            
             {/* Notes - styled as personal message */}
             {notes && (
               <p className="card-notes">"{notes}"</p>
             )}
-            
             {preference && preference !== 'Anyone' && preference !== 'anyone' && (
               <span className="preference-badge">{preference}</span>
             )}
           </div>
-
           <div className="card-actions">
             <button 
               className="share-button" 
@@ -206,64 +201,76 @@ export default function PostCard({
           </div>
         </div>
 
-        <div className="card-footer">
-          <div className="footer-left">
-            {!hideInterestButton && (
-              <button className="btn btn-primary" onClick={onImInterested}>
-                I'm interested
-              </button>
-            )}
+        {/* Footer - Rearranged: poster name on left, button on right */}
+        <div className="card-footer" style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          flexDirection: 'row',
+        }}>
+          {/* Left side: poster name and interested count */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div
+              className="poster-name"
+              onClick={handleNameClick}
+              onMouseEnter={() => setShowNameTooltip(true)}
+              onMouseLeave={() => setShowNameTooltip(false)}
+              style={{ 
+                cursor: authorAvatarUrl ? 'pointer' : 'default',
+                position: 'relative',
+              }}
+            >
+              {name}
+              {showNameTooltip && (
+                <div className="name-tooltip">
+                  {authorAvatarUrl ? (
+                    <div 
+                      className="tooltip-avatar"
+                      onClick={handleNameClick}
+                      style={{ 
+                        backgroundImage: `url(${authorAvatarUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  ) : (
+                    <div 
+                      className="tooltip-avatar"
+                      style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#888',
+                      }}
+                    >
+                      {getInitials(name)}
+                    </div>
+                  )}
+                  <div className="tooltip-info">
+                    <span className="tooltip-name">{name}</span>
+                    {age !== null && (
+                      <span className="tooltip-since">{age} years old</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             {peopleInterested > 0 && (
-              <span className="interested-badge">
+              <span className="interested-badge" style={{ alignSelf: 'flex-start' }}>
                 {peopleInterested} interested
               </span>
             )}
           </div>
-          <div
-            className="poster-name"
-            onClick={handleNameClick}
-            onMouseEnter={() => setShowNameTooltip(true)}
-            onMouseLeave={() => setShowNameTooltip(false)}
-            style={{ cursor: authorAvatarUrl ? 'pointer' : 'default' }}
-          >
-            {name}
-            {showNameTooltip && (
-              <div className="name-tooltip">
-                {authorAvatarUrl ? (
-                  <div 
-                    className="tooltip-avatar"
-                    onClick={handleNameClick}
-                    style={{ 
-                      backgroundImage: `url(${authorAvatarUrl})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      cursor: 'pointer',
-                    }}
-                  />
-                ) : (
-                  <div 
-                    className="tooltip-avatar"
-                    style={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#888',
-                    }}
-                  >
-                    {getInitials(name)}
-                  </div>
-                )}
-                <div className="tooltip-info">
-                  <span className="tooltip-name">{name}</span>
-                  {age !== null && (
-                    <span className="tooltip-since">{age} years old</span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+
+          {/* Right side: I'm interested button */}
+          {!hideInterestButton && (
+            <button className="btn btn-primary" onClick={onImInterested}>
+              I'm interested
+            </button>
+          )}
         </div>
       </div>
     </>

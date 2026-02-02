@@ -5,10 +5,24 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import Header from '../components/Header';
+import BottomNav from '../components/BottomNav';
 
 export default function GuidelinesPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [mobileTab, setMobileTab] = useState<'home' | 'messages' | 'activity' | 'menu'>('menu');
+
+  // Check screen size
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -22,9 +36,49 @@ export default function GuidelinesPage() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Check if user is admin and fetch counts
+  useEffect(() => {
+    async function checkAdmin() {
+      if (!user) return;
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.is_admin) {
+        setIsAdmin(true);
+        
+        // Fetch pending counts
+        const [postsRes, reportsRes] = await Promise.all([
+          supabase.from('posts').select('id', { count: 'exact' }).eq('status', 'pending'),
+          supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
+        ]);
+        
+        setPendingPostsCount(postsRes.count || 0);
+        setPendingReportsCount(reportsRes.count || 0);
+      }
+    }
+    
+    checkAdmin();
+  }, [user]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/');
+  };
+
+  // Handle mobile tab change
+  const handleMobileTabChange = (tab: 'home' | 'messages' | 'activity' | 'menu') => {
+    setMobileTab(tab);
+    if (tab === 'home') {
+      router.push('/');
+    } else if (tab === 'messages') {
+      router.push('/?messages=open');
+    } else if (tab === 'activity') {
+      router.push('/my-activity');
+    }
   };
 
   return (
@@ -43,7 +97,7 @@ export default function GuidelinesPage() {
       <div style={{ 
         flex: 1, 
         background: '#FAFAFA',
-        padding: '48px 24px',
+        padding: isMobile ? '24px 16px 100px' : '48px 24px',
       }}>
         <div style={{ 
           maxWidth: '640px', 
@@ -51,11 +105,11 @@ export default function GuidelinesPage() {
           background: '#fff',
           borderRadius: '16px',
           border: '1px solid #E0E0E0',
-          padding: '48px',
+          padding: isMobile ? '24px' : '48px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         }}>
           <h1 style={{ 
-            fontSize: '28px', 
+            fontSize: isMobile ? '24px' : '28px', 
             fontWeight: 700, 
             color: '#000',
             letterSpacing: '-0.5px',
@@ -72,7 +126,6 @@ export default function GuidelinesPage() {
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-            
             {/* What Common is for */}
             <section>
               <h2 style={{ 
@@ -158,7 +211,6 @@ export default function GuidelinesPage() {
                 Always meet in public places for the first time. Tell a friend where you're going. Trust your instincts — if something feels off, it's okay to leave. You can report any post or conversation that makes you uncomfortable.
               </p>
             </section>
-
           </div>
 
           {/* Footer */}
@@ -178,6 +230,18 @@ export default function GuidelinesPage() {
           </div>
         </div>
       </div>
+
+      {/* Bottom Nav - Mobile only, and only if user is logged in */}
+      {isMobile && user && (
+        <BottomNav
+          activeTab={mobileTab}
+          onTabChange={handleMobileTabChange}
+          onLogout={handleLogout}
+          isAdmin={isAdmin}
+          pendingPostsCount={pendingPostsCount}
+          pendingReportsCount={pendingReportsCount}
+        />
+      )}
     </div>
   );
 }
