@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
+import BottomNav from '../../components/BottomNav';
 
 interface Report {
   id: string;
@@ -34,11 +35,22 @@ export default function AdminReportsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'reviewed'>('pending');
   const [actioningReport, setActioningReport] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [confirmRemove, setConfirmRemove] = useState<{
     reportId: string;
     postId: string;
     postTitle: string;
   } | null>(null);
+
+  // Check screen size
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Check auth
   useEffect(() => {
@@ -59,7 +71,7 @@ export default function AdminReportsPage() {
     return () => subscription.unsubscribe();
   }, [router]);
 
-  // Fetch reports
+  // Fetch reports and counts
   useEffect(() => {
     async function fetchReports() {
       if (!user) return;
@@ -106,8 +118,18 @@ export default function AdminReportsPage() {
       setLoading(false);
     }
 
+    async function fetchCounts() {
+      const [postsRes, reportsRes] = await Promise.all([
+        supabase.from('posts').select('id', { count: 'exact' }).eq('status', 'pending'),
+        supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
+      ]);
+      setPendingPostsCount(postsRes.count || 0);
+      setPendingReportsCount(reportsRes.count || 0);
+    }
+
     if (user) {
       fetchReports();
+      fetchCounts();
     }
   }, [user, filter]);
 
@@ -118,6 +140,7 @@ export default function AdminReportsPage() {
 
   const handleDismiss = async (reportId: string) => {
     setActioningReport(reportId);
+
     const { error } = await supabase
       .from('reports')
       .update({ status: 'dismissed' })
@@ -130,13 +153,14 @@ export default function AdminReportsPage() {
       setReports(prev => prev.map(r => 
         r.id === reportId ? { ...r, status: 'dismissed' as const } : r
       ));
+      setPendingReportsCount(prev => Math.max(0, prev - 1));
     }
     setActioningReport(null);
   };
 
   const handleRemovePost = async (reportId: string, postId: string) => {
     setActioningReport(reportId);
-    
+
     // Soft delete - set status to 'hidden'
     const { error: postError } = await supabase
       .from('posts')
@@ -166,7 +190,7 @@ export default function AdminReportsPage() {
       }
       return r;
     }));
-    
+    setPendingReportsCount(prev => Math.max(0, prev - 1));
     setActioningReport(null);
     setConfirmRemove(null);
   };
@@ -199,6 +223,16 @@ export default function AdminReportsPage() {
       dismissed: { bg: '#F5F5F5', color: '#888888', label: 'Dismissed' },
     };
     return styles[status] || styles.dismissed;
+  };
+
+  const handleMobileTabChange = (tab: 'home' | 'messages' | 'activity' | 'menu') => {
+    if (tab === 'home') {
+      router.push('/');
+    } else if (tab === 'messages') {
+      router.push('/?messages=open');
+    } else if (tab === 'activity') {
+      router.push('/my-activity');
+    }
   };
 
   const pendingCount = reports.filter(r => r.status === 'pending').length;
@@ -239,46 +273,50 @@ export default function AdminReportsPage() {
         flexDirection: 'row',
         overflow: 'hidden',
       }}>
-        {/* Sidebar */}
-        <div style={{
-          width: '224px',
-          flexShrink: 0,
-          borderRight: '1px solid #F0F0F0',
-          background: 'rgba(250, 250, 250, 0.5)',
-          overflow: 'hidden',
-        }}>
-          <Sidebar
-            userId={user.id}
-            selectedThreadId={null}
-            onSelectThread={(threadId) => router.push(`/?thread=${threadId}`)}
-            onNavigateToMyActivity={() => router.push('/my-activity')}
-            onLogout={handleLogout}
-            activeItem="admin-reports"
-          />
-        </div>
+        {/* Sidebar - Desktop only */}
+        {!isMobile && (
+          <div style={{
+            width: '224px',
+            flexShrink: 0,
+            borderRight: '1px solid #F0F0F0',
+            background: 'rgba(250, 250, 250, 0.5)',
+            overflow: 'hidden',
+          }}>
+            <Sidebar
+              userId={user.id}
+              selectedThreadId={null}
+              onSelectThread={(threadId) => router.push(`/?thread=${threadId}`)}
+              onNavigateToMyActivity={() => router.push('/my-activity')}
+              onLogout={handleLogout}
+              activeItem="admin-reports"
+            />
+          </div>
+        )}
 
         {/* Main content */}
         <div style={{ 
           flex: 1, 
           overflowY: 'auto',
           background: '#FAFAFA',
+          paddingBottom: isMobile ? '80px' : '0',
         }}>
           <div style={{ 
             maxWidth: '720px', 
             width: '100%', 
             margin: '0 auto', 
-            padding: '32px 24px',
+            padding: isMobile ? '16px' : '32px 24px',
           }}>
             {/* Page header */}
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: isMobile ? '20px' : '32px' }}>
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '12px',
                 marginBottom: '8px',
+                flexWrap: 'wrap',
               }}>
                 <h1 style={{ 
-                  fontSize: '24px', 
+                  fontSize: isMobile ? '20px' : '24px', 
                   fontWeight: 700, 
                   color: '#000',
                   letterSpacing: '-0.5px',
@@ -315,6 +353,7 @@ export default function AdminReportsPage() {
               marginBottom: '24px',
               borderBottom: '1px solid #E0E0E0',
               paddingBottom: '16px',
+              overflowX: 'auto',
             }}>
               {[
                 { key: 'pending', label: 'Pending' },
@@ -334,6 +373,7 @@ export default function AdminReportsPage() {
                     fontWeight: filter === tab.key ? 600 : 500,
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {tab.label}
@@ -369,7 +409,6 @@ export default function AdminReportsPage() {
                 {reports.map(report => {
                   const statusBadge = getStatusBadge(report.status);
                   const isActioning = actioningReport === report.id;
-                  
                   return (
                     <div
                       key={report.id}
@@ -383,13 +422,15 @@ export default function AdminReportsPage() {
                     >
                       {/* Report header */}
                       <div style={{ 
-                        padding: '16px 20px',
+                        padding: isMobile ? '12px 16px' : '16px 20px',
                         borderBottom: '1px solid #F0F0F0',
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
+                        gap: '12px',
+                        flexWrap: 'wrap',
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                           <span
                             style={{
                               display: 'inline-block',
@@ -414,6 +455,7 @@ export default function AdminReportsPage() {
                         <span style={{ 
                           fontSize: '13px', 
                           color: '#888',
+                          flexShrink: 0,
                         }}>
                           {formatDate(report.created_at)}
                         </span>
@@ -421,11 +463,11 @@ export default function AdminReportsPage() {
 
                       {/* Reported post preview */}
                       {report.posts && (
-                        <div style={{ padding: '20px' }}>
+                        <div style={{ padding: isMobile ? '16px' : '20px' }}>
                           <div style={{
                             background: '#FAFAFA',
                             borderRadius: '12px',
-                            padding: '16px',
+                            padding: isMobile ? '12px' : '16px',
                             border: '1px solid #F0F0F0',
                           }}>
                             <div style={{ 
@@ -433,8 +475,9 @@ export default function AdminReportsPage() {
                               justifyContent: 'space-between', 
                               alignItems: 'flex-start',
                               marginBottom: '8px',
+                              gap: '12px',
                             }}>
-                              <div style={{ flex: 1 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ 
                                   fontSize: '16px', 
                                   fontWeight: 600, 
@@ -464,7 +507,7 @@ export default function AdminReportsPage() {
                                 </span>
                               )}
                             </div>
-                            
+
                             {report.posts.notes && (
                               <p style={{ 
                                 fontSize: '14px', 
@@ -475,7 +518,7 @@ export default function AdminReportsPage() {
                                 {report.posts.notes}
                               </p>
                             )}
-                            
+
                             <div style={{ 
                               display: 'flex', 
                               justifyContent: 'space-between', 
@@ -483,6 +526,8 @@ export default function AdminReportsPage() {
                               marginTop: '12px',
                               paddingTop: '12px',
                               borderTop: '1px solid #E0E0E0',
+                              flexWrap: 'wrap',
+                              gap: '8px',
                             }}>
                               <span style={{ 
                                 fontSize: '13px', 
@@ -511,12 +556,13 @@ export default function AdminReportsPage() {
                       {/* Actions - only show for pending reports */}
                       {report.status === 'pending' && report.posts && (
                         <div style={{ 
-                          padding: '16px 20px',
+                          padding: isMobile ? '12px 16px' : '16px 20px',
                           borderTop: '1px solid #F0F0F0',
                           background: '#FAFAFA',
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
+                          gap: '12px',
                         }}>
                           <button
                             onClick={() => setConfirmRemove({ 
@@ -540,7 +586,6 @@ export default function AdminReportsPage() {
                           >
                             Remove post
                           </button>
-
                           <button
                             onClick={() => handleDismiss(report.id)}
                             disabled={isActioning}
@@ -570,6 +615,18 @@ export default function AdminReportsPage() {
         </div>
       </div>
 
+      {/* Bottom Nav - Mobile only */}
+      {isMobile && (
+        <BottomNav
+          activeTab="menu"
+          onTabChange={handleMobileTabChange}
+          onLogout={handleLogout}
+          isAdmin={true}
+          pendingPostsCount={pendingPostsCount}
+          pendingReportsCount={pendingReportsCount}
+        />
+      )}
+
       {/* Confirmation Modal */}
       {confirmRemove && (
         <div 
@@ -584,6 +641,7 @@ export default function AdminReportsPage() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
+            padding: '16px',
           }}
           onClick={() => setConfirmRemove(null)}
         >
@@ -591,9 +649,9 @@ export default function AdminReportsPage() {
             style={{
               background: '#fff',
               borderRadius: '16px',
-              padding: '32px',
+              padding: isMobile ? '24px' : '32px',
               maxWidth: '400px',
-              width: '90%',
+              width: '100%',
               boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
             }}
             onClick={(e) => e.stopPropagation()}

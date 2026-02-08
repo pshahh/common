@@ -40,7 +40,6 @@ export default function BottomNav({
     } else if (tab === 'home') {
       router.push('/');
     }
-    // 'messages' is handled by onTabChange - parent component opens message list
   };
 
   return (
@@ -132,7 +131,7 @@ export default function BottomNav({
           </span>
         </button>
 
-        {/* More */}
+        {/* More - no badge */}
         <button
           onClick={handleMenuClick}
           style={{
@@ -144,7 +143,6 @@ export default function BottomNav({
             border: 'none',
             padding: '8px 16px',
             cursor: 'pointer',
-            position: 'relative',
             minWidth: '64px',
           }}
         >
@@ -155,23 +153,6 @@ export default function BottomNav({
           }}>
             More
           </span>
-          {isAdmin && (pendingPostsCount > 0 || pendingReportsCount > 0) && (
-            <span style={{
-              position: 'absolute',
-              top: '4px',
-              right: '8px',
-              fontSize: '11px',
-              fontWeight: 600,
-              color: '#FFFFFF',
-              background: '#D4594F',
-              padding: '2px 6px',
-              borderRadius: '10px',
-              minWidth: '18px',
-              textAlign: 'center',
-            }}>
-              {pendingPostsCount + pendingReportsCount}
-            </span>
-          )}
         </button>
       </nav>
 

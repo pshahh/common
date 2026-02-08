@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
+import BottomNav from '../../components/BottomNav';
 
 interface Post {
   id: string;
@@ -29,22 +30,31 @@ export default function AdminPostsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [actioningPost, setActioningPost] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [confirmReject, setConfirmReject] = useState<{
     postId: string;
     postTitle: string;
     userId: string;
   } | null>(null);
 
+  // Check screen size
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Check auth and admin status
   useEffect(() => {
     async function checkAuth() {
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session?.user) {
         router.push('/');
         return;
       }
-      
       setUser(session.user);
 
       // Check if user is admin
@@ -58,7 +68,6 @@ export default function AdminPostsPage() {
         router.push('/');
         return;
       }
-
       setIsAdmin(true);
     }
 
@@ -73,7 +82,7 @@ export default function AdminPostsPage() {
     return () => subscription.unsubscribe();
   }, [router]);
 
-  // Fetch posts
+  // Fetch posts and counts
   useEffect(() => {
     async function fetchPosts() {
       if (!isAdmin) return;
@@ -82,7 +91,7 @@ export default function AdminPostsPage() {
         .from('posts')
         .select('*')
         .eq('status', filter)
-        .order('created_at', { ascending: filter === 'pending' }); // Oldest first for pending
+        .order('created_at', { ascending: filter === 'pending' });
 
       if (error) {
         console.error('Error fetching posts:', error);
@@ -94,9 +103,19 @@ export default function AdminPostsPage() {
       setLoading(false);
     }
 
+    async function fetchCounts() {
+      const [postsRes, reportsRes] = await Promise.all([
+        supabase.from('posts').select('id', { count: 'exact' }).eq('status', 'pending'),
+        supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
+      ]);
+      setPendingPostsCount(postsRes.count || 0);
+      setPendingReportsCount(reportsRes.count || 0);
+    }
+
     if (isAdmin) {
       setLoading(true);
       fetchPosts();
+      fetchCounts();
     }
   }, [isAdmin, filter]);
 
@@ -133,11 +152,11 @@ export default function AdminPostsPage() {
       console.log('Email function response:', response);
     } catch (emailError) {
       console.error('Failed to send approval email:', emailError);
-      // Don't block on email failure
     }
 
     // Update local state
     setPosts(prev => prev.filter(p => p.id !== postId));
+    setPendingPostsCount(prev => Math.max(0, prev - 1));
     setActioningPost(null);
   };
 
@@ -169,11 +188,11 @@ export default function AdminPostsPage() {
       console.log('Email function response:', response);
     } catch (emailError) {
       console.error('Failed to send rejection email:', emailError);
-      // Don't block on email failure
     }
 
     // Update local state
     setPosts(prev => prev.filter(p => p.id !== postId));
+    setPendingPostsCount(prev => Math.max(0, prev - 1));
     setActioningPost(null);
     setConfirmReject(null);
   };
@@ -199,6 +218,16 @@ export default function AdminPostsPage() {
         day: 'numeric',
         month: 'short',
       });
+    }
+  };
+
+  const handleMobileTabChange = (tab: 'home' | 'messages' | 'activity' | 'menu') => {
+    if (tab === 'home') {
+      router.push('/');
+    } else if (tab === 'messages') {
+      router.push('/?messages=open');
+    } else if (tab === 'activity') {
+      router.push('/my-activity');
     }
   };
 
@@ -240,46 +269,50 @@ export default function AdminPostsPage() {
         flexDirection: 'row',
         overflow: 'hidden',
       }}>
-        {/* Sidebar */}
-        <div style={{
-          width: '224px',
-          flexShrink: 0,
-          borderRight: '1px solid #F0F0F0',
-          background: 'rgba(250, 250, 250, 0.5)',
-          overflow: 'hidden',
-        }}>
-          <Sidebar
-            userId={user.id}
-            selectedThreadId={null}
-            onSelectThread={(threadId) => router.push(`/?thread=${threadId}`)}
-            onNavigateToMyActivity={() => router.push('/my-activity')}
-            onLogout={handleLogout}
-            activeItem="admin-posts"
-          />
-        </div>
+        {/* Sidebar - Desktop only */}
+        {!isMobile && (
+          <div style={{
+            width: '224px',
+            flexShrink: 0,
+            borderRight: '1px solid #F0F0F0',
+            background: 'rgba(250, 250, 250, 0.5)',
+            overflow: 'hidden',
+          }}>
+            <Sidebar
+              userId={user.id}
+              selectedThreadId={null}
+              onSelectThread={(threadId) => router.push(`/?thread=${threadId}`)}
+              onNavigateToMyActivity={() => router.push('/my-activity')}
+              onLogout={handleLogout}
+              activeItem="admin-posts"
+            />
+          </div>
+        )}
 
         {/* Main content */}
         <div style={{ 
           flex: 1, 
           overflowY: 'auto',
           background: '#FAFAFA',
+          paddingBottom: isMobile ? '80px' : '0',
         }}>
           <div style={{ 
             maxWidth: '720px', 
             width: '100%', 
             margin: '0 auto', 
-            padding: '32px 24px',
+            padding: isMobile ? '16px' : '32px 24px',
           }}>
             {/* Page header */}
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: isMobile ? '20px' : '32px' }}>
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '12px',
                 marginBottom: '8px',
+                flexWrap: 'wrap',
               }}>
                 <h1 style={{ 
-                  fontSize: '24px', 
+                  fontSize: isMobile ? '20px' : '24px', 
                   fontWeight: 700, 
                   color: '#000',
                   letterSpacing: '-0.5px',
@@ -316,6 +349,7 @@ export default function AdminPostsPage() {
               marginBottom: '24px',
               borderBottom: '1px solid #E0E0E0',
               paddingBottom: '16px',
+              overflowX: 'auto',
             }}>
               {[
                 { key: 'pending', label: 'Pending' },
@@ -335,6 +369,7 @@ export default function AdminPostsPage() {
                     fontWeight: filter === tab.key ? 600 : 500,
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {tab.label}
@@ -369,7 +404,6 @@ export default function AdminPostsPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {posts.map(post => {
                   const isActioning = actioningPost === post.id;
-                  
                   return (
                     <div
                       key={post.id}
@@ -382,15 +416,16 @@ export default function AdminPostsPage() {
                       }}
                     >
                       {/* Post content */}
-                      <div style={{ padding: '20px' }}>
+                      <div style={{ padding: isMobile ? '16px' : '20px' }}>
                         {/* Header with time */}
                         <div style={{ 
                           display: 'flex', 
                           justifyContent: 'space-between', 
                           alignItems: 'flex-start',
                           marginBottom: '12px',
+                          gap: '12px',
                         }}>
-                          <div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <h3 style={{ 
                               fontSize: '16px', 
                               fontWeight: 600, 
@@ -458,18 +493,19 @@ export default function AdminPostsPage() {
                       {/* Actions - only for pending posts */}
                       {filter === 'pending' && (
                         <div style={{ 
-                          padding: '16px 20px',
+                          padding: isMobile ? '12px 16px' : '16px 20px',
                           borderTop: '1px solid #F0F0F0',
                           background: '#FAFAFA',
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
+                          gap: '12px',
                         }}>
                           <button
                             onClick={() => handleApprove(post.id, post.user_id, post.title)}
                             disabled={isActioning}
                             style={{
-                              padding: '10px 24px',
+                              padding: isMobile ? '10px 20px' : '10px 24px',
                               border: 'none',
                               borderRadius: '24px',
                               background: '#000',
@@ -483,7 +519,6 @@ export default function AdminPostsPage() {
                           >
                             Approve
                           </button>
-
                           <button
                             onClick={() => setConfirmReject({
                               postId: post.id,
@@ -492,7 +527,7 @@ export default function AdminPostsPage() {
                             })}
                             disabled={isActioning}
                             style={{
-                              padding: '10px 24px',
+                              padding: isMobile ? '10px 20px' : '10px 24px',
                               border: '1px solid #E0E0E0',
                               borderRadius: '24px',
                               background: '#fff',
@@ -517,6 +552,18 @@ export default function AdminPostsPage() {
         </div>
       </div>
 
+      {/* Bottom Nav - Mobile only */}
+      {isMobile && (
+        <BottomNav
+          activeTab="menu"
+          onTabChange={handleMobileTabChange}
+          onLogout={handleLogout}
+          isAdmin={true}
+          pendingPostsCount={pendingPostsCount}
+          pendingReportsCount={pendingReportsCount}
+        />
+      )}
+
       {/* Rejection Confirmation Modal */}
       {confirmReject && (
         <div 
@@ -531,6 +578,7 @@ export default function AdminPostsPage() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
+            padding: '16px',
           }}
           onClick={() => setConfirmReject(null)}
         >
@@ -538,9 +586,9 @@ export default function AdminPostsPage() {
             style={{
               background: '#fff',
               borderRadius: '16px',
-              padding: '32px',
+              padding: isMobile ? '24px' : '32px',
               maxWidth: '400px',
-              width: '90%',
+              width: '100%',
               boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
             }}
             onClick={(e) => e.stopPropagation()}

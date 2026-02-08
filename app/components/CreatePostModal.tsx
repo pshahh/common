@@ -38,6 +38,12 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
 
   // Default expiry date (2 weeks from now)
   const defaultExpiry = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  // Default date (tomorrow)
+const getTomorrowDate = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split('T')[0];
+};
 
   // Reset form state when modal opens
   useEffect(() => {
@@ -49,7 +55,7 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
       setLocationSuggestions([]);
       setShowSuggestions(false);
       setTimingMode('specific');
-      setDate('');
+      setDate(getTomorrowDate());
       setTimeDetails('');
       setExpiresAt(defaultExpiry); // Set default expiry
       setWhoCanRespond('anyone');
@@ -465,7 +471,10 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                 <button
                   type="button"
-                  onClick={() => setTimingMode('specific')}
+                  onClick={() => {
+                    setTimingMode('specific');
+                    if (!date) setDate(getTomorrowDate());
+                  }}
                   style={{
                     padding: '8px 16px',
                     borderRadius: '20px',
