@@ -839,7 +839,7 @@ function HomeContent() {
         />
         <main className="main-content">
           <div className="guest-banner">
-            <h1 className="page-title">Find people to do things with nearby</h1>
+            <h1 className="page-title">Do things with people nearby</h1>
             <p className="page-subtitle">
               Browsing as a guest.{' '}
               <button
@@ -997,6 +997,15 @@ function HomeContent() {
               }
             }}
           >
+             {/* Tagline */}
+  <h1 style={{ 
+    fontSize: '20px', 
+    fontWeight: 600, 
+    color: '#000',
+    marginBottom: '16px',
+  }}>
+    Do things with people nearby
+  </h1>
             <div 
               className="feed-header"
               onClick={(e) => e.stopPropagation()}

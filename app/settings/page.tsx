@@ -14,6 +14,7 @@ interface Profile {
   first_name: string;
   avatar_url: string | null;
   date_of_birth: string | null;
+  email_notifications: boolean;
 }
 
 export default function SettingsPage() {
@@ -31,6 +32,7 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [emailNotifications, setEmailNotifications] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +120,7 @@ export default function SettingsPage() {
         setProfile(data);
         setAvatarPreview(data.avatar_url);
         setDateOfBirth(data.date_of_birth || '');
+        setEmailNotifications(data.email_notifications !== false); // Default to true
       }
       setLoading(false);
     }
@@ -201,6 +204,7 @@ export default function SettingsPage() {
         .update({
           avatar_url: avatarUrl,
           date_of_birth: dateOfBirth || null,
+          email_notifications: emailNotifications,
         })
         .eq('id', user.id);
 
@@ -208,7 +212,12 @@ export default function SettingsPage() {
         throw new Error('Failed to update profile: ' + updateError.message);
       }
 
-      setProfile({ ...profile, avatar_url: avatarUrl, date_of_birth: dateOfBirth || null });
+      setProfile({ 
+        ...profile, 
+        avatar_url: avatarUrl, 
+        date_of_birth: dateOfBirth || null,
+        email_notifications: emailNotifications,
+      });
       setAvatarFile(null);
       setSaveSuccess(true);
 
@@ -436,33 +445,88 @@ export default function SettingsPage() {
                   </p>
                 )}
               </div>
-
-              {error && (
-                <p style={{ color: '#dc2626', fontSize: '14px', marginBottom: '16px' }}>{error}</p>
-              )}
-
-              {saveSuccess && (
-                <p style={{ color: '#4a9d6b', fontSize: '14px', marginBottom: '16px' }}>✓ Changes saved</p>
-              )}
-
-              <button
-                onClick={handleSaveProfile}
-                disabled={saving}
-                style={{
-                  padding: '12px 24px',
-                  background: '#000',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '24px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  opacity: saving ? 0.7 : 1,
-                }}
-              >
-                {saving ? 'Saving...' : 'Save changes'}
-              </button>
             </section>
+
+            {/* Notifications Section */}
+            <section style={{ marginBottom: '40px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', color: '#000' }}>
+                Notifications
+              </h2>
+
+              {/* Email notifications toggle */}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                padding: '16px 0',
+              }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>
+                    Email notifications
+                  </label>
+                  <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>
+                    Get notified when you receive a new message
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailNotifications(!emailNotifications);
+                    setSaveSuccess(false);
+                  }}
+                  style={{
+                    width: '48px',
+                    height: '28px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: emailNotifications ? '#000' : '#e0e0e0',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'background 0.2s ease',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute',
+                    top: '2px',
+                    left: emailNotifications ? '22px' : '2px',
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    background: '#fff',
+                    transition: 'left 0.2s ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }} />
+                </button>
+              </div>
+            </section>
+
+            {error && (
+              <p style={{ color: '#dc2626', fontSize: '14px', marginBottom: '16px' }}>{error}</p>
+            )}
+
+            {saveSuccess && (
+              <p style={{ color: '#4a9d6b', fontSize: '14px', marginBottom: '16px' }}>✓ Changes saved</p>
+            )}
+
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving}
+              style={{
+                padding: '12px 24px',
+                background: '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '24px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: saving ? 'not-allowed' : 'pointer',
+                opacity: saving ? 0.7 : 1,
+                marginBottom: '40px',
+              }}
+            >
+              {saving ? 'Saving...' : 'Save changes'}
+            </button>
 
             {/* Account Section */}
             <section style={{ marginBottom: '40px' }}>
