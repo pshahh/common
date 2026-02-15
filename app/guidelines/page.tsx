@@ -225,7 +225,7 @@ export default function GuidelinesPage() {
               lineHeight: 1.6,
               margin: 0,
             }}>
-              Posts that don't follow these guidelines won't be approved. If you have questions, reach out to us at <a href="mailto:hello@common-app.com" style={{ color: '#444' }}>hello@common-app.com</a>
+              Posts that don't follow these guidelines won't be approved. If you have questions, reach out to us at <a href="mailto:hello@common-social.com" style={{ color: '#444' }}>hello@common-social.com</a>
             </p>
           </div>
         </div>

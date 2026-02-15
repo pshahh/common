@@ -10,7 +10,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 // For testing, use Resend's test domain (can only send to your own email)
 // Change this to your domain once verified: "Common <notifications@yourdomain.com>"
-const EMAIL_FROM = "Common <onboarding@resend.dev>";
+const EMAIL_FROM = "common <notifications@notifications.common-social.com>";
 
 interface WebhookPayload {
   type: "INSERT";

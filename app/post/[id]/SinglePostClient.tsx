@@ -8,6 +8,7 @@ import PostCard from '../../components/PostCard';
 import AuthModal from '../../components/AuthModal';
 import InterestedModal from '../../components/InterestedModal';
 import MessageSentModal from '../../components/MessageSentModal';
+import InterestRegisteredModal from '../../components/InterestRegisteredModal';
 
 interface Post {
   id: string;
@@ -38,6 +39,8 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInterestedModal, setShowInterestedModal] = useState(false);
   const [showMessageSentModal, setShowMessageSentModal] = useState(false);
+  const [showInterestRegisteredModal, setShowInterestRegisteredModal] = useState(false);
+  const [interestPosterName, setInterestPosterName] = useState('');
 
   // Check auth state
   useEffect(() => {
@@ -91,11 +94,24 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
     }
   };
 
-  const handleInterestedSuccess = (threadId: string) => {
+  const handleInterestedSuccess = (threadId: string, messageSent: boolean) => {
     setShowInterestedModal(false);
-    setShowMessageSentModal(true);
+    
+    if (messageSent) {
+      // User sent a message - show message sent modal
+      setShowMessageSentModal(true);
+    } else {
+      // User clicked "Send later" - show interest registered modal
+      setInterestPosterName(post?.name || 'the organizer');
+      setShowInterestRegisteredModal(true);
+    }
+    
     // Refresh post to update interested count
     refreshPost();
+  };
+
+  const handleInterestRegisteredClose = () => {
+    setShowInterestRegisteredModal(false);
   };
 
   const refreshPost = async () => {
@@ -239,6 +255,12 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
       {showMessageSentModal && (
         <MessageSentModal
           onClose={() => setShowMessageSentModal(false)}
+        />
+      )}
+      {showInterestRegisteredModal && (
+        <InterestRegisteredModal
+          posterName={interestPosterName}
+          onClose={handleInterestRegisteredClose}
         />
       )}
     </div>

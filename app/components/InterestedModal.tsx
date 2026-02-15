@@ -8,17 +8,17 @@ interface Post {
   title: string;
   location: string;
   time: string;
-  notes?: string | null;
-  preference?: string | null;
+  notes: string | null;
   name: string;
   user_id: string;
+  preference?: string | null;
 }
 
 interface InterestedModalProps {
   post: Post;
   currentUserId: string;
   onClose: () => void;
-  onSuccess: (threadId: string) => void;
+  onSuccess: (threadId: string, messageSent: boolean) => void;
 }
 
 export default function InterestedModal({
@@ -35,28 +35,30 @@ export default function InterestedModal({
     setSending(true);
 
     try {
-      // Check if a thread already exists for this user and post
-      const { data: existingThread } = await supabase
+      // Check if thread already exists
+      const { data: existingThreads, error: threadCheckError } = await supabase
         .from('threads')
         .select('id')
         .eq('post_id', post.id)
-        .contains('participant_ids', [currentUserId])
-        .single();
+        .contains('participant_ids', [currentUserId]);
+
+      if (threadCheckError) throw threadCheckError;
 
       let threadId: string;
 
-      if (existingThread) {
-        threadId = existingThread.id;
+      if (existingThreads && existingThreads.length > 0) {
+        // Thread exists, use it
+        threadId = existingThreads[0].id;
       } else {
-        // Create the thread
+        // Create new thread
         const { data: newThread, error: threadError } = await supabase
           .from('threads')
           .insert({
             post_id: post.id,
-            participant_ids: [post.user_id, currentUserId],
+            participant_ids: [currentUserId, post.user_id],
             created_by: currentUserId,
           })
-          .select('id')
+          .select()
           .single();
 
         if (threadError) throw threadError;
@@ -79,7 +81,8 @@ export default function InterestedModal({
         if (messageError) throw messageError;
       }
 
-      onSuccess(threadId);
+      // Pass whether a message was actually sent
+      onSuccess(threadId, includeMessage && message.trim().length > 0);
     } catch (error) {
       console.error('Error creating thread:', error);
       alert('Something went wrong. Please try again.');

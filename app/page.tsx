@@ -13,6 +13,7 @@ import MessageSentModal from './components/MessageSentModal';
 import ProfileCompletionModal from './components/ProfileCompletionModal';
 import ReportModal from './components/ReportModal';
 import ReportConfirmationModal from './components/ReportConfirmationModal';
+import InterestRegisteredModal from './components/InterestRegisteredModal';
 import Sidebar from './components/Sidebar';
 import MessageThread from './components/MessageThread';
 import BottomNav from './components/BottomNav';
@@ -283,6 +284,8 @@ function HomeContent() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInterestedModal, setShowInterestedModal] = useState(false);
   const [showMessageSentModal, setShowMessageSentModal] = useState(false);
+  const [showInterestRegisteredModal, setShowInterestRegisteredModal] = useState(false);
+  const [interestPosterName, setInterestPosterName] = useState('');
   const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<'post' | 'interest' | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -681,32 +684,51 @@ function HomeContent() {
     setShowReportConfirmation(true);
   };
 
-  const handleInterestedSuccess = (threadId: string) => {
+  const handleInterestedSuccess = (threadId: string, messageSent: boolean) => {
     setShowInterestedModal(false);
-    setShowMessageSentModal(true);
-    setSelectedThreadId(threadId);
-
+    
     // Add this post to the interested set so it disappears from feed immediately
     if (selectedPost) {
       setUserInterestedPostIds(prev => new Set([...prev, selectedPost.id]));
     }
+    
+    if (messageSent) {
+      // User sent a message - show message sent modal and open thread
+      setShowMessageSentModal(true);
+      setSelectedThreadId(threadId);
+      // On mobile, show the thread
+      if (isMobile) {
+        setShowMobileThread(true);
+      }
+    } else {
+      // User clicked "Send later" - show interest registered modal, DON'T open thread
+      setInterestPosterName(selectedPost?.name || 'the organizer');
+      setShowInterestRegisteredModal(true);
+      // Don't set selectedThreadId or show mobile thread
+    }
+    
     setSelectedPost(null);
     refreshPosts();
-
+    
     // Check if profile is incomplete
     if (currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
       setPendingAction('interest');
     }
-
-    // On mobile, show the thread
-    if (isMobile) {
-      setShowMobileThread(true);
-    }
   };
+   
 
   const handleMessageSentClose = () => {
     setShowMessageSentModal(false);
     // Show profile completion modal after message sent if profile is incomplete
+    if (pendingAction === 'interest' && currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
+      setShowProfileCompletionModal(true);
+    }
+    setPendingAction(null);
+  };
+
+  const handleInterestRegisteredClose = () => {
+    setShowInterestRegisteredModal(false);
+    // Show profile completion modal if profile is incomplete
     if (pendingAction === 'interest' && currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
       setShowProfileCompletionModal(true);
     }
@@ -1178,6 +1200,13 @@ function HomeContent() {
           onClose={handleMessageSentClose}
         />
       )}
+
+{showInterestRegisteredModal && (
+  <InterestRegisteredModal
+    posterName={interestPosterName}
+    onClose={handleInterestRegisteredClose}
+  />
+)}
 
       {showProfileCompletionModal && currentUserProfile && (
         <ProfileCompletionModal

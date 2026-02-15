@@ -161,6 +161,11 @@ export default function AdminReportsPage() {
   const handleRemovePost = async (reportId: string, postId: string) => {
     setActioningReport(reportId);
 
+    // Get post details for the notification
+    const report = reports.find(r => r.id === reportId);
+    const postTitle = report?.posts?.title || 'Unknown';
+    const postUserId = report?.posts?.user_id;
+
     // Soft delete - set status to 'hidden'
     const { error: postError } = await supabase
       .from('posts')
@@ -179,6 +184,23 @@ export default function AdminReportsPage() {
       .from('reports')
       .update({ status: 'reviewed' })
       .eq('id', reportId);
+
+    // Send removal notification email
+    if (postUserId) {
+      try {
+        await supabase.functions.invoke('post-moderation-notification', {
+          body: {
+            postId,
+            userId: postUserId,
+            postTitle,
+            action: 'removed',
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send removal email:', emailError);
+        // Don't block on email failure
+      }
+    }
 
     setReports(prev => prev.map(r => {
       if (r.id === reportId) {

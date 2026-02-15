@@ -1,5 +1,5 @@
 // supabase/functions/post-moderation-notification/index.ts
-// Sends email notifications when posts are approved or rejected
+// Sends email notifications when posts are approved, rejected, or removed
 
 // @ts-ignore - Deno types
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -10,13 +10,13 @@ const corsHeaders = {
 };
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const EMAIL_FROM = 'Common <onboarding@resend.dev>'; // Update with your domain
-const BASE_URL = 'https://common-smoky-seven.vercel.app'; // Update with your production URL
+const EMAIL_FROM = 'Common <notifications@notifications.common-social.com>';
+const BASE_URL = 'https://common-social.com';
 
 // @ts-ignore - Deno.serve
 Deno.serve(async (req: Request) => {
   console.log('Function invoked, method:', req.method);
-  
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     console.log('Handling CORS preflight');
@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
     
     console.log('Supabase URL exists:', !!supabaseUrl);
     console.log('Service key exists:', !!supabaseServiceKey);
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
@@ -44,7 +44,7 @@ Deno.serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     console.log('Processing action:', action, 'for post:', postTitle);
 
     // Get user's email and name
@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
 
     // Get user's email from auth
     const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(userId);
-
+    
     if (userError || !user?.email) {
       console.error('Error fetching user email:', userError);
       return new Response(
@@ -90,6 +90,13 @@ Deno.serve(async (req: Request) => {
     } else if (action === 'rejected') {
       subject = `About your post "${postTitle}"`;
       emailHtml = generateRejectedEmail({
+        recipientName,
+        postTitle,
+        guidelinesUrl: `${BASE_URL}/guidelines`,
+      });
+    } else if (action === 'removed') {
+      subject = `Your post "${postTitle}" has been removed`;
+      emailHtml = generateRemovedEmail({
         recipientName,
         postTitle,
         guidelinesUrl: `${BASE_URL}/guidelines`,
@@ -130,7 +137,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`${action} email sent to ${recipientEmail} for post ${postId}`);
-    
+
     return new Response(
       JSON.stringify({ success: true, action, email: recipientEmail }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -246,6 +253,62 @@ function generateRejectedEmail(params: {
             <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
               <p style="margin: 0; font-size: 12px; color: #888888; line-height: 1.5;">
                 If you think this was a mistake, you can reply to this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+// Generate removed email HTML (for posts removed after being reported)
+function generateRemovedEmail(params: {
+  recipientName: string;
+  postTitle: string;
+  guidelinesUrl: string;
+}): string {
+  const { recipientName, postTitle, guidelinesUrl } = params;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your post has been removed</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-width: 100%; background-color: #f5f5f5;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="padding: 32px 32px 24px; border-bottom: 1px solid #f0f0f0;">
+              <div style="font-size: 20px; font-weight: 700; color: #000000; letter-spacing: -0.5px;">common</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 8px; font-size: 18px; font-weight: 600; color: #000000;">
+                Hi ${recipientName},
+              </h1>
+              <p style="margin: 0 0 16px; font-size: 14px; color: #444444; line-height: 1.6;">
+                Your post <strong>"${postTitle}"</strong> has been removed following a review. It was found to not meet our community guidelines.
+              </p>
+              <p style="margin: 0 0 24px; font-size: 14px; color: #444444; line-height: 1.6;">
+                Please take a moment to review our guidelines. We want Common to be a safe and welcoming place for everyone to connect.
+              </p>
+              <a href="${guidelinesUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 24px;">
+                Read community guidelines
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
+              <p style="margin: 0; font-size: 12px; color: #888888; line-height: 1.5;">
+                If you believe this was a mistake, you can reply to this email.
               </p>
             </td>
           </tr>
