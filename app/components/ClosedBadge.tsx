@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface ClosedBadgeProps {
   size?: 'small' | 'normal';
@@ -8,12 +8,25 @@ interface ClosedBadgeProps {
 
 export default function ClosedBadge({ size = 'normal' }: ClosedBadgeProps) {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const badgeRef = useRef<HTMLSpanElement>(null);
 
   const isSmall = size === 'small';
 
+  useEffect(() => {
+    if (showTooltip && badgeRef.current) {
+      const rect = badgeRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        top: rect.top - 8,
+        left: rect.left + rect.width / 2,
+      });
+    }
+  }, [showTooltip]);
+
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <>
       <span
+        ref={badgeRef}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
         onClick={() => setShowTooltip(!showTooltip)}
@@ -37,19 +50,19 @@ export default function ClosedBadge({ size = 'normal' }: ClosedBadgeProps) {
       {showTooltip && (
         <div
           style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            marginBottom: '8px',
+            position: 'fixed',
+            top: tooltipPosition.top,
+            left: tooltipPosition.left,
+            transform: 'translate(-50%, -100%)',
             padding: '8px 12px',
             background: '#333',
             color: '#fff',
             fontSize: '12px',
             borderRadius: '8px',
             whiteSpace: 'nowrap',
-            zIndex: 1000,
+            zIndex: 9999,
             boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            pointerEvents: 'none',
           }}
         >
           No longer looking for more people
@@ -69,6 +82,6 @@ export default function ClosedBadge({ size = 'normal' }: ClosedBadgeProps) {
           />
         </div>
       )}
-    </div>
+    </>
   );
 }
