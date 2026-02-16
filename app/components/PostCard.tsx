@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { calculateAge, getInitials } from '@/lib/profile';
+import ClosedBadge from './ClosedBadge';
 
 interface PostCardProps {
   id: string;
@@ -22,6 +23,7 @@ interface PostCardProps {
   authorAvatarUrl?: string | null;
   authorDateOfBirth?: string | null;
   hideInterestButton?: boolean;
+  status?: string;
 }
 
 export default function PostCard({
@@ -42,6 +44,7 @@ export default function PostCard({
   authorAvatarUrl,
   authorDateOfBirth,
   hideInterestButton = false,
+  status,
 }: PostCardProps) {
   const [showNameTooltip, setShowNameTooltip] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -140,7 +143,17 @@ export default function PostCard({
       <div className="card">
         <div className="card-header">
           <div className="card-content">
-            <h3 className="card-title">{title}</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+  <h3 style={{ 
+    fontSize: '16px', 
+    fontWeight: 600, 
+    color: '#000',
+    margin: 0,
+  }}>
+    {title}
+  </h3>
+  {status === 'closed' && <ClosedBadge />}
+</div>
             {/* Location line */}
             <div className="card-meta">
               <a
@@ -266,7 +279,7 @@ export default function PostCard({
           </div>
 
           {/* Right side: I'm interested button */}
-          {!hideInterestButton && (
+          {!hideInterestButton && status !== 'closed' && (
             <button className="btn btn-primary" onClick={onImInterested}>
               I'm interested
             </button>

@@ -8,6 +8,7 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
 import AuthModal from '../components/AuthModal';
+import ClosedBadge from '../components/ClosedBadge';
 import EditPostModal from '../components/EditPostModal';
 import CreatePostModal from '../components/CreatePostModal';
 import MobileMessageList from '../components/MobileMessageList';
@@ -121,7 +122,7 @@ export default function MyActivityPage() {
         .from('posts')
         .select('*')
         .eq('user_id', user.id)
-        .in('status', ['approved', 'pending'])
+        .in('status', ['approved', 'pending', 'closed'])
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -160,12 +161,15 @@ export default function MyActivityPage() {
       .update({ status: 'closed' })
       .eq('id', selectedPostId);
 
-    if (error) {
-      console.error('Error closing post:', error);
-      alert('Failed to close post. Please try again.');
-    } else {
-      setPosts(posts.filter(p => p.id !== selectedPostId));
-    }
+      if (error) {
+        console.error('Error closing post:', error);
+        alert('Failed to close post. Please try again.');
+      } else {
+        // Update the post status locally instead of removing it
+        setPosts(posts.map(p => 
+          p.id === selectedPostId ? { ...p, status: 'closed' } : p
+        ));
+      }
 
     setActionLoading(false);
     setShowCloseModal(false);
@@ -389,9 +393,17 @@ export default function MyActivityPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                          <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#000', margin: 0 }}>
-                            {post.title}
-                          </h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+  <h3 style={{ 
+    fontSize: '16px', 
+    fontWeight: 600, 
+    color: '#000',
+    margin: 0,
+  }}>
+    {post.title}
+  </h3>
+  {post.status === 'closed' && <ClosedBadge />}
+</div>
                           {post.status === 'pending' && (
                             <span style={{
                               fontSize: '11px',
@@ -681,11 +693,11 @@ export default function MyActivityPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>
-              Close this post?
-            </h3>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>
-              This post will no longer be visible to others. You can't undo this action.
-            </p>
+  Close this post?
+</h3>
+<p style={{ fontSize: '14px', color: '#666', marginBottom: '20px', lineHeight: 1.5 }}>
+  Close your post when you're no longer looking for more people. It will be hidden from the feed but people you're already chatting with can still see it.
+</p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowCloseModal(false)}

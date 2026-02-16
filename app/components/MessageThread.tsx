@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { calculateAge, getInitials } from '@/lib/profile';
+import ClosedBadge from './ClosedBadge';
 
 interface Message {
   id: string;
@@ -27,6 +28,7 @@ interface Post {
   preference: string | null;
   expires_at: string | null;
   user_id: string;
+  status: string;
 }
 
 interface Thread {
@@ -137,7 +139,8 @@ export default function MessageThread({
             name,
             preference,
             expires_at,
-            user_id
+            user_id,
+            status
           )
         `)
         .eq('id', threadId)
@@ -782,7 +785,10 @@ export default function MessageThread({
         alignItems: 'center',
         flexShrink: 0,
       }}>
-        <span style={{ fontSize: '16px', fontWeight: 600, color: '#000' }}>{post.title}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+  <span style={{ fontSize: '16px', fontWeight: 600, color: '#000' }}>{post.title}</span>
+  {post.status === 'closed' && <ClosedBadge size="small" />}
+</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ position: 'relative' }}>
             <button
@@ -848,7 +854,10 @@ export default function MessageThread({
           flexShrink: 0,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ fontSize: '14px', fontWeight: 500, color: '#000' }}>{post.title}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+  <span style={{ fontSize: '14px', fontWeight: 500, color: '#000' }}>{post.title}</span>
+  {post.status === 'closed' && <ClosedBadge size="small" />}
+</div>
             <button 
               onClick={handleShare} 
               style={{ 

@@ -9,6 +9,7 @@ import AuthModal from '../../components/AuthModal';
 import InterestedModal from '../../components/InterestedModal';
 import MessageSentModal from '../../components/MessageSentModal';
 import InterestRegisteredModal from '../../components/InterestRegisteredModal';
+import ClosedBadge from '../../components/ClosedBadge';
 
 interface Post {
   id: string;
@@ -63,7 +64,7 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
         .from('posts')
         .select('*')
         .eq('id', postId)
-        .eq('status', 'approved')
+        .in('status', ['approved', 'closed'])
         .single();
 
       if (error || !data) {
@@ -216,6 +217,7 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
           preference={post.preference || undefined}
           isLoggedIn={!!user}
           onImInterested={handleInterestedClick}
+          status={post.status}
         />
         {/* Prompt for logged out users */}
         {!user && (
