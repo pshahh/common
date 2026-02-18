@@ -40,9 +40,16 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate name
+    if (!firstName.trim()) {
+      setError('Please enter your first name');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
-    
+  
     // Create the user
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
@@ -58,11 +65,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     // Create their profile
     if (data.user) {
       const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          first_name: firstName,
-        });
+      .from('profiles')
+      .insert({
+        id: data.user.id,
+        first_name: firstName.trim(),
+      });
+    
+    if (profileError) {
+      console.error('Profile creation error:', profileError);
+      // Don't silently fail - this is important
+      setError('Account created but profile setup failed. Please contact support.');
+    }
       
       if (profileError) {
         // Profile creation failed, but user might still be created

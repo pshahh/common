@@ -32,6 +32,7 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [firstName, setFirstName] = useState('');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -116,12 +117,13 @@ export default function SettingsPage() {
         .eq('id', user.id)
         .single();
 
-      if (!error && data) {
-        setProfile(data);
-        setAvatarPreview(data.avatar_url);
-        setDateOfBirth(data.date_of_birth || '');
-        setEmailNotifications(data.email_notifications !== false); // Default to true
-      }
+        if (!error && data) {
+          setProfile(data);
+          setAvatarPreview(data.avatar_url);
+          setDateOfBirth(data.date_of_birth || '');
+          setEmailNotifications(data.email_notifications !== false);
+          setFirstName(data.first_name || '');
+        }
       setLoading(false);
     }
 
@@ -198,15 +200,21 @@ export default function SettingsPage() {
         avatarUrl = publicUrl;
       }
 
-      // Update profile
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          avatar_url: avatarUrl,
-          date_of_birth: dateOfBirth || null,
-          email_notifications: emailNotifications,
-        })
-        .eq('id', user.id);
+      
+      // Validate name
+if (!firstName.trim()) {
+  throw new Error('First name is required');
+}
+// Update profile
+const { error: updateError } = await supabase
+  .from('profiles')
+  .update({
+    first_name: firstName.trim(),
+    avatar_url: avatarUrl,
+    date_of_birth: dateOfBirth || null,
+    email_notifications: emailNotifications,
+  })
+  .eq('id', user.id);
 
       if (updateError) {
         throw new Error('Failed to update profile: ' + updateError.message);
@@ -214,6 +222,7 @@ export default function SettingsPage() {
 
       setProfile({ 
         ...profile, 
+        first_name: firstName.trim(),
         avatar_url: avatarUrl, 
         date_of_birth: dateOfBirth || null,
         email_notifications: emailNotifications,
@@ -362,6 +371,30 @@ export default function SettingsPage() {
               <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', color: '#000' }}>
                 Profile
               </h2>
+
+              {/* First name */}
+<div style={{ marginBottom: '24px' }}>
+  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
+    First name
+  </label>
+  <input
+    type="text"
+    value={firstName}
+    onChange={(e) => {
+      setFirstName(e.target.value);
+      setSaveSuccess(false);
+    }}
+    style={{
+      padding: '12px 16px',
+      border: '1px solid #e0e0e0',
+      borderRadius: '12px',
+      fontSize: '14px',
+      outline: 'none',
+      width: '100%',
+      maxWidth: '300px',
+    }}
+  />
+</div>
 
               {/* Avatar */}
               <div style={{ marginBottom: '24px' }}>
