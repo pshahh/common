@@ -18,7 +18,7 @@ import Sidebar from './components/Sidebar';
 import MessageThread from './components/MessageThread';
 import BottomNav from './components/BottomNav';
 import MobileMessageList from './components/MobileMessageList';
-import { sortByDistance, formatDistance, getDistanceToPost } from '@/lib/distance';
+import { sortByDistance, formatDistance, getDistanceToPost, calculateDistance } from '@/lib/distance';
 
 interface Post {
   id: string;
@@ -59,6 +59,7 @@ interface LocationSuggestion {
 // Separate component to avoid re-render issues
 interface LocationSectionProps {
   sortBy: string;
+  radiusFilter: number | null;
   locationStatus: 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
   userLocation: UserLocation | null;
   showLocationInput: boolean;
@@ -73,6 +74,7 @@ interface LocationSectionProps {
 
 function LocationSection({
   sortBy,
+  radiusFilter,
   locationStatus,
   userLocation,
   showLocationInput,
@@ -84,7 +86,7 @@ function LocationSection({
   selectManualLocation,
   requestBrowserLocation,
 }: LocationSectionProps) {
-  if (sortBy !== 'nearest') return null;
+  if (sortBy !== 'nearest' && radiusFilter === null) return null;
 
   // Show requesting state
   if (locationStatus === 'requesting') {
@@ -308,6 +310,7 @@ function HomeContent() {
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [searchingLocation, setSearchingLocation] = useState(false);
+  const [radiusFilter, setRadiusFilter] = useState<number | null>(null); // null = Any distance, values in miles
 
   // Mobile state
   const [mobileTab, setMobileTab] = useState<'home' | 'messages' | 'activity' | 'menu'>('home');
@@ -552,11 +555,12 @@ function HomeContent() {
   }, []);
 
   // Request location when sorting by nearest
-  useEffect(() => {
-    if (sortBy === 'nearest' && locationStatus === 'idle') {
-      requestBrowserLocation();
-    }
-  }, [sortBy, locationStatus, requestBrowserLocation]);
+  // Request location when sorting by nearest OR when radius filter is set
+useEffect(() => {
+  if ((sortBy === 'nearest' || radiusFilter !== null) && locationStatus === 'idle') {
+    requestBrowserLocation();
+  }
+}, [sortBy, radiusFilter, locationStatus, requestBrowserLocation]);
 
   // Search for locations (debounced)
   useEffect(() => {
@@ -569,12 +573,17 @@ function HomeContent() {
       setSearchingLocation(true);
       try {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=5&countrycodes=gb`
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=5`
         );
+        if (!response.ok) {
+          throw new Error('Search failed');
+        }
         const data = await response.json();
         setLocationSuggestions(data);
       } catch (err) {
-        console.error('Location search failed:', err);
+        // Silently fail - user can keep typing or try again
+        console.log('Location search failed, will retry on next keystroke');
+        setLocationSuggestions([]);
       }
       setSearchingLocation(false);
     }, 300);
@@ -610,27 +619,47 @@ function HomeContent() {
   }, [posts, user, userInterestedPostIds]);
 
   // Sort posts based on selected sort option
-  const sortedPosts = useMemo(() => {
-    const postsToSort = user ? filteredPosts : posts;
-
-    if (sortBy === 'nearest' && userLocation) {
-      return sortByDistance(postsToSort, userLocation.latitude, userLocation.longitude);
-    } else if (sortBy === 'soon') {
-      // Sort by expires_at ascending (soonest first)
-      // Posts without expires_at go to the end
-      return [...postsToSort].sort((a, b) => {
-        if (!a.expires_at && !b.expires_at) return 0;
-        if (!a.expires_at) return 1;
-        if (!b.expires_at) return -1;
-        return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
-      });
-    } else {
-      // Default: recently added - sort by created_at descending (newest first)
-      return [...postsToSort].sort((a, b) => {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-    }
-  }, [filteredPosts, posts, user, sortBy, userLocation]);
+  // Sort and filter posts based on selected options
+const sortedPosts = useMemo(() => {
+  let postsToSort = user ? filteredPosts : posts;
+  
+  // Apply radius filter if user has a location and radius is set
+  // radiusFilter is in miles, calculateDistance returns km, so convert
+  if (userLocation && radiusFilter !== null) {
+    postsToSort = postsToSort.filter(post => {
+      if (post.latitude === null || post.longitude === null) {
+        // Posts without coordinates are excluded when radius filter is active
+        return false;
+      }
+      const distanceKm = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        post.latitude,
+        post.longitude
+      );
+      const distanceMiles = distanceKm * 0.621371; // Convert km to miles
+      return distanceMiles <= radiusFilter;
+    });
+  }
+  
+  if (sortBy === 'nearest' && userLocation) {
+    return sortByDistance(postsToSort, userLocation.latitude, userLocation.longitude);
+  } else if (sortBy === 'soon') {
+    // Sort by expires_at ascending (soonest first)
+    // Posts without expires_at go to the end
+    return [...postsToSort].sort((a, b) => {
+      if (!a.expires_at && !b.expires_at) return 0;
+      if (!a.expires_at) return 1;
+      if (!b.expires_at) return -1;
+      return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
+    });
+  } else {
+    // Default: recently added - sort by created_at descending (newest first)
+    return [...postsToSort].sort((a, b) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }
+}, [filteredPosts, posts, user, sortBy, userLocation, radiusFilter]);
 
   // Get distance string for a post
   const getPostDistance = useCallback((post: Post): string | null => {
@@ -762,6 +791,7 @@ function HomeContent() {
       .from('posts')
       .select('*')
       .eq('status', 'approved')
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .order('created_at', { ascending: false });
 
     if (!error && postsData) {
@@ -875,22 +905,36 @@ function HomeContent() {
           </div>
 
           <div className="feed-header">
-            <button className="btn btn-primary" onClick={handleShareClick}>
-              Share what I'm doing
-            </button>
-            <select
-              className="sort-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="nearest">Sort by: nearest</option>
-              <option value="soon">Sort by: happening soon</option>
-              <option value="recent">Sort by: recently added</option>
-            </select>
-          </div>
+  <button className="btn btn-primary" onClick={handleShareClick}>
+    Share what I'm doing
+  </button>
+  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+    <select
+      className="sort-select"
+      value={sortBy}
+      onChange={(e) => setSortBy(e.target.value)}
+    >
+      <option value="nearest">Sort by: nearest</option>
+      <option value="soon">Sort by: happening soon</option>
+      <option value="recent">Sort by: recently added</option>
+    </select>
+    <select
+      className="sort-select"
+      value={radiusFilter === null ? 'any' : radiusFilter.toString()}
+      onChange={(e) => setRadiusFilter(e.target.value === 'any' ? null : Number(e.target.value))}
+    >
+      <option value="any">Distance: any</option>
+      <option value="1">Within 1 miles</option>
+      <option value="3">Within 3 miles</option>
+      <option value="5">Within 5 miles</option>
+      <option value="10">Within 10 miles</option>
+    </select>
+  </div>
+</div>
 
           <LocationSection
             sortBy={sortBy}
+            radiusFilter={radiusFilter} 
             locationStatus={locationStatus}
             userLocation={userLocation}
             showLocationInput={showLocationInput}
@@ -1028,28 +1072,42 @@ function HomeContent() {
   }}>
     Do things with people nearby
   </h1>
-            <div 
-              className="feed-header"
-              onClick={(e) => e.stopPropagation()}
-              style={{ pointerEvents: selectedThreadId && !isMobile ? 'none' : 'auto' }}
-            >
-              <button className="btn btn-primary" onClick={handleShareClick}>
-                Share what I'm doing
-              </button>
-              <select
-                className="sort-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="nearest">Sort by: nearest</option>
-                <option value="soon">Sort by: happening soon</option>
-                <option value="recent">Sort by: recently added</option>
-              </select>
-            </div>
+  <div 
+  className="feed-header"
+  onClick={(e) => e.stopPropagation()}
+  style={{ pointerEvents: selectedThreadId && !isMobile ? 'none' : 'auto' }}
+>
+  <button className="btn btn-primary" onClick={handleShareClick}>
+    Share what I'm doing
+  </button>
+  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+    <select
+      className="sort-select"
+      value={sortBy}
+      onChange={(e) => setSortBy(e.target.value)}
+    >
+      <option value="nearest">Sort by: nearest</option>
+      <option value="soon">Sort by: happening soon</option>
+      <option value="recent">Sort by: recently added</option>
+    </select>
+    <select
+      className="sort-select"
+      value={radiusFilter === null ? 'any' : radiusFilter.toString()}
+      onChange={(e) => setRadiusFilter(e.target.value === 'any' ? null : Number(e.target.value))}
+    >
+      <option value="any">Distance: any</option>
+      <option value="1">Within 1 miles</option>
+      <option value="3">Within 3 miles</option>
+      <option value="5">Within 5 miles</option>
+      <option value="10">Within 10 miles</option>
+    </select>
+  </div>
+</div>
 
             <div onClick={(e) => e.stopPropagation()} style={{ pointerEvents: selectedThreadId && !isMobile ? 'none' : 'auto' }}>
               <LocationSection
                 sortBy={sortBy}
+                radiusFilter={radiusFilter} 
                 locationStatus={locationStatus}
                 userLocation={userLocation}
                 showLocationInput={showLocationInput}

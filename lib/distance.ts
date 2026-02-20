@@ -34,21 +34,20 @@ function toRadians(degrees: number): number {
 }
 
 /**
- * Format distance for display
- * @param distanceKm Distance in kilometers
- * @returns Formatted string like "1.2 km" or "500 m"
+/**
+ * Format distance for display (in miles)
+ * @param distanceKm Distance in kilometers (from calculateDistance)
+ * @returns Formatted string like "1.2 miles" or "nearby"
  */
 export function formatDistance(distanceKm: number): string {
-  if (distanceKm < 1) {
-    // Show in meters for distances under 1km
-    const meters = Math.round(distanceKm * 1000);
-    return `${meters} m`;
-  } else if (distanceKm < 10) {
-    // Show one decimal place for distances under 10km
-    return `${distanceKm.toFixed(1)} km`;
+  const distanceMiles = distanceKm * 0.621371;
+  
+  if (distanceMiles < 0.1) {
+    return 'nearby';
+  } else if (distanceMiles < 10) {
+    return `${distanceMiles.toFixed(1)} miles`;
   } else {
-    // Round to whole number for larger distances
-    return `${Math.round(distanceKm)} km`;
+    return `${Math.round(distanceMiles)} miles`;
   }
 }
 

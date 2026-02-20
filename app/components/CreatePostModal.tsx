@@ -99,16 +99,19 @@ const getTomorrowDate = () => {
     const timer = setTimeout(async () => {
       setSearchingLocation(true);
       try {
-        // Search with broader parameters for better POI coverage
-        // Adding addressdetails and different search approach
         const response = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=8&addressdetails=1&extratags=1`
         );
+        if (!response.ok) {
+          throw new Error('Search failed');
+        }
         const data = await response.json();
         setLocationSuggestions(data);
-        setShowSuggestions(data.length > 0);
+        setShowSuggestions(true);
       } catch (err) {
-        console.error('Location search failed:', err);
+        // Silently fail - user can keep typing or try again
+        console.log('Location search failed, will retry on next keystroke');
+        setLocationSuggestions([]);
       }
       setSearchingLocation(false);
     }, 300);
