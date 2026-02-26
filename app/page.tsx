@@ -713,6 +713,7 @@ const sortedPosts = useMemo(() => {
     setShowReportConfirmation(true);
   };
 
+  
   const handleInterestedSuccess = (threadId: string, messageSent: boolean) => {
     setShowInterestedModal(false);
     
@@ -720,25 +721,20 @@ const sortedPosts = useMemo(() => {
     if (selectedPost) {
       setUserInterestedPostIds(prev => new Set([...prev, selectedPost.id]));
     }
-    
+
     if (messageSent) {
-      // User sent a message - show message sent modal and open thread
+      // User sent a message - just show confirmation, DON'T open thread
       setShowMessageSentModal(true);
-      setSelectedThreadId(threadId);
-      // On mobile, show the thread
-      if (isMobile) {
-        setShowMobileThread(true);
-      }
+      // Don't set selectedThreadId or show mobile thread
     } else {
-      // User clicked "Send later" - show interest registered modal, DON'T open thread
+      // User clicked "Send later" - show interest registered modal
       setInterestPosterName(selectedPost?.name || 'the organizer');
       setShowInterestRegisteredModal(true);
-      // Don't set selectedThreadId or show mobile thread
     }
-    
+
     setSelectedPost(null);
     refreshPosts();
-    
+
     // Check if profile is incomplete
     if (currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
       setPendingAction('interest');
