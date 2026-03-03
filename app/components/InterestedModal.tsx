@@ -23,7 +23,7 @@ export default function InterestedModal({
   onClose,
   onSuccess,
 }: InterestedModalProps) {
-  const [message, setMessage] = useState('Hey, I\'m interested in joining you. How should we do this?');
+  const [message, setMessage] = useState('hey, I\'m interested in joining you');
   const [sending, setSending] = useState(false);
   const createThreadAndMessage = async () => {
     setSending(true);
@@ -56,7 +56,7 @@ export default function InterestedModal({
         await supabase.rpc('increment_interested', { post_id: post.id });
       }
       // Send the message (use default if field is empty)
-      const messageContent = message.trim() || 'Hey, I\'m interested in joining you. How should we do this?';
+      const messageContent = message.trim() || 'hey, I\'m interested in joining you';
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
@@ -108,7 +108,7 @@ export default function InterestedModal({
             </label>
             <textarea
               className="form-textarea"
-              placeholder="Hey, I'm interested in joining you. How should we do this?"
+              placeholder="hey, I'm interested in joining you"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
