@@ -1,8 +1,6 @@
 'use client';
-
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-
 interface Post {
   id: string;
   title: string;
@@ -13,27 +11,22 @@ interface Post {
   user_id: string;
   preference?: string | null;
 }
-
 interface InterestedModalProps {
   post: Post;
   currentUserId: string;
   onClose: () => void;
   onSuccess: (threadId: string, messageSent: boolean) => void;
 }
-
 export default function InterestedModal({
   post,
   currentUserId,
   onClose,
   onSuccess,
 }: InterestedModalProps) {
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState('Hey, I\'m interested in joining you. How should we do this?');
   const [sending, setSending] = useState(false);
-  const [showSkipTooltip, setShowSkipTooltip] = useState(false);
-
-  const createThreadAndMessage = async (includeMessage: boolean) => {
+  const createThreadAndMessage = async () => {
     setSending(true);
-
     try {
       // Check if thread already exists
       const { data: existingThreads, error: threadCheckError } = await supabase
@@ -41,11 +34,8 @@ export default function InterestedModal({
         .select('id')
         .eq('post_id', post.id)
         .contains('participant_ids', [currentUserId]);
-
       if (threadCheckError) throw threadCheckError;
-
       let threadId: string;
-
       if (existingThreads && existingThreads.length > 0) {
         // Thread exists, use it
         threadId = existingThreads[0].id;
@@ -60,29 +50,22 @@ export default function InterestedModal({
           })
           .select()
           .single();
-
         if (threadError) throw threadError;
         threadId = newThread.id;
-
         // Increment people_interested count on the post
         await supabase.rpc('increment_interested', { post_id: post.id });
       }
-
-      // Send the message if provided
-      if (includeMessage && message.trim()) {
-        const { error: messageError } = await supabase
-          .from('messages')
-          .insert({
-            thread_id: threadId,
-            sender_id: currentUserId,
-            content: message.trim(),
-          });
-
-        if (messageError) throw messageError;
-      }
-
-      // Pass whether a message was actually sent
-      onSuccess(threadId, includeMessage && message.trim().length > 0);
+      // Send the message (use default if field is empty)
+      const messageContent = message.trim() || 'Hey, I\'m interested in joining you. How should we do this?';
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          thread_id: threadId,
+          sender_id: currentUserId,
+          content: messageContent,
+        });
+      if (messageError) throw messageError;
+      onSuccess(threadId, true);
     } catch (error) {
       console.error('Error creating thread:', error);
       alert('Something went wrong. Please try again.');
@@ -90,19 +73,17 @@ export default function InterestedModal({
       setSending(false);
     }
   };
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h2 className="modal-title">Send a message to coordinate</h2>
+            <h2 className="modal-title">Say hello</h2>
           </div>
           <button className="modal-close" onClick={onClose}>
             ×
           </button>
         </div>
-
         <div className="modal-body">
           {/* Post summary card */}
           <div className="post-summary">
@@ -120,11 +101,10 @@ export default function InterestedModal({
               <span className="post-summary-name">{post.name}</span>
             </div>
           </div>
-
           {/* Message input */}
           <div className="form-group">
             <label className="form-label">
-              A quick (optional) note to get things moving
+              A quick note to get things moving
             </label>
             <textarea
               className="form-textarea"
@@ -134,42 +114,23 @@ export default function InterestedModal({
               rows={4}
             />
           </div>
-
           <p className="hint-text">
             Once you've both sent a message, you'll see each other's profile photo.
           </p>
-
           {/* Safety tips */}
           <div className="safety-tips">
             <p>Meet in public places</p>
             <p>Decide details together</p>
             <p>You're free to leave at any time</p>
           </div>
-
           {/* Actions */}
           <div className="modal-actions">
-            <div className="skip-button-container">
-              <button
-                className="btn btn-secondary"
-                onClick={() => createThreadAndMessage(false)}
-                disabled={sending}
-                onMouseEnter={() => setShowSkipTooltip(true)}
-                onMouseLeave={() => setShowSkipTooltip(false)}
-              >
-                Send later
-              </button>
-              {showSkipTooltip && (
-                <div className="skip-tooltip">
-                  You'll be able to send a message later on
-                </div>
-              )}
-            </div>
             <button
               className="btn btn-primary"
-              onClick={() => createThreadAndMessage(true)}
+              onClick={createThreadAndMessage}
               disabled={sending}
             >
-              {sending ? 'Sending...' : 'Send message'}
+              {sending ? 'Sending...' : 'Send & join'}
             </button>
           </div>
         </div>
