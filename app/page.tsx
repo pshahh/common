@@ -1217,6 +1217,8 @@ const sortedPosts = useMemo(() => {
             onClose={() => {
               setShowMobileThread(false);
               setSelectedThreadId(null);
+              setShowMobileMessages(true);
+              setMobileTab('messages');
             }}
             onReport={handleReportClick}
             onLeaveThread={handleLeaveThread}

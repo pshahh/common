@@ -1,16 +1,13 @@
 'use client';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-
 interface ThreadPost {
   id: string;
   title: string;
   location: string;
   expires_at: string | null;
 }
-
 interface Thread {
   id: string;
   post_id: string;
@@ -18,8 +15,8 @@ interface Thread {
   created_at: string;
   closed_at: string | null;
   post: ThreadPost | null;
+  otherParticipantName: string | null;
 }
-
 interface SidebarProps {
   userId: string;
   selectedThreadId: string | null;
@@ -29,7 +26,6 @@ interface SidebarProps {
   activeItem?: 'messages' | 'my-activity' | 'settings' | 'admin-reports' | 'admin-posts' | null;
   refreshTrigger?: number; // Increment this to trigger a refresh
 }
-
 export default function Sidebar({
   userId,
   selectedThreadId,
@@ -45,7 +41,6 @@ export default function Sidebar({
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [pendingPostsCount, setPendingPostsCount] = useState(0);
-
   // Check if user is admin and fetch pending counts
   useEffect(() => {
     async function checkAdminStatus() {
@@ -54,33 +49,26 @@ export default function Sidebar({
         .select('is_admin')
         .eq('id', userId)
         .single();
-
       if (!error && data?.is_admin) {
         setIsAdmin(true);
-
         // Fetch pending reports count
         const { count: reportsCount } = await supabase
           .from('reports')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'pending');
-
         setPendingReportsCount(reportsCount || 0);
-
         // Fetch pending posts count
         const { count: postsCount } = await supabase
           .from('posts')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'pending');
-
         setPendingPostsCount(postsCount || 0);
       }
     }
-
     if (userId) {
       checkAdminStatus();
     }
   }, [userId]);
-
   const fetchThreads = useCallback(async () => {
     const { data, error } = await supabase
       .from('threads')
@@ -99,15 +87,40 @@ export default function Sidebar({
       `)
       .contains('participant_ids', [userId])
       .order('created_at', { ascending: false });
-
     if (error) {
       console.error('Error fetching threads:', error);
     } else if (data) {
+      // Collect all other participant IDs across all threads
+      const otherParticipantIds = new Set<string>();
+      data.forEach((thread) => {
+        thread.participant_ids.forEach((id: string) => {
+          if (id !== userId) otherParticipantIds.add(id);
+        });
+      });
+
+      // Fetch their names in one query
+      let nameMap: Record<string, string> = {};
+      if (otherParticipantIds.size > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name')
+          .in('id', [...otherParticipantIds]);
+        if (profiles) {
+          profiles.forEach((p) => {
+            nameMap[p.id] = p.first_name;
+          });
+        }
+      }
+
       const transformedThreads: Thread[] = data.map((thread) => {
         const postData = thread.posts;
         const post: ThreadPost | null = Array.isArray(postData) 
           ? postData[0] || null 
           : postData;
+
+        // Find the other participant's name
+        const otherIds = thread.participant_ids.filter((id: string) => id !== userId);
+        const otherName = otherIds.length > 0 ? nameMap[otherIds[0]] || null : null;
 
         return {
           id: thread.id,
@@ -116,25 +129,21 @@ export default function Sidebar({
           created_at: thread.created_at,
           closed_at: thread.closed_at,
           post: post,
+          otherParticipantName: otherName,
         };
       });
-
       setThreads(transformedThreads);
     }
-
     setLoading(false);
   }, [userId]);
-
   useEffect(() => {
     if (userId) {
       fetchThreads();
     }
   }, [userId, fetchThreads, refreshTrigger]);
-
   // Subscribe to new threads for this user
   useEffect(() => {
     if (!userId) return;
-
     const channel = supabase
       .channel(`user-threads-${userId}`)
       .on(
@@ -152,15 +161,25 @@ export default function Sidebar({
             created_at: string;
             closed_at: string | null;
           };
-
           if (newThread.participant_ids.includes(userId)) {
             const { data: postData } = await supabase
               .from('posts')
               .select('id, title, location, expires_at')
               .eq('id', newThread.post_id)
               .single();
-
             if (postData) {
+              // Fetch other participant's name
+              const otherIds = newThread.participant_ids.filter((id: string) => id !== userId);
+              let otherName: string | null = null;
+              if (otherIds.length > 0) {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('first_name')
+                  .eq('id', otherIds[0])
+                  .single();
+                otherName = profile?.first_name || null;
+              }
+
               const transformedThread: Thread = {
                 id: newThread.id,
                 post_id: newThread.post_id,
@@ -168,8 +187,8 @@ export default function Sidebar({
                 created_at: newThread.created_at,
                 closed_at: newThread.closed_at,
                 post: postData,
+                otherParticipantName: otherName,
               };
-
               setThreads((prev) => {
                 if (prev.some(t => t.id === newThread.id)) return prev;
                 return [transformedThread, ...prev];
@@ -179,17 +198,14 @@ export default function Sidebar({
         }
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
   }, [userId]);
-
   const handleMyActivityClick = () => {
     router.push('/my-activity');
     onNavigateToMyActivity();
   };
-
   // Check if a thread is closed
   const isThreadClosed = (thread: Thread): boolean => {
     if (thread.closed_at) return true;
@@ -201,7 +217,6 @@ export default function Sidebar({
     }
     return false;
   };
-
   const NavItem = ({ 
     onClick, 
     isActive, 
@@ -247,7 +262,6 @@ export default function Sidebar({
       )}
     </div>
   );
-
   return (
     <div className="sidebar-container" style={{
       height: '100%',
@@ -269,14 +283,13 @@ export default function Sidebar({
           }}>
             Messages
           </div>
-
           {loading ? (
             <div style={{ fontSize: '13px', color: '#888', padding: '8px 12px' }}>
               Loading...
             </div>
           ) : threads.length === 0 ? (
             <div style={{ fontSize: '13px', color: '#888', padding: '8px 12px', lineHeight: 1.5 }}>
-              Messages appear here when it's time to coordinate.
+              Messages appear here when it&apos;s time to coordinate.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -325,7 +338,7 @@ export default function Sidebar({
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                       }}>
-                        {thread.post?.location || ''}
+                        {thread.otherParticipantName || thread.post?.location || ''}
                       </div>
                     </div>
                   );
@@ -333,7 +346,6 @@ export default function Sidebar({
             </div>
           )}
         </div>
-
         {/* My activity link */}
         <NavItem 
           onClick={handleMyActivityClick} 
@@ -341,7 +353,6 @@ export default function Sidebar({
         >
           My activity
         </NavItem>
-
         {/* Admin section - only show for admins */}
         {isAdmin && (
           <>
@@ -373,10 +384,8 @@ export default function Sidebar({
             </NavItem>
           </>
         )}
-
         {/* Spacer to push settings and logout to bottom */}
         <div style={{ flex: 1 }} />
-
         {/* Settings link */}
         <NavItem 
           onClick={() => router.push('/settings')} 
@@ -385,7 +394,6 @@ export default function Sidebar({
           Settings
         </NavItem>
       </div>
-
       {/* Logout at bottom */}
       <div style={{ padding: '8px 12px 16px' }}>
         <button

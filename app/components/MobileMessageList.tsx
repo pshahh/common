@@ -1,15 +1,12 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-
 interface ThreadPost {
   id: string;
   title: string;
   location: string;
   expires_at: string | null;
 }
-
 interface Thread {
   id: string;
   post_id: string;
@@ -17,15 +14,14 @@ interface Thread {
   created_at: string;
   closed_at: string | null;
   post: ThreadPost | null;
+  otherParticipantName: string | null;
 }
-
 interface MobileMessageListProps {
   userId: string;
   onSelectThread: (threadId: string) => void;
   onClose: () => void;
   refreshTrigger?: number;
 }
-
 export default function MobileMessageList({
   userId,
   onSelectThread,
@@ -33,7 +29,6 @@ export default function MobileMessageList({
 }: MobileMessageListProps) {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     async function fetchThreads() {
       const { data, error } = await supabase
@@ -53,15 +48,41 @@ export default function MobileMessageList({
         `)
         .contains('participant_ids', [userId])
         .order('created_at', { ascending: false });
-
       if (error) {
         console.error('Error fetching threads:', error);
       } else if (data) {
+        // Collect all other participant IDs across all threads
+        const otherParticipantIds = new Set<string>();
+        data.forEach((thread) => {
+          thread.participant_ids.forEach((id: string) => {
+            if (id !== userId) otherParticipantIds.add(id);
+          });
+        });
+
+        // Fetch their names in one query
+        let nameMap: Record<string, string> = {};
+        if (otherParticipantIds.size > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, first_name')
+            .in('id', [...otherParticipantIds]);
+          if (profiles) {
+            profiles.forEach((p) => {
+              nameMap[p.id] = p.first_name;
+            });
+          }
+        }
+
         const transformedThreads: Thread[] = data.map((thread) => {
           const postData = thread.posts;
           const post: ThreadPost | null = Array.isArray(postData) 
             ? postData[0] || null 
             : postData;
+
+          // Find the other participant's name
+          const otherIds = thread.participant_ids.filter((id: string) => id !== userId);
+          const otherName = otherIds.length > 0 ? nameMap[otherIds[0]] || null : null;
+
           return {
             id: thread.id,
             post_id: thread.post_id,
@@ -69,18 +90,17 @@ export default function MobileMessageList({
             created_at: thread.created_at,
             closed_at: thread.closed_at,
             post: post,
+            otherParticipantName: otherName,
           };
         });
         setThreads(transformedThreads);
       }
       setLoading(false);
     }
-
     if (userId) {
       fetchThreads();
     }
   }, [userId, refreshTrigger]);
-
   // Check if a thread is closed
   const isThreadClosed = (thread: Thread): boolean => {
     if (thread.closed_at) return true;
@@ -91,7 +111,6 @@ export default function MobileMessageList({
     }
     return false;
   };
-
   // Sort threads: open threads first, then closed
   const sortedThreads = [...threads].sort((a, b) => {
     const aIsClosed = isThreadClosed(a);
@@ -100,7 +119,6 @@ export default function MobileMessageList({
     if (!aIsClosed && bIsClosed) return -1;
     return 0;
   });
-
   return (
     <div style={{
       position: 'fixed',
@@ -132,7 +150,7 @@ export default function MobileMessageList({
           fontSize: '14px',
           lineHeight: 1.5,
         }}>
-          Messages appear here when it's time to coordinate.
+          Messages appear here when it&apos;s time to coordinate.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -163,7 +181,7 @@ export default function MobileMessageList({
                   fontSize: '13px',
                   color: '#888888',
                 }}>
-                  {thread.post?.location || ''}
+                  {thread.otherParticipantName || thread.post?.location || ''}
                 </div>
                 {closed && (
                   <div style={{
