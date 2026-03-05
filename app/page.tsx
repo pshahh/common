@@ -853,6 +853,8 @@ const sortedPosts = useMemo(() => {
     if (isMobile) {
       setShowMobileThread(false);
     }
+    // Re-fetch threads to update read state
+    setSidebarRefreshTrigger(prev => prev + 1);
   };
 
   const handleLeaveThread = () => {

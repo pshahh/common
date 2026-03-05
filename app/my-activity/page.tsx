@@ -261,6 +261,8 @@ export default function MyActivityPage() {
   // Handle closing the message thread
   const handleCloseThread = () => {
     setMobileSelectedThreadId(null);
+    // Re-fetch threads to update read state
+    setRefreshTrigger(prev => prev + 1);
   };
 
   // Handle closing the message list

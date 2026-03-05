@@ -10,7 +10,9 @@ export default function InterestRegisteredModal({
   onClose,
 }: InterestRegisteredModalProps) {
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={(e) => {
+      if (e.target === e.currentTarget) onClose();
+    }}>
       <div
         className="modal confirmation-modal"
         onClick={(e) => e.stopPropagation()}

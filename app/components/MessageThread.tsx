@@ -114,6 +114,14 @@ export default function MessageThread({
     return profile;
   };
 
+  // Helper to mark thread as read with error logging
+  const markThreadAsRead = async () => {
+    const { error } = await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
+    if (error) {
+      console.error('mark_thread_read failed:', error);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -205,6 +213,9 @@ export default function MessageThread({
       }
 
       setLoading(false);
+
+      // Mark thread as read when opened
+      markThreadAsRead();
     }
 
     fetchThreadData();
@@ -253,6 +264,9 @@ export default function MessageThread({
             }
             return [...prev, transformedMessage];
           });
+
+          // Mark thread as read since user is viewing it
+          markThreadAsRead();
         }
       )
       .subscribe();
@@ -283,6 +297,8 @@ export default function MessageThread({
       alert('Failed to send message. Please try again.');
     } else {
       setNewMessage('');
+      // Mark as read after sending own message
+      markThreadAsRead();
     }
 
     setSending(false);
@@ -297,70 +313,75 @@ export default function MessageThread({
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
   };
 
-  const handleShare = async () => {
+  const handleShare = () => {
     if (!thread?.post) return;
     const url = `${window.location.origin}/post/${thread.post.id}`;
-    await navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Leave conversation handler
-  const handleLeaveConversation = async () => {
+  const handleLeaveThread = async () => {
     setActionLoading(true);
     try {
       const { error } = await supabase.rpc('leave_thread', {
         thread_id_param: threadId
       });
-
       if (error) {
         console.error('Error leaving thread:', JSON.stringify(error, null, 2));
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
-      console.error('Error details:', error.details);
         alert('Failed to leave conversation. Please try again.');
+        setActionLoading(false);
+        return;
+      }
+      setShowLeaveModal(false);
+      setActionLoading(false);
+      if (onLeaveThread) {
+        onLeaveThread();
       } else {
-        setShowLeaveModal(false);
-        onLeaveThread?.();
         onClose();
       }
     } catch (err) {
       console.error('Error leaving thread:', err);
       alert('Failed to leave conversation. Please try again.');
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
-  // Block user handler
   const handleBlockUser = async () => {
     const otherUserId = getOtherParticipantId();
-    if (!otherUserId) {
-      alert('Could not identify user to block.');
-      return;
-    }
-
+    if (!otherUserId) return;
     setActionLoading(true);
     try {
       const { error } = await supabase.rpc('block_user', {
-        blocked_id: otherUserId
+        blocked_user_id: otherUserId
       });
-
       if (error) {
-        console.error('Error blocking user:', error);
+        console.error('Error blocking user:', JSON.stringify(error, null, 2));
         alert('Failed to block user. Please try again.');
+        setActionLoading(false);
+        return;
+      }
+      setShowBlockModal(false);
+      setActionLoading(false);
+      if (onLeaveThread) {
+        onLeaveThread();
       } else {
-        setShowBlockModal(false);
-        onLeaveThread?.();
         onClose();
       }
     } catch (err) {
       console.error('Error blocking user:', err);
       alert('Failed to block user. Please try again.');
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
-  // Avatar component with hover tooltip
+  // Check if both participants have sent messages (for avatar reveal)
+  const bothHaveSentMessages = (): boolean => {
+    if (!thread) return false;
+    const senderIds = new Set(messages.map(m => m.sender_id));
+    return thread.participant_ids.every(id => senderIds.has(id));
+  };
+
   const MessageAvatar = ({ 
     senderId, 
     senderName, 
@@ -368,268 +389,148 @@ export default function MessageThread({
     dateOfBirth,
     showAvatar 
   }: { 
-    senderId: string;
-    senderName: string;
-    avatarUrl: string | null | undefined;
-    dateOfBirth: string | null | undefined;
+    senderId: string; 
+    senderName: string; 
+    avatarUrl?: string | null;
+    dateOfBirth?: string | null;
     showAvatar: boolean;
   }) => {
     if (!showAvatar) {
-      return <div style={{ width: '24px', height: '24px', flexShrink: 0 }} />;
+      return <div style={{ width: '28px', height: '28px', flexShrink: 0 }} />;
     }
 
-    const age = calculateAge(dateOfBirth || null);
+    const canReveal = bothHaveSentMessages();
+    const age = dateOfBirth ? calculateAge(dateOfBirth) : null;
 
-    const handleAvatarClick = () => {
-      if (avatarUrl) {
-        setExpandedPhoto({ url: avatarUrl, name: senderName, age });
-      }
-    };
-
-    return (
-      <div 
-        style={{ position: 'relative' }}
-        onMouseEnter={() => setHoveredAvatarId(senderId)}
-        onMouseLeave={() => setHoveredAvatarId(null)}
-      >
-        {avatarUrl ? (
-          <div 
-            onClick={handleAvatarClick}
-            style={{ 
-              width: '24px', 
-              height: '24px', 
-              borderRadius: '50%', 
-              backgroundImage: `url(${avatarUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
+    if (canReveal && avatarUrl) {
+      return (
+        <div 
+          style={{ position: 'relative' }}
+          onMouseEnter={() => setHoveredAvatarId(senderId)}
+          onMouseLeave={() => setHoveredAvatarId(null)}
+        >
+          <img
+            src={avatarUrl}
+            alt={senderName}
+            style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              objectFit: 'cover',
               flexShrink: 0,
               cursor: 'pointer',
-            }} 
+            }}
+            onClick={() => setExpandedPhoto({ url: avatarUrl, name: senderName, age })}
           />
-        ) : (
-          <div style={{ 
-            width: '24px', 
-            height: '24px', 
-            borderRadius: '50%', 
-            background: '#e0e0e0', 
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '10px',
-            fontWeight: 600,
-            color: '#888',
-          }}>
-            {getInitials(senderName)}
-          </div>
-        )}
-
-        {/* Hover tooltip */}
-        {hoveredAvatarId === senderId && (
-          <div style={{
-            position: 'absolute',
-            bottom: 'calc(100% + 8px)',
-            left: '0',
-            background: '#fff',
-            border: '1px solid #e0e0e0',
-            borderRadius: '12px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-            padding: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            zIndex: 30,
-            width: '200px',
-          }}>
-            {avatarUrl ? (
-              <div 
-                onClick={handleAvatarClick}
-                style={{ 
-                  width: '40px', 
-                  height: '40px', 
-                  borderRadius: '50%', 
-                  backgroundImage: `url(${avatarUrl})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  flexShrink: 0,
-                  cursor: 'pointer',
-                }} 
-              />
-            ) : (
-              <div style={{ 
-                width: '40px', 
-                height: '40px', 
-                borderRadius: '50%', 
-                background: '#e0e0e0', 
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#888',
-              }}>
-                {getInitials(senderName)}
-              </div>
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '14px', fontWeight: 500, color: '#000' }}>
-                {senderName}
-              </span>
-              {age !== null && (
-                <span style={{ fontSize: '12px', color: '#888' }}>
-                  {age} years old
-                </span>
-              )}
+          {hoveredAvatarId === senderId && age && (
+            <div style={{
+              position: 'absolute',
+              bottom: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              marginBottom: '4px',
+              background: '#333',
+              color: '#fff',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              whiteSpace: 'nowrap',
+              zIndex: 30,
+            }}>
+              {senderName}, {age}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div style={{
+        width: '28px',
+        height: '28px',
+        borderRadius: '50%',
+        background: '#f0f0f0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        fontSize: '11px',
+        color: '#888',
+        fontWeight: 500,
+      }}>
+        {getInitials(senderName)}
       </div>
     );
   };
 
-  // Expanded photo modal
   const ExpandedPhotoModal = () => {
     if (!expandedPhoto) return null;
-
     return (
       <div 
         onClick={() => setExpandedPhoto(null)}
         style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 100,
-          cursor: 'pointer',
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 100, cursor: 'pointer',
         }}
       >
-        <div 
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            background: '#fff',
-            borderRadius: '16px',
-            padding: '24px',
-            maxWidth: '400px',
-            width: '90%',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{
-            width: '200px',
-            height: '200px',
-            borderRadius: '50%',
-            backgroundImage: `url(${expandedPhoto.url})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            margin: '0 auto 16px',
-          }} />
-          <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '4px' }}>
-            {expandedPhoto.name}
-          </h3>
-          {expandedPhoto.age !== null && (
-            <p style={{ fontSize: '14px', color: '#666' }}>
-              {expandedPhoto.age} years old
-            </p>
-          )}
-          <button
-            onClick={() => setExpandedPhoto(null)}
+        <div onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
+          <img
+            src={expandedPhoto.url}
+            alt={expandedPhoto.name}
             style={{
-              marginTop: '20px',
-              padding: '10px 24px',
-              background: '#000',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '24px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
+              maxWidth: '280px', maxHeight: '280px', borderRadius: '16px',
+              objectFit: 'cover', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
             }}
-          >
-            Close
-          </button>
+          />
+          <div style={{ color: '#fff', marginTop: '12px', fontSize: '14px', fontWeight: 500 }}>
+            {expandedPhoto.name}{expandedPhoto.age ? `, ${expandedPhoto.age}` : ''}
+          </div>
         </div>
       </div>
     );
   };
 
-  // Leave Conversation Modal
   const LeaveConversationModal = () => {
     if (!showLeaveModal) return null;
-
     return (
       <div 
         onClick={() => !actionLoading && setShowLeaveModal(false)}
         style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.4)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 100,
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
         }}
       >
-        <div 
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            background: '#fff',
-            borderRadius: '16px',
-            padding: '24px',
-            maxWidth: '380px',
-            width: '90%',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
-          }}
-        >
-          <h3 style={{ 
-            fontSize: '16px', 
-            fontWeight: 600, 
-            color: '#000',
-            marginBottom: '12px',
-          }}>
+        <div onClick={(e) => e.stopPropagation()} style={{
+          background: '#fff', borderRadius: '16px', padding: '24px',
+          maxWidth: '340px', width: '100%', margin: '0 16px',
+        }}>
+          <div style={{ fontSize: '16px', fontWeight: 600, color: '#000', marginBottom: '12px' }}>
             Leave this conversation?
-          </h3>
-          <p style={{ 
-            fontSize: '14px', 
-            color: '#666',
-            lineHeight: 1.5,
-            marginBottom: '24px',
-          }}>
-            You'll no longer receive messages from this thread. Others will see that you've left.
-          </p>
+          </div>
+          <div style={{ fontSize: '14px', color: '#444', marginBottom: '20px', lineHeight: 1.5 }}>
+            You&apos;ll no longer receive messages from this thread. Others will see that you&apos;ve left.
+          </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button
               onClick={() => setShowLeaveModal(false)}
               disabled={actionLoading}
               style={{
-                padding: '10px 20px',
-                background: 'transparent',
-                border: '1px solid #e0e0e0',
-                borderRadius: '24px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-                color: '#444',
+                padding: '10px 20px', borderRadius: '20px', fontSize: '14px',
+                fontWeight: 500, border: '1px solid #e0e0e0', background: '#fff',
+                cursor: actionLoading ? 'not-allowed' : 'pointer', color: '#444',
               }}
             >
               Cancel
             </button>
             <button
-              onClick={handleLeaveConversation}
+              onClick={handleLeaveThread}
               disabled={actionLoading}
               style={{
-                padding: '10px 20px',
-                background: '#000',
-                border: 'none',
-                borderRadius: '24px',
-                fontSize: '14px',
-                fontWeight: 600,
+                padding: '10px 20px', borderRadius: '20px', fontSize: '14px',
+                fontWeight: 500, border: 'none', background: '#000',
                 cursor: actionLoading ? 'not-allowed' : 'pointer',
-                color: '#fff',
-                opacity: actionLoading ? 0.6 : 1,
+                color: '#fff', opacity: actionLoading ? 0.6 : 1,
               }}
             >
               {actionLoading ? 'Leaving...' : 'Leave'}
@@ -640,64 +541,34 @@ export default function MessageThread({
     );
   };
 
-  // Block User Modal
   const BlockUserModal = () => {
     if (!showBlockModal) return null;
-
     return (
       <div 
         onClick={() => !actionLoading && setShowBlockModal(false)}
         style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.4)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 100,
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
         }}
       >
-        <div 
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            background: '#fff',
-            borderRadius: '16px',
-            padding: '24px',
-            maxWidth: '380px',
-            width: '90%',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
-          }}
-        >
-          <h3 style={{ 
-            fontSize: '16px', 
-            fontWeight: 600, 
-            color: '#000',
-            marginBottom: '12px',
-          }}>
+        <div onClick={(e) => e.stopPropagation()} style={{
+          background: '#fff', borderRadius: '16px', padding: '24px',
+          maxWidth: '340px', width: '100%', margin: '0 16px',
+        }}>
+          <div style={{ fontSize: '16px', fontWeight: 600, color: '#000', marginBottom: '12px' }}>
             Block this person?
-          </h3>
-          <p style={{ 
-            fontSize: '14px', 
-            color: '#666',
-            lineHeight: 1.5,
-            marginBottom: '24px',
-          }}>
-            You won't see their posts and will be removed from any shared conversations. They won't be notified that you've blocked them.
-          </p>
+          </div>
+          <div style={{ fontSize: '14px', color: '#444', marginBottom: '20px', lineHeight: 1.5 }}>
+            You won&apos;t see their posts and will be removed from any shared conversations. They won&apos;t be notified that you&apos;ve blocked them.
+          </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button
               onClick={() => setShowBlockModal(false)}
               disabled={actionLoading}
               style={{
-                padding: '10px 20px',
-                background: 'transparent',
-                border: '1px solid #e0e0e0',
-                borderRadius: '24px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-                color: '#444',
+                padding: '10px 20px', borderRadius: '20px', fontSize: '14px',
+                fontWeight: 500, border: '1px solid #e0e0e0', background: '#fff',
+                cursor: actionLoading ? 'not-allowed' : 'pointer', color: '#444',
               }}
             >
               Cancel
@@ -706,15 +577,10 @@ export default function MessageThread({
               onClick={handleBlockUser}
               disabled={actionLoading}
               style={{
-                padding: '10px 20px',
-                background: '#000',
-                border: 'none',
-                borderRadius: '24px',
-                fontSize: '14px',
-                fontWeight: 600,
+                padding: '10px 20px', borderRadius: '20px', fontSize: '14px',
+                fontWeight: 500, border: 'none', background: '#000',
                 cursor: actionLoading ? 'not-allowed' : 'pointer',
-                color: '#fff',
-                opacity: actionLoading ? 0.6 : 1,
+                color: '#fff', opacity: actionLoading ? 0.6 : 1,
               }}
             >
               {actionLoading ? 'Blocking...' : 'Block'}
@@ -775,7 +641,6 @@ export default function MessageThread({
       <ExpandedPhotoModal />
       <LeaveConversationModal />
       <BlockUserModal />
-
       {/* Header */}
       <div style={{
         padding: '16px',
@@ -786,9 +651,9 @@ export default function MessageThread({
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-  <span style={{ fontSize: '16px', fontWeight: 600, color: '#000' }}>{post.title}</span>
-  {post.status === 'closed' && <ClosedBadge size="small" />}
-</div>
+          <span style={{ fontSize: '16px', fontWeight: 600, color: '#000' }}>{post.title}</span>
+          {post.status === 'closed' && <ClosedBadge size="small" />}
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ position: 'relative' }}>
             <button
@@ -854,10 +719,10 @@ export default function MessageThread({
           flexShrink: 0,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-  <span style={{ fontSize: '14px', fontWeight: 500, color: '#000' }}>{post.title}</span>
-  {post.status === 'closed' && <ClosedBadge size="small" />}
-</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '14px', fontWeight: 500, color: '#000' }}>{post.title}</span>
+              {post.status === 'closed' && <ClosedBadge size="small" />}
+            </div>
             <button 
               onClick={handleShare} 
               style={{ 
@@ -902,7 +767,9 @@ export default function MessageThread({
           ) : (
             <>
               {messages.map((msg, idx) => {
+                const prevMsg = messages[idx - 1];
                 const nextMsg = messages[idx + 1];
+                const isFirstFromSender = !prevMsg || prevMsg.sender_id !== msg.sender_id;
                 const isLastFromSender = !nextMsg || nextMsg.sender_id !== msg.sender_id;
                 const isSelf = msg.sender_id === currentUserId;
 
@@ -923,23 +790,31 @@ export default function MessageThread({
                   return (
                     <div key={msg.id} style={{
                       display: 'flex', justifyContent: 'flex-start', gap: '8px',
-                      alignItems: 'flex-end', marginBottom: isLastFromSender ? '12px' : '4px',
+                      marginBottom: isLastFromSender ? '12px' : '4px',
                     }}>
-                      <MessageAvatar
-                        senderId={msg.sender_id}
-                        senderName={msg.sender_name || 'Unknown'}
-                        avatarUrl={msg.sender_avatar_url}
-                        dateOfBirth={msg.sender_date_of_birth}
-                        showAvatar={isLastFromSender}
-                      />
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {isLastFromSender && <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>{msg.sender_name}</div>}
-                        <div style={{
-                          background: '#fafafa', color: '#000', padding: '10px 14px',
-                          fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
-                          wordWrap: 'break-word',
-                        }}>{msg.content}</div>
+                      {/* Avatar column — shown on last message in a group */}
+                      <div style={{ 
+                        width: '28px', 
+                        flexShrink: 0, 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        justifyContent: 'flex-end' 
+                      }}>
+                        {isLastFromSender && (
+                          <MessageAvatar
+                            senderId={msg.sender_id}
+                            senderName={msg.sender_name || 'Unknown'}
+                            avatarUrl={msg.sender_avatar_url}
+                            dateOfBirth={msg.sender_date_of_birth}
+                            showAvatar={true}
+                          />
+                        )}
                       </div>
+                      <div style={{
+                        background: '#fafafa', color: '#000', padding: '10px 14px',
+                        fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
+                        wordWrap: 'break-word',
+                      }}>{msg.content}</div>
                     </div>
                   );
                 }
