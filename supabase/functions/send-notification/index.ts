@@ -156,7 +156,7 @@ serve(async (req: Request) => {
           postTitle: post.title,
           messagePreview: message.content.substring(0, 150) + (message.content.length > 150 ? "..." : ""),
           isFirstMessage,
-          threadUrl: "https://common-smoky-seven.vercel.app/?thread=" + threadId,
+          threadUrl: "https://www.common-social.com/?thread=" + threadId,
         });
 
         // Send via Resend

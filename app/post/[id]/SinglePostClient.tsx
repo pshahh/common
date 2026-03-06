@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import Header from '../../components/Header';
@@ -77,6 +77,18 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
     }
     fetchPost();
   }, [postId]);
+
+  const searchParams = useSearchParams();
+
+// Auto-open interested modal if redirected after signup
+useEffect(() => {
+  const action = searchParams.get('action');
+  if (action === 'interested' && user && post && post.user_id !== user.id) {
+    setShowInterestedModal(true);
+    // Clean the URL
+    window.history.replaceState({}, '', `/post/${postId}`);
+  }
+}, [user, post, searchParams, postId]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

@@ -899,6 +899,12 @@ const sortedPosts = useMemo(() => {
   };
 
   const handleLeaveThread = () => {
+    // Close the thread panel
+    setSelectedThreadId(null);
+    if (isMobile) {
+      setShowMobileThread(false);
+      setShowMobileMessages(true);
+    }
     // Refresh sidebar to remove the thread
     setSidebarRefreshTrigger(prev => prev + 1);
     // Also refresh posts in case blocking affected what's visible

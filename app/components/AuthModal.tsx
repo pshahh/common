@@ -55,7 +55,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       email,
       password,
       options: {
-        emailRedirectTo: window.location.href,
+        emailRedirectTo: window.location.href.includes('/post/')
+  ? `${window.location.href.split('?')[0]}?action=interested`
+  : window.location.href,
       },
     });
     

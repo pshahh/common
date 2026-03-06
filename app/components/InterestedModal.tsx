@@ -65,6 +65,9 @@ export default function InterestedModal({
           content: messageContent,
         });
       if (messageError) throw messageError;
+      // After the message insert succeeds, mark the thread as read
+// so the sender doesn't see an unread dot for their own message
+await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
       onSuccess(threadId, true);
     } catch (error) {
       console.error('Error creating thread:', error);

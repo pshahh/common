@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "common",
   description: "Find people to do things with nearby",
-  metadataBase: new URL('https://common-smoky-seven.vercel.app'),
+  metadataBase: new URL('https://common-social.com'),
   manifest: '/manifest.json',
   icons: {
     icon: [

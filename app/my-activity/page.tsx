@@ -221,7 +221,7 @@ export default function MyActivityPage() {
       .from('posts')
       .select('*')
       .eq('user_id', user.id)
-      .in('status', ['approved', 'pending'])
+      .in('status', ['approved', 'pending', 'closed'])
       .order('created_at', { ascending: false });
 
     if (!error && data) {
@@ -524,7 +524,7 @@ export default function MyActivityPage() {
                                 minWidth: '140px',
                               }}
                             >
-                              {post.status === 'pending' && (
+                              {post.status === 'pending' || post.status === 'approved' && (
                                 <button
                                   onClick={() => openEditModal(post)}
                                   style={{

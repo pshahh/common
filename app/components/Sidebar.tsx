@@ -275,7 +275,8 @@ export default function Sidebar({
             updatedThreads[idx] = {
               ...updatedThreads[idx],
               last_message_at: updated.last_message_at,
-              hasUnread: true,
+              // Don't mark as unread if this thread is currently selected
+              hasUnread: selectedThreadId === updated.id ? false : true,
             };
             return updatedThreads;
           });
@@ -285,7 +286,7 @@ export default function Sidebar({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, selectedThreadId]);
 
   const handleMyActivityClick = () => {
     router.push('/my-activity');
