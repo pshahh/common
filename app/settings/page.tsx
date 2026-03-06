@@ -256,30 +256,36 @@ const { error: updateError } = await supabase
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE' || !user) return;
-
     setDeleting(true);
-
     try {
-      // Delete user's posts
-      await supabase.from('posts').delete().eq('user_id', user.id);
-
-      // Delete user's profile (will cascade or be handled by FK)
-      await supabase.from('profiles').delete().eq('id', user.id);
-
-      // Delete avatar from storage
-      if (profile?.avatar_url) {
-        const avatarPath = profile.avatar_url.split('/avatars/')[1];
-        if (avatarPath) {
-          await supabase.storage.from('avatars').remove([avatarPath]);
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Not authenticated. Please log in again.');
+        setDeleting(false);
+        return;
       }
-
-      // Sign out
+  
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete account');
+      }
+  
+      // Sign out locally and redirect
       await supabase.auth.signOut();
-
       router.push('/');
-
     } catch (err) {
+      console.error('Delete account error:', err);
       setError('Failed to delete account. Please try again.');
       setDeleting(false);
     }

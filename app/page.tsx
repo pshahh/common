@@ -312,6 +312,47 @@ function HomeContent() {
   const [searchingLocation, setSearchingLocation] = useState(false);
   const [radiusFilter, setRadiusFilter] = useState<number | null>(null); // null = Any distance, values in miles
 
+  // Load saved location from localStorage on mount
+useEffect(() => {
+  try {
+    const saved = localStorage.getItem('common_user_location');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Check it's not too old (24 hours for browser, indefinite for manual)
+      const age = Date.now() - (parsed.savedAt || 0);
+      const maxAge = parsed.source === 'browser' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+      if (age < maxAge) {
+        setUserLocation({
+          latitude: parsed.latitude,
+          longitude: parsed.longitude,
+          source: parsed.source,
+          name: parsed.name,
+        });
+        setLocationStatus('granted');
+      }
+    }
+  } catch (e) {
+    // localStorage not available or corrupt data — ignore
+  }
+}, []);
+
+// Persist location to localStorage when it changes
+useEffect(() => {
+  if (userLocation) {
+    try {
+      localStorage.setItem('common_user_location', JSON.stringify({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        source: userLocation.source,
+        name: userLocation.name || null,
+        savedAt: Date.now(),
+      }));
+    } catch (e) {
+      // localStorage full or unavailable — ignore
+    }
+  }
+}, [userLocation]);
+
   // Mobile state
   const [mobileTab, setMobileTab] = useState<'home' | 'messages' | 'activity' | 'menu'>('home');
   const [showMobileMessages, setShowMobileMessages] = useState(false);

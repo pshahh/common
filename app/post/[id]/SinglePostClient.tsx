@@ -219,26 +219,7 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
           onImInterested={handleInterestedClick}
           status={post.status}
         />
-        {/* Prompt for logged out users */}
-        {!user && (
-          <div style={{
-            marginTop: '24px',
-            padding: '20px',
-            background: '#fafafa',
-            borderRadius: '12px',
-            textAlign: 'center',
-          }}>
-            <p style={{ fontSize: '14px', color: '#444', marginBottom: '16px' }}>
-              Want to join? Create an account to express interest and message the organiser.
-            </p>
-            <button 
-              className="btn btn-primary"
-              onClick={() => setShowAuthModal(true)}
-            >
-              Log in / Sign up
-            </button>
-          </div>
-        )}
+        
       </main>
       {/* Modals */}
       <AuthModal
