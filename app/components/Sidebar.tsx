@@ -503,6 +503,15 @@ export default function Sidebar({
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
+        {/* Community guidelines */}
+<NavItem
+  onClick={() => router.push('/guidelines')}
+  isActive={false}
+>
+  Community guidelines
+</NavItem>
+
+
         {/* Settings link */}
         <NavItem
           onClick={() => router.push('/settings')}

@@ -122,7 +122,7 @@ export default function GuidelinesPage() {
             color: '#888', 
             marginBottom: '32px',
           }}>
-            Simple rules to keep Common helpful for everyone
+            Simple rules to keep common helpful for everyone
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -134,7 +134,7 @@ export default function GuidelinesPage() {
                 color: '#000',
                 marginBottom: '12px',
               }}>
-                What Common is for
+                What common is for
               </h2>
               <p style={{ 
                 fontSize: '15px', 
@@ -142,8 +142,17 @@ export default function GuidelinesPage() {
                 lineHeight: 1.7,
                 margin: 0,
               }}>
-                Common helps you find people to do real activities with nearby. Post things like going for a walk, playing sports, attending an event, working on a project together, or exploring a new place. The best posts are specific about what, when, and where.
-              </p>
+                common helps you find people to do real activities with nearby. Post things you want to do with someone — like going for a walk, playing sports, exploring a new place, or working on a project together. The best posts are specific about what, when, and where.
+                </p>
+<p style={{ 
+  fontSize: '15px', 
+  color: '#444', 
+  lineHeight: 1.7,
+  margin: 0,
+  marginTop: '12px',
+}}>
+  common isn't for promoting events, businesses, or ticketed gatherings. If you're hosting something and won't be joining as part of the group, it doesn't belong here.
+</p>
             </section>
 
             {/* What's not allowed */}
