@@ -264,7 +264,7 @@ function generateEmailHtml(params: {
 '              <p style="margin: 0; font-size: 12px; color: #888888; line-height: 1.5;">' +
 '                You\'re receiving this because you have an active post on Common.' +
 '                <br>' +
-'                <a href="https://common-smoky-seven.vercel.app/settings" style="color: #888888;">Manage notification preferences</a>' +
+'                <a href="https://common-social.com/settings" style="color: #888888;">Manage notification preferences</a>' +
 '              </p>' +
 '            </td>' +
 '          </tr>' +

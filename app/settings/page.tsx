@@ -265,23 +265,19 @@ const { error: updateError } = await supabase
         return;
       }
   
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const response = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
   
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Failed to delete account');
       }
   
-      // Sign out locally and redirect
       await supabase.auth.signOut();
       router.push('/');
     } catch (err) {

@@ -391,9 +391,28 @@ useEffect(() => {
       setSelectedThreadId(threadId);
       if (isMobile) {
         setShowMobileThread(true);
+        window.history.pushState({ mobileThread: true }, '');
       }
     }
   }, [searchParams, user, isMobile]);
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (showMobileThread) {
+        e.preventDefault();
+        setShowMobileThread(false);
+        setSelectedThreadId(null);
+        setShowMobileMessages(true);
+      } else if (showMobileMessages) {
+        e.preventDefault();
+        setShowMobileMessages(false);
+        setMobileTab('home');
+      }
+    };
+  
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [showMobileThread, showMobileMessages]);
 
   // Check auth state
   useEffect(() => {
@@ -886,6 +905,7 @@ const sortedPosts = useMemo(() => {
     if (isMobile) {
       setShowMobileMessages(false);
       setShowMobileThread(true);
+      window.history.pushState({ mobileThread: true }, '');
     }
   };
 
@@ -920,6 +940,7 @@ const sortedPosts = useMemo(() => {
     setMobileTab(tab);
     if (tab === 'messages') {
       setShowMobileMessages(true);
+      window.history.pushState({ mobileMessages: true }, '');
     } else {
       setShowMobileMessages(false);
     }
