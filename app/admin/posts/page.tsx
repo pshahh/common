@@ -458,6 +458,7 @@ export default function AdminPostsPage() {
                             color: '#666', 
                             margin: '12px 0',
                             lineHeight: 1.5,
+                            whiteSpace: 'pre-line',
                           }}>
                             "{post.notes}"
                           </p>

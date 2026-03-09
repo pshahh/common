@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { renderTextWithLinks } from '@/lib/textUtils';
 interface Post {
   id: string;
   title: string;
@@ -97,7 +98,7 @@ await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
               {post.location} · {post.time}
             </p>
             {post.notes && (
-              <p className="post-summary-notes">{post.notes}</p>
+              <p className="post-summary-notes" style={{ whiteSpace: 'pre-line' }}>{renderTextWithLinks(post.notes)}</p>
             )}
             {post.preference && post.preference !== 'Anyone' && (
               <span className="preference-badge small">{post.preference}</span>

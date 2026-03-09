@@ -26,6 +26,30 @@ interface PostCardProps {
   status?: string;
 }
 
+// Add this helper function (can go at the top of PostCard.tsx or in a shared utils file)
+function renderTextWithLinks(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  
+  return parts.map((part, i) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a 
+          key={i}
+          href={part} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{ color: '#444', textDecoration: 'underline' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
+
 export default function PostCard({
   id,
   title,
@@ -176,8 +200,10 @@ export default function PostCard({
             <div className="card-time">{time}</div>
             {/* Notes - styled as personal message */}
             {notes && (
-              <p className="card-notes">"{notes}"</p>
-            )}
+  <p className="card-notes" style={{ whiteSpace: 'pre-line' }}>
+    "{renderTextWithLinks(notes)}"
+  </p>
+)}
             {preference && preference !== 'Anyone' && preference !== 'anyone' && (
               <span className="preference-badge">{preference}</span>
             )}

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { calculateAge, getInitials } from '@/lib/profile';
 import ClosedBadge from './ClosedBadge';
+import { renderTextWithLinks } from '@/lib/textUtils';
 
 interface Message {
   id: string;
@@ -742,7 +743,7 @@ export default function MessageThread({
             <span style={{ margin: '0 8px', color: '#888' }}>·</span>
             <span>{post.time}</span>
           </div>
-          {post.notes && <div style={{ fontSize: '12px', color: '#444', marginTop: '4px' }}>{post.notes}</div>}
+          {post.notes && <div style={{ fontSize: '12px', color: '#444', marginTop: '4px', whiteSpace: 'pre-line' }}>{renderTextWithLinks(post.notes)}</div>}
           {post.preference && post.preference !== 'anyone' && (
             <span style={{
               display: 'inline-block', fontSize: '12px', color: '#888',
@@ -846,28 +847,49 @@ export default function MessageThread({
             <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px', lineHeight: 1.4 }}>
               Conversations close 24 hours after the activity ends. You can still read past messages.
             </div>
-            <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px' }}>
-              <input
-                type="text"
-                placeholder="Type your message..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                style={{
-                  flex: 1, border: '1px solid #e0e0e0', borderRadius: '12px',
-                  padding: '10px 16px', fontSize: '14px', outline: 'none',
-                }}
-              />
-              <button
-                type="submit"
-                disabled={!newMessage.trim() || sending}
-                style={{
-                  background: 'none', border: 'none', fontSize: '18px',
-                  color: newMessage.trim() && !sending ? '#000' : '#888',
-                  cursor: newMessage.trim() && !sending ? 'pointer' : 'not-allowed',
-                  padding: '0 8px',
-                }}
-              >→</button>
-            </form>
+            <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+  <textarea
+    placeholder="Type your message..."
+    value={newMessage}
+    onChange={(e) => {
+      setNewMessage(e.target.value);
+      // Auto-resize
+      e.target.style.height = 'auto';
+      e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+    }}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage(e);
+      }
+    }}
+    rows={1}
+    style={{
+      flex: 1, 
+      border: '1px solid #e0e0e0', 
+      borderRadius: '12px',
+      padding: '10px 16px', 
+      fontSize: '14px', 
+      outline: 'none',
+      resize: 'none',
+      lineHeight: '1.4',
+      maxHeight: '120px',
+      overflow: 'auto',
+      fontFamily: 'inherit',
+    }}
+  />
+  <button
+    type="submit"
+    disabled={!newMessage.trim() || sending}
+    style={{
+      background: 'none', border: 'none', fontSize: '18px',
+      color: newMessage.trim() && !sending ? '#000' : '#888',
+      cursor: newMessage.trim() && !sending ? 'pointer' : 'not-allowed',
+      padding: '0 8px',
+      marginBottom: '4px',
+    }}
+  >→</button>
+</form>
           </>
         )}
       </div>

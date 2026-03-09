@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const EMAIL_FROM = 'Common <notifications@notifications.common-social.com>';
+const EMAIL_FROM = 'Common <notifications@common-social.com>';
 const BASE_URL = 'https://common-social.com';
 
 // @ts-ignore - Deno.serve
