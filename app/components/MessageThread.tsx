@@ -784,6 +784,7 @@ export default function MessageThread({
                         background: '#000', color: '#fff', padding: '10px 14px',
                         fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 6px 18px',
                         wordWrap: 'break-word',
+                        whiteSpace: 'pre-line',
                       }}>{msg.content}</div>
                     </div>
                   );
@@ -815,6 +816,7 @@ export default function MessageThread({
                         background: '#fafafa', color: '#000', padding: '10px 14px',
                         fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
                         wordWrap: 'break-word',
+                        whiteSpace: 'pre-line',
                       }}>{msg.content}</div>
                     </div>
                   );

@@ -154,7 +154,7 @@ serve(async (req: Request) => {
           recipientName,
           senderName,
           postTitle: post.title,
-          messagePreview: message.content.substring(0, 150) + (message.content.length > 150 ? "..." : ""),
+          messagePreview: message.content.substring(0, 150).replace(/\n/g, '<br>') + (message.content.length > 150 ? "..." : ""),
           isFirstMessage,
           threadUrl: "https://www.common-social.com/?thread=" + threadId,
         });
