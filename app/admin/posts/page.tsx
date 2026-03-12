@@ -7,6 +7,7 @@ import { User } from '@supabase/supabase-js';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import BottomNav from '../../components/BottomNav';
+import { renderTextWithLinks } from '@/lib/textUtils';
 
 interface Post {
   id: string;
@@ -460,7 +461,7 @@ export default function AdminPostsPage() {
                             lineHeight: 1.5,
                             whiteSpace: 'pre-line',
                           }}>
-                            "{post.notes}"
+                            "{renderTextWithLinks(post.notes)}"
                           </p>
                         )}
 

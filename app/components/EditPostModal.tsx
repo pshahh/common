@@ -12,6 +12,7 @@ interface Post {
   notes: string | null;
   preference: string | null;
   expires_at: string | null;
+  recurrence_rule: string | null;
 }
 
 interface EditPostModalProps {
@@ -37,6 +38,10 @@ export default function EditPostModal({ post, onClose, onSuccess }: EditPostModa
   const [time, setTime] = useState(post.time);
   const [notes, setNotes] = useState(post.notes || '');
   const [preference, setPreference] = useState(post.preference || 'anyone');
+  const [frequency, setFrequency] = useState<'one-off' | 'repeats'>(post.recurrence_rule ? 'repeats' : 'one-off');
+const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'biweekly' | 'monthly'>(
+  (post.recurrence_rule as 'weekly' | 'biweekly' | 'monthly') || 'weekly'
+);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState(false);
@@ -131,6 +136,7 @@ export default function EditPostModal({ post, onClose, onSuccess }: EditPostModa
       time,
       notes: notes || null,
       preference,
+      recurrence_rule: frequency === 'repeats' ? recurrenceRule : null,
     };
     
     // Only update coordinates if they exist (location was changed and selected from dropdown)
@@ -291,7 +297,7 @@ export default function EditPostModal({ post, onClose, onSuccess }: EditPostModa
             {/* What */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-                What are you doing?
+                What are you up to?
               </label>
               <input
                 type="text"
@@ -384,6 +390,67 @@ export default function EditPostModal({ post, onClose, onSuccess }: EditPostModa
                 </p>
               )}
             </div>
+
+            {/* How often */}
+<div>
+  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
+    How often?
+  </label>
+  <div style={{ display: 'flex', gap: '8px' }}>
+    <button
+      type="button"
+      onClick={() => setFrequency('one-off')}
+      style={{
+        padding: '8px 16px',
+        borderRadius: '20px',
+        border: 'none',
+        fontSize: '14px',
+        cursor: 'pointer',
+        backgroundColor: frequency === 'one-off' ? '#000' : '#f5f5f5',
+        color: frequency === 'one-off' ? '#FFF' : '#666',
+      }}
+    >
+      One-off
+    </button>
+    <button
+      type="button"
+      onClick={() => setFrequency('repeats')}
+      style={{
+        padding: '8px 16px',
+        borderRadius: '20px',
+        border: 'none',
+        fontSize: '14px',
+        cursor: 'pointer',
+        backgroundColor: frequency === 'repeats' ? '#000' : '#f5f5f5',
+        color: frequency === 'repeats' ? '#FFF' : '#666',
+      }}
+    >
+      Repeating activity
+    </button>
+  </div>
+  {frequency === 'repeats' && (
+    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+      {([['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly']] as const).map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => setRecurrenceRule(value)}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '20px',
+            border: recurrenceRule === value ? 'none' : '1px solid #e0e0e0',
+            fontSize: '13px',
+            cursor: 'pointer',
+            backgroundColor: recurrenceRule === value ? '#000' : '#fff',
+            color: recurrenceRule === value ? '#FFF' : '#666',
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )}
+</div>
 
             {/* When */}
             <div>

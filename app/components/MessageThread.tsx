@@ -376,12 +376,6 @@ export default function MessageThread({
     }
   };
 
-  // Check if both participants have sent messages (for avatar reveal)
-  const bothHaveSentMessages = (): boolean => {
-    if (!thread) return false;
-    const senderIds = new Set(messages.map(m => m.sender_id));
-    return thread.participant_ids.every(id => senderIds.has(id));
-  };
 
   const MessageAvatar = ({ 
     senderId, 
@@ -400,10 +394,9 @@ export default function MessageThread({
       return <div style={{ width: '28px', height: '28px', flexShrink: 0 }} />;
     }
 
-    const canReveal = bothHaveSentMessages();
     const age = dateOfBirth ? calculateAge(dateOfBirth) : null;
 
-    if (canReveal && avatarUrl) {
+    if (avatarUrl) {
       return (
         <div 
           style={{ position: 'relative' }}

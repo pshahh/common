@@ -508,7 +508,7 @@ export default function Sidebar({
   onClick={() => router.push('/guidelines')}
   isActive={false}
 >
-  Community guidelines
+  Guidelines & examples
 </NavItem>
 
 

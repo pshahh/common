@@ -120,9 +120,6 @@ await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
               rows={4}
             />
           </div>
-          <p className="hint-text">
-            Once you've both sent a message, you'll see each other's profile photo.
-          </p>
           {/* Safety tips */}
           <div className="safety-tips">
             <p>Meet in public places</p>

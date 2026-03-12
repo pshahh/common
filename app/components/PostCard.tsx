@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { calculateAge, getInitials } from '@/lib/profile';
 import ClosedBadge from './ClosedBadge';
+import { renderTextWithLinks } from '@/lib/textUtils';
 
 interface PostCardProps {
   id: string;
@@ -24,31 +25,9 @@ interface PostCardProps {
   authorDateOfBirth?: string | null;
   hideInterestButton?: boolean;
   status?: string;
+  recurrenceRule?: string | null;
 }
 
-// Add this helper function (can go at the top of PostCard.tsx or in a shared utils file)
-function renderTextWithLinks(text: string) {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
-  
-  return parts.map((part, i) => {
-    if (part.match(urlRegex)) {
-      return (
-        <a 
-          key={i}
-          href={part} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          style={{ color: '#444', textDecoration: 'underline' }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {part}
-        </a>
-      );
-    }
-    return part;
-  });
-}
 
 export default function PostCard({
   id,
@@ -69,6 +48,7 @@ export default function PostCard({
   authorDateOfBirth,
   hideInterestButton = false,
   status,
+  recurrenceRule,
 }: PostCardProps) {
   const [showNameTooltip, setShowNameTooltip] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -197,7 +177,14 @@ export default function PostCard({
               )}
             </div>
             {/* Time on separate line */}
-            <div className="card-time">{time}</div>
+<div className="card-time" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+  {time}
+  {recurrenceRule && (
+    <span className="preference-badge" style={{ margin: 0 }}>
+      repeats {recurrenceRule === 'biweekly' ? 'every 2 weeks' : recurrenceRule}
+    </span>
+  )}
+</div>
             {/* Notes - styled as personal message */}
             {notes && (
   <p className="card-notes" style={{ whiteSpace: 'pre-line' }}>

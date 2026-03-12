@@ -25,6 +25,7 @@ interface Post {
   user_id: string;
   created_at: string;
   status: string;
+  recurrence_rule: string | null;
 }
 
 interface SinglePostClientProps {
@@ -230,6 +231,7 @@ useEffect(() => {
           isLoggedIn={!!user}
           onImInterested={handleInterestedClick}
           status={post.status}
+          recurrenceRule={post.recurrence_rule}
         />
         
       </main>

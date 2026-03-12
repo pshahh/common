@@ -315,7 +315,7 @@ export default function BottomNav({
                   textAlign: 'left',
                 }}
               >
-                Community guidelines
+              Guidelines & examples
               </button>
 
               <div style={{ height: '1px', background: '#F0F0F0', margin: '8px 0' }} />

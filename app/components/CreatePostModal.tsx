@@ -22,6 +22,8 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchingLocation, setSearchingLocation] = useState(false);
+  const [frequency, setFrequency] = useState<'one-off' | 'repeats'>('one-off');
+const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly');
   const [timingMode, setTimingMode] = useState<'specific' | 'flexible'>('specific');
   const [date, setDate] = useState('');
   const [timeDetails, setTimeDetails] = useState('');
@@ -54,6 +56,8 @@ const getTomorrowDate = () => {
       setLongitude(null);
       setLocationSuggestions([]);
       setShowSuggestions(false);
+      setFrequency('one-off');
+setRecurrenceRule('weekly');
       setTimingMode('specific');
       setDate(getTomorrowDate());
       setTimeDetails('');
@@ -183,31 +187,35 @@ const getTomorrowDate = () => {
     }
 
     // Calculate expiry - always set a value
-    let expiryDate: string;
-    if (timingMode === 'specific' && date) {
-      const eventDate = new Date(date);
-      eventDate.setDate(eventDate.getDate() + 1);
-      expiryDate = eventDate.toISOString();
-    } else {
-      // Use the expiresAt value, or default if not set
-      const expiryValue = expiresAt || defaultExpiry;
-      expiryDate = new Date(expiryValue).toISOString();
-    }
+let expiryDate: string;
+if (timingMode === 'specific' && date) {
+  const eventDate = new Date(date);
+  eventDate.setDate(eventDate.getDate() + 1);
+  expiryDate = eventDate.toISOString();
+} else if (frequency === 'repeats') {
+  // Recurring + flexible: no real expiry, set far future
+  expiryDate = new Date('2099-12-31').toISOString();
+} else {
+  // Use the expiresAt value, or default if not set
+  const expiryValue = expiresAt || defaultExpiry;
+  expiryDate = new Date(expiryValue).toISOString();
+}
 
-    const { error: insertError } = await supabase
-      .from('posts')
-      .insert({
-        title,
-        location,
-        latitude,
-        longitude,
-        time: timeString,
-        notes: notes || null,
-        name: profile?.first_name || 'Anonymous',
-        preference: whoCanRespond,
-        user_id: user.id,
-        expires_at: expiryDate,
-      });
+const { error: insertError } = await supabase
+.from('posts')
+.insert({
+  title,
+  location,
+  latitude,
+  longitude,
+  time: timeString,
+  notes: notes || null,
+  name: profile?.first_name || 'Anonymous',
+  preference: whoCanRespond,
+  user_id: user.id,
+  expires_at: expiryDate,
+  recurrence_rule: frequency === 'repeats' ? recurrenceRule : null,
+});
 
     if (insertError) {
       setError(insertError.message);
@@ -335,9 +343,16 @@ const getTomorrowDate = () => {
             <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>
               Share what you're doing
             </h2>
-            <p style={{ fontSize: '14px', color: '#666' }}>
-              Open to company? Let others know
-            </p>
+            <p style={{ fontSize: '13px', color: '#888', lineHeight: 1.5 }}>
+  If it's not a personal invitation to an activity you're also participating in, it doesn't belong on common.{' '}
+  <a 
+    href="/guidelines" 
+    target="_blank" 
+    style={{ color: '#888', textDecoration: 'underline' }}
+  >
+    Guidelines & examples
+  </a>
+</p>
           </div>
           <button 
             onClick={onClose}
@@ -359,14 +374,14 @@ const getTomorrowDate = () => {
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* What */}
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-                What are you doing?
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Going to a gig, tennis, painting in the park, café working..."
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
+  What are you up to?
+</label>
+<input
+  type="text"
+  value={title}
+  onChange={e => setTitle(e.target.value)}
+  placeholder="e.g. Join our writing group, casual badminton, running"
                 required
                 style={{
                   width: '100%',
@@ -466,6 +481,67 @@ const getTomorrowDate = () => {
               )}
             </div>
 
+{/* How often */}
+<div>
+  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
+    How often?
+  </label>
+  <div style={{ display: 'flex', gap: '8px' }}>
+    <button
+      type="button"
+      onClick={() => setFrequency('one-off')}
+      style={{
+        padding: '8px 16px',
+        borderRadius: '20px',
+        border: 'none',
+        fontSize: '14px',
+        cursor: 'pointer',
+        backgroundColor: frequency === 'one-off' ? '#000' : '#f5f5f5',
+        color: frequency === 'one-off' ? '#FFF' : '#666',
+      }}
+    >
+      One-off
+    </button>
+    <button
+      type="button"
+      onClick={() => setFrequency('repeats')}
+      style={{
+        padding: '8px 16px',
+        borderRadius: '20px',
+        border: 'none',
+        fontSize: '14px',
+        cursor: 'pointer',
+        backgroundColor: frequency === 'repeats' ? '#000' : '#f5f5f5',
+        color: frequency === 'repeats' ? '#FFF' : '#666',
+      }}
+    >
+      Repeating activity
+    </button>
+  </div>
+  {frequency === 'repeats' && (
+    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+      {([['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly']] as const).map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => setRecurrenceRule(value)}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '20px',
+            border: frequency === 'repeats' && recurrenceRule === value ? 'none' : '1px solid #e0e0e0',
+            fontSize: '13px',
+            cursor: 'pointer',
+            backgroundColor: recurrenceRule === value ? '#000' : '#fff',
+            color: recurrenceRule === value ? '#FFF' : '#666',
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )}
+</div>
+
             {/* When */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
@@ -509,6 +585,11 @@ const getTomorrowDate = () => {
               
               {timingMode === 'specific' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {frequency === 'repeats' && (
+  <p style={{ fontSize: '12px', color: '#888', margin: '0 0 4px 0' }}>
+    Select the date of your next one
+  </p>
+)}
                   <input
                     type="date"
                     value={date}
@@ -557,26 +638,28 @@ const getTomorrowDate = () => {
                       boxSizing: 'border-box',
                     }}
                   />
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '14px', color: '#666' }}>Post expires:</span>
-                      <input
-                        type="date"
-                        value={expiresAt}
-                        onChange={e => setExpiresAt(e.target.value)}
-                        style={{
-                          padding: '12px 16px',
-                          border: '1px solid #e0e0e0',
-                          borderRadius: '12px',
-                          fontSize: '14px',
-                          outline: 'none',
-                        }}
-                      />
-                    </div>
-                    <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
-                      This controls how long your post stays visible.
-                    </p>
-                  </div>
+                  {frequency !== 'repeats' && (
+  <div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <span style={{ fontSize: '14px', color: '#666' }}>Post expires:</span>
+      <input
+        type="date"
+        value={expiresAt}
+        onChange={e => setExpiresAt(e.target.value)}
+        style={{
+          padding: '12px 16px',
+          border: '1px solid #e0e0e0',
+          borderRadius: '12px',
+          fontSize: '14px',
+          outline: 'none',
+        }}
+      />
+    </div>
+    <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
+      This controls how long your post stays visible.
+    </p>
+  </div>
+)}
                 </div>
               )}
             </div>

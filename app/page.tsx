@@ -34,6 +34,7 @@ interface Post {
   user_id: string;
   created_at: string;
   expires_at: string | null;
+  recurrence_rule: string | null;
 }
 
 interface Profile {
@@ -1043,6 +1044,7 @@ const sortedPosts = useMemo(() => {
                     onImInterested={() => handleInterestedClick(post)}
                     onReport={() => handleReportClick(post.id)}
                     distance={getPostDistance(post)}
+                    recurrenceRule={post.recurrence_rule}
                     authorAvatarUrl={authorProfile?.avatar_url}
                     authorDateOfBirth={authorProfile?.date_of_birth}
                   />
@@ -1219,6 +1221,7 @@ const sortedPosts = useMemo(() => {
                       distance={getPostDistance(post)}
                       authorAvatarUrl={authorProfile?.avatar_url}
                       authorDateOfBirth={authorProfile?.date_of_birth}
+                      recurrenceRule={post.recurrence_rule}
                     />
                   );
                 })}

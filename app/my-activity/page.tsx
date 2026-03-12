@@ -29,6 +29,7 @@ interface Post {
   created_at: string;
   expires_at: string | null;
   status: string;
+  recurrence_rule: string | null;
 }
 
 export default function MyActivityPage() {
@@ -430,9 +431,21 @@ export default function MyActivityPage() {
                             {post.location}
                           </a>
                         </p>
-                        <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0' }}>
-                          {post.time}
-                        </p>
+                        <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+  {post.time}
+  {post.recurrence_rule && (
+    <span style={{
+      fontSize: '12px',
+      color: '#888',
+      background: '#fafafa',
+      border: '1px solid #e0e0e0',
+      padding: '4px 10px',
+      borderRadius: '12px',
+    }}>
+      repeats {post.recurrence_rule === 'biweekly' ? 'every 2 weeks' : post.recurrence_rule}
+    </span>
+  )}
+</p>
 
                         {post.notes && (
                           <p style={{ 
