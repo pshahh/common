@@ -1,9 +1,8 @@
 import React from 'react';
 
-export function renderTextWithLinks(text: string) {
+export function renderTextWithLinks(text: string, linkColor?: string) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
-  
   return parts.map((part, i) => {
     if (part.match(urlRegex)) {
       return (
@@ -12,7 +11,7 @@ export function renderTextWithLinks(text: string) {
           href={part} 
           target="_blank" 
           rel="noopener noreferrer"
-          style={{ color: '#444', textDecoration: 'underline' }}
+          style={{ color: linkColor || '#444', textDecoration: 'underline' }}
           onClick={(e) => e.stopPropagation()}
         >
           {part}

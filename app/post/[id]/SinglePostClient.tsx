@@ -26,6 +26,7 @@ interface Post {
   created_at: string;
   status: string;
   recurrence_rule: string | null;
+  expires_at: string | null;
 }
 
 interface SinglePostClientProps {
@@ -84,9 +85,9 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
 // Auto-open interested modal if redirected after signup
 useEffect(() => {
   const action = searchParams.get('action');
-  if (action === 'interested' && user && post && post.user_id !== user.id) {
+  const isExpired = post?.expires_at ? new Date(post.expires_at) < new Date() : false;
+  if (action === 'interested' && user && post && post.user_id !== user.id && post.status !== 'closed' && !isExpired) {
     setShowInterestedModal(true);
-    // Clean the URL
     window.history.replaceState({}, '', `/post/${postId}`);
   }
 }, [user, post, searchParams, postId]);
@@ -100,6 +101,11 @@ useEffect(() => {
     if (user) {
       if (post.user_id === user.id) {
         alert("You can't express interest in your own post");
+        return;
+      }
+      // Block interest on closed or expired posts
+      const isExpired = post.expires_at ? new Date(post.expires_at) < new Date() : false;
+      if (post.status === 'closed' || isExpired) {
         return;
       }
       setShowInterestedModal(true);
@@ -134,7 +140,7 @@ useEffect(() => {
       .from('posts')
       .select('*')
       .eq('id', postId)
-      .eq('status', 'approved')
+      .in('status', ['approved', 'closed'])
       .single();
     if (data) {
       setPost(data);
@@ -190,6 +196,9 @@ useEffect(() => {
     );
   }
 
+  const isExpired = post?.expires_at ? new Date(post.expires_at) < new Date() : false;
+  const isClosedOrExpired = post?.status === 'closed' || isExpired;
+
   return (
     <div className="app">
       <Header
@@ -230,7 +239,7 @@ useEffect(() => {
           preference={post.preference || undefined}
           isLoggedIn={!!user}
           onImInterested={handleInterestedClick}
-          status={post.status}
+          status={isClosedOrExpired ? 'closed' : post.status}
           recurrenceRule={post.recurrence_rule}
         />
         

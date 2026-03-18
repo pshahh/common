@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { calculateAge, getInitials } from '@/lib/profile';
 import ClosedBadge from './ClosedBadge';
 import { renderTextWithLinks } from '@/lib/textUtils';
@@ -54,6 +54,18 @@ export default function PostCard({
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const [expandedPhoto, setExpandedPhoto] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
 
   const age = calculateAge(authorDateOfBirth ?? null);
 
@@ -203,7 +215,7 @@ export default function PostCard({
             >
               {copied ? '✓ Copied!' : 'Share ↗'}
             </button>
-            <div className="menu-container">
+            <div className="menu-container" ref={menuRef}>
               <button
                 className="menu-button"
                 onClick={() => setShowMenu(!showMenu)}

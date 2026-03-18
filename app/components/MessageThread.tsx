@@ -778,7 +778,7 @@ export default function MessageThread({
                         fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 6px 18px',
                         wordWrap: 'break-word',
                         whiteSpace: 'pre-line',
-                      }}>{msg.content}</div>
+                      }}>{renderTextWithLinks(msg.content, '#fff')}</div>
                     </div>
                   );
                 } else {
@@ -810,7 +810,7 @@ export default function MessageThread({
                         fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
                         wordWrap: 'break-word',
                         whiteSpace: 'pre-line',
-                      }}>{msg.content}</div>
+                      }}>{renderTextWithLinks(msg.content)}</div>
                     </div>
                   );
                 }
@@ -853,7 +853,8 @@ export default function MessageThread({
       e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
     }}
     onKeyDown={(e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      const isMobile = window.innerWidth < 768;
+      if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
         e.preventDefault();
         handleSendMessage(e);
       }
