@@ -391,10 +391,12 @@ export default function MyActivityPage() {
                       marginBottom: '16px',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                       position: 'relative',
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
   <h3 style={{ 
