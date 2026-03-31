@@ -15,6 +15,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [firstName, setFirstName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   if (!isOpen) return null;
 
@@ -93,10 +94,18 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     setMode('check-email');
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) {
-      setError('Please enter your email');
+  
+
+const handleForgotPassword = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setHasSubmitted(true);
+  const trimmed = email.trim();
+  if (!trimmed) {
+    setError('Please enter your email address.');
+    return;
+  }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setError('Please enter a valid email address.');
       return;
     }
     setLoading(true);
@@ -199,11 +208,10 @@ if (mode === 'forgot-password') {
                 Email
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                style={{
+  type="text"
+  value={email}
+  onChange={e => setEmail(e.target.value)}
+  style={{
                   width: '100%',
                   padding: '12px 16px',
                   border: '1px solid #e0e0e0',
@@ -214,9 +222,6 @@ if (mode === 'forgot-password') {
                 }}
               />
             </div>
-            {error && (
-              <p style={{ color: '#DC2626', fontSize: '14px', margin: 0 }}>{error}</p>
-            )}
             <button
               type="submit"
               disabled={loading}

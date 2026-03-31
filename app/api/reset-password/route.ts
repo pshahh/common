@@ -67,7 +67,7 @@ export async function POST(req: Request) {
               </p>
               <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 32px 0 16px;" />
               <p style="font-size: 12px; color: #999;">
-                common — do things with people nearby
+                do things with people nearby
               </p>
             </div>
           `,
