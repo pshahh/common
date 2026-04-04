@@ -19,6 +19,7 @@ import MessageThread from './components/MessageThread';
 import BottomNav from './components/BottomNav';
 import MobileMessageList from './components/MobileMessageList';
 import { sortByDistance, formatDistance, getDistanceToPost, calculateDistance } from '@/lib/distance';
+import { subscribeToPush } from '@/lib/pushNotifications';
 
 interface Post {
   id: string;
@@ -430,10 +431,19 @@ useEffect(() => {
     return () => subscription.unsubscribe();
   }, []);
 
+  
+  
   // Check admin status and fetch counts
   useEffect(() => {
     async function checkAdminAndCounts() {
       if (!user) return;
+     
+        // Subscribe to push notifications (once)
+if (!sessionStorage.getItem('push-subscribed')) {
+  sessionStorage.setItem('push-subscribed', 'true');
+  subscribeToPush(user.id).catch(console.error);
+}
+    
 
       const { data, error } = await supabase
         .from('profiles')

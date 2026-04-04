@@ -187,6 +187,18 @@ serve(async (req: Request) => {
     const results = await Promise.all(emailPromises);
     const successCount = results.filter((r: { success: boolean }) => r.success).length;
 
+    // Send push notifications to all recipients (regardless of email preference)
+    const pushRecipientIds = recipientIds;
+    const pushTitle = isFirstMessage
+      ? senderName + ' is interested in "' + post.title + '"'
+      : 'New message from ' + senderName;
+    const pushBody = message.content.substring(0, 100) + (message.content.length > 100 ? '...' : '');
+    const pushUrl = 'https://www.common-social.com/?thread=' + threadId;
+
+    await sendPushNotifications(supabase, pushRecipientIds, pushTitle, pushBody, pushUrl).catch(err => {
+      console.error('Push notifications failed:', err);
+    });
+    
     return new Response(
       JSON.stringify({
         message: "Sent " + successCount + " notification(s)",
@@ -274,4 +286,51 @@ function generateEmailHtml(params: {
 '  </table>' +
 '</body>' +
 '</html>';
+}
+
+async function sendPushNotifications(
+  supabase: any,
+  recipientIds: string[],
+  title: string,
+  body: string,
+  url: string
+) {
+  // Fetch push subscriptions for recipients
+  const { data: subscriptions } = await supabase
+    .from('push_subscriptions')
+    .select('*')
+    .in('user_id', recipientIds);
+
+  if (!subscriptions || subscriptions.length === 0) return;
+
+  const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY');
+  const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY');
+
+  // For each subscription, send a web push
+  // You'll need the web-push library — but since this is Deno/Edge Functions,
+  // we'll use the Web Push protocol directly via fetch
+  for (const sub of subscriptions) {
+    try {
+      // We need to use a web-push compatible library for Deno
+      // The simplest approach is to call an API route instead
+      await fetch('https://www.common-social.com/api/send-push', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('PUSH_API_SECRET')}`,
+        },
+        body: JSON.stringify({
+          subscription: {
+            endpoint: sub.endpoint,
+            keys: { p256dh: sub.keys_p256dh, auth: sub.keys_auth },
+          },
+          title,
+          body,
+          url,
+        }),
+      });
+    } catch (err) {
+      console.error('Push send error:', err);
+    }
+  }
 }
