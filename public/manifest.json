@@ -1,6 +1,6 @@
 {
-    "name": "Common",
-    "short_name": "Common",
+    "name": "common",
+    "short_name": "common",
     "description": "Find people to do things with nearby",
     "start_url": "/",
     "display": "standalone",

@@ -198,7 +198,7 @@ serve(async (req: Request) => {
     await sendPushNotifications(supabase, pushRecipientIds, pushTitle, pushBody, pushUrl).catch(err => {
       console.error('Push notifications failed:', err);
     });
-    
+
     return new Response(
       JSON.stringify({
         message: "Sent " + successCount + " notification(s)",
@@ -295,29 +295,26 @@ async function sendPushNotifications(
   body: string,
   url: string
 ) {
-  // Fetch push subscriptions for recipients
-  const { data: subscriptions } = await supabase
+  console.log('sendPushNotifications called for recipients:', recipientIds);
+  
+  const { data: subscriptions, error: subError } = await supabase
     .from('push_subscriptions')
     .select('*')
     .in('user_id', recipientIds);
 
+  console.log('Push subscriptions found:', subscriptions?.length, 'error:', subError);
+
   if (!subscriptions || subscriptions.length === 0) return;
 
-  const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY');
-  const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY');
-
-  // For each subscription, send a web push
-  // You'll need the web-push library — but since this is Deno/Edge Functions,
-  // we'll use the Web Push protocol directly via fetch
   for (const sub of subscriptions) {
     try {
-      // We need to use a web-push compatible library for Deno
-      // The simplest approach is to call an API route instead
-      await fetch('https://www.common-social.com/api/send-push', {
+      console.log('Sending push to endpoint:', sub.endpoint.substring(0, 50) + '...');
+      
+      const pushRes = await fetch('https://www.common-social.com/api/send-push', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('PUSH_API_SECRET')}`,
+          'Authorization': 'Bearer ' + Deno.env.get('PUSH_API_SECRET'),
         },
         body: JSON.stringify({
           subscription: {
@@ -329,6 +326,9 @@ async function sendPushNotifications(
           url,
         }),
       });
+
+      const pushResText = await pushRes.text();
+      console.log('Push API response:', pushRes.status, pushResText);
     } catch (err) {
       console.error('Push send error:', err);
     }

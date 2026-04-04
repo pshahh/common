@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Common',
+    title: 'common',
   },
   formatDetection: {
     telephone: false,
