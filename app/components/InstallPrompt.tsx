@@ -19,27 +19,27 @@ export default function InstallPrompt() {
     // Don't show if user previously dismissed
     if (localStorage.getItem('install-prompt-dismissed')) return;
 
+    // Don't show on desktop
+    if (window.innerWidth > 768) return;
+
     // Detect iOS
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     setIsIOS(isIOSDevice);
 
-    // On iOS, show our custom prompt (no beforeinstallprompt event)
-    if (isIOSDevice) {
-      // Delay showing to not overwhelm on first visit
-      const timer = setTimeout(() => setShow(true), 3000);
-      return () => clearTimeout(timer);
-    }
-
-    // On Android/Chrome, capture the install prompt
+    // Capture the install prompt if available (Android/Chrome)
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      const timer = setTimeout(() => setShow(true), 3000);
-      return () => clearTimeout(timer);
     };
-
     window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+
+    // Always show the banner after 3 seconds on mobile
+    const timer = setTimeout(() => setShow(true), 3000);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleInstall = async () => {
@@ -95,17 +95,28 @@ export default function InstallPrompt() {
           }}>
             Add common to your home screen
           </p>
-          <p style={{
-            fontSize: '13px',
-            color: '#999',
-            margin: 0,
-            lineHeight: 1.4,
-          }}>
-            {isIOS
-              ? 'Tap the share button, then "Add to Home Screen"'
-              : 'Get notifications when someone messages you'
-            }
-          </p>
+          {isIOS ? (
+            <p style={{
+              fontSize: '13px',
+              color: '#999',
+              margin: 0,
+              lineHeight: 1.4,
+            }}>
+              Tap the share button, then &quot;Add to Home Screen&quot;
+            </p>
+          ) : (
+            <p style={{
+              fontSize: '13px',
+              color: '#999',
+              margin: 0,
+              lineHeight: 1.4,
+            }}>
+              {deferredPrompt
+                ? 'Get notifications when someone messages you'
+                : 'Open the browser menu (⋮) and tap "Add to Home Screen"'
+              }
+            </p>
+          )}
         </div>
 
         <button
