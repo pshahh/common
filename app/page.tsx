@@ -20,6 +20,7 @@ import BottomNav from './components/BottomNav';
 import MobileMessageList from './components/MobileMessageList';
 import { sortByDistance, formatDistance, getDistanceToPost, calculateDistance } from '@/lib/distance';
 import { subscribeToPush } from '@/lib/pushNotifications';
+import InstallPrompt from './components/InstallPrompt';
 
 interface Post {
   id: string;
@@ -1377,6 +1378,8 @@ const sortedPosts = useMemo(() => {
           onClose={() => setShowReportConfirmation(false)}
         />
       )}
+
+{isMobile && user && <InstallPrompt />}
     </div>
   );
 }
