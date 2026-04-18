@@ -8,7 +8,6 @@ import PostCard from '../../components/PostCard';
 import AuthModal from '../../components/AuthModal';
 import InterestedModal from '../../components/InterestedModal';
 import MessageSentModal from '../../components/MessageSentModal';
-import InterestRegisteredModal from '../../components/InterestRegisteredModal';
 import ClosedBadge from '../../components/ClosedBadge';
 
 interface Post {
@@ -42,8 +41,7 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInterestedModal, setShowInterestedModal] = useState(false);
   const [showMessageSentModal, setShowMessageSentModal] = useState(false);
-  const [showInterestRegisteredModal, setShowInterestRegisteredModal] = useState(false);
-  const [interestPosterName, setInterestPosterName] = useState('');
+  const [hasExpressedInterest, setHasExpressedInterest] = useState(false);
 
   // Check auth state
   useEffect(() => {
@@ -116,22 +114,15 @@ useEffect(() => {
 
   const handleInterestedSuccess = (threadId: string, messageSent: boolean) => {
     setShowInterestedModal(false);
-    
+    setHasExpressedInterest(true);
+
     if (messageSent) {
       // User sent a message - show message sent modal
       setShowMessageSentModal(true);
-    } else {
-      // User clicked "Send later" - show interest registered modal
-      setInterestPosterName(post?.name || 'the organizer');
-      setShowInterestRegisteredModal(true);
     }
     
     // Refresh post to update interested count
     refreshPost();
-  };
-
-  const handleInterestRegisteredClose = () => {
-    setShowInterestRegisteredModal(false);
   };
 
   const refreshPost = async () => {
@@ -235,10 +226,11 @@ useEffect(() => {
           time={post.time}
           notes={post.notes || undefined}
           name={post.name}
-          peopleInterested={post.people_interested}
+          peopleInterested={post.people_interested + (hasExpressedInterest ? 1 : 0)}
           preference={post.preference || undefined}
           isLoggedIn={!!user}
           onImInterested={handleInterestedClick}
+          hideInterestButton={hasExpressedInterest}
           status={isClosedOrExpired ? 'closed' : post.status}
           recurrenceRule={post.recurrence_rule}
         />
@@ -261,12 +253,11 @@ useEffect(() => {
       {showMessageSentModal && (
         <MessageSentModal
           onClose={() => setShowMessageSentModal(false)}
-        />
-      )}
-      {showInterestRegisteredModal && (
-        <InterestRegisteredModal
-          posterName={interestPosterName}
-          onClose={handleInterestRegisteredClose}
+          onCreatePost={() => {
+            setShowMessageSentModal(false);
+            router.push('/');
+          }}
+          createPostLabel="Explore other activities"
         />
       )}
     </div>

@@ -13,7 +13,6 @@ import MessageSentModal from './components/MessageSentModal';
 import ProfileCompletionModal from './components/ProfileCompletionModal';
 import ReportModal from './components/ReportModal';
 import ReportConfirmationModal from './components/ReportConfirmationModal';
-import InterestRegisteredModal from './components/InterestRegisteredModal';
 import Sidebar from './components/Sidebar';
 import MessageThread from './components/MessageThread';
 import BottomNav from './components/BottomNav';
@@ -295,7 +294,7 @@ function HomeContent() {
   const [pendingAction, setPendingAction] = useState<'post' | 'interest' | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState('nearest');
+  const [sortBy, setSortBy] = useState('recent');
 
   // Report modal state
   const [showReportModal, setShowReportModal] = useState(false);
@@ -1338,6 +1337,10 @@ const sortedPosts = useMemo(() => {
       {showMessageSentModal && (
         <MessageSentModal
           onClose={handleMessageSentClose}
+          onCreatePost={() => {
+            setShowMessageSentModal(false);
+            setShowCreateModal(true);
+          }}
         />
       )}
 

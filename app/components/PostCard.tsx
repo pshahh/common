@@ -54,7 +54,12 @@ export default function PostCard({
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const [expandedPhoto, setExpandedPhoto] = useState(false);
+  const [notesExpanded, setNotesExpanded] = useState(false);
+  const [notesTruncated, setNotesTruncated] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLDivElement>(null);
+  const notesRef = useRef<HTMLParagraphElement>(null);
+  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
     if (!showMenu) return;
@@ -66,6 +71,46 @@ export default function PostCard({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
+
+  // Calculate fixed tooltip position clamped to viewport
+  useEffect(() => {
+    if (showNameTooltip && nameRef.current) {
+      const rect = nameRef.current.getBoundingClientRect();
+      const tooltipWidth = 200;
+      const tooltipHeight = 70;
+      const padding = 8;
+
+      let left = rect.left;
+      let top = rect.top - tooltipHeight - padding;
+
+      // Clamp horizontally
+      if (left + tooltipWidth > window.innerWidth - padding) {
+        left = window.innerWidth - tooltipWidth - padding;
+      }
+      if (left < padding) {
+        left = padding;
+      }
+
+      // If not enough room above, show below
+      if (top < padding) {
+        top = rect.bottom + padding;
+      }
+
+      setTooltipStyle({
+        position: 'fixed' as const,
+        top: `${top}px`,
+        left: `${left}px`,
+        width: `${tooltipWidth}px`,
+      });
+    }
+  }, [showNameTooltip]);
+
+  // Detect if notes text overflows the clamped height
+  useEffect(() => {
+    if (notesRef.current) {
+      setNotesTruncated(notesRef.current.scrollHeight > notesRef.current.clientHeight + 1);
+    }
+  }, [notes]);
 
   const age = calculateAge(authorDateOfBirth ?? null);
 
@@ -197,11 +242,29 @@ export default function PostCard({
     </span>
   )}
 </div>
-            {/* Notes - styled as personal message */}
+            {/* Notes - styled as personal message, collapsible if long */}
             {notes && (
-  <p className="card-notes" style={{ whiteSpace: 'pre-line' }}>
-    "{renderTextWithLinks(notes)}"
-  </p>
+  <div className="card-notes-wrapper">
+    <p
+      ref={notesRef}
+      className={`card-notes${!notesExpanded ? ' card-notes-collapsed' : ''}`}
+      style={{ whiteSpace: 'pre-line', cursor: notesTruncated && !notesExpanded ? 'pointer' : undefined }}
+      onClick={notesTruncated && !notesExpanded ? (e) => { e.stopPropagation(); setNotesExpanded(true); } : undefined}
+    >
+      {renderTextWithLinks(notes)}
+    </p>
+    {notesTruncated && (
+      <button
+        className="notes-toggle"
+        onClick={(e) => {
+          e.stopPropagation();
+          setNotesExpanded(!notesExpanded);
+        }}
+      >
+        {notesExpanded ? 'Show less' : 'Show more'}
+      </button>
+    )}
+  </div>
 )}
             {preference && preference !== 'Anyone' && preference !== 'anyone' && (
               <span className="preference-badge">{preference}</span>
@@ -249,6 +312,7 @@ export default function PostCard({
           {/* Left side: poster name and interested count */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div
+              ref={nameRef}
               className="poster-name"
               onClick={handleNameClick}
               onMouseEnter={() => setShowNameTooltip(true)}
@@ -260,7 +324,7 @@ export default function PostCard({
             >
               {name}
               {showNameTooltip && (
-                <div className="name-tooltip">
+                <div className="name-tooltip" style={tooltipStyle}>
                   {authorAvatarUrl ? (
                     <div 
                       className="tooltip-avatar"

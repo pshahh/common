@@ -36,7 +36,9 @@ export default function MyActivityPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [interestedPosts, setInterestedPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'yours' | 'interested'>('yours');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [overflowMenuId, setOverflowMenuId] = useState<string | null>(null);
@@ -134,8 +136,48 @@ export default function MyActivityPage() {
       setLoading(false);
     }
 
+    async function fetchInterestedPosts() {
+      if (!user) return;
+
+      // Find threads where user is a participant
+      const { data: threads, error: threadsError } = await supabase
+        .from('threads')
+        .select(`
+          id,
+          post_id,
+          posts (
+            id, title, location, latitude, longitude, time,
+            notes, name, preference, people_interested,
+            user_id, created_at, expires_at, status, recurrence_rule
+          )
+        `)
+        .contains('participant_ids', [user.id])
+        .order('created_at', { ascending: false });
+
+      if (threadsError) {
+        console.error('Error fetching interested posts:', threadsError);
+        return;
+      }
+
+      if (threads) {
+        // Filter to posts where user is NOT the creator, deduplicate by post_id
+        const seen = new Set<string>();
+        const interested: Post[] = [];
+        for (const thread of threads) {
+          const postData = Array.isArray(thread.posts) ? thread.posts[0] : thread.posts;
+          if (!postData) continue;
+          if (postData.user_id === user.id) continue;
+          if (seen.has(postData.id)) continue;
+          seen.add(postData.id);
+          interested.push(postData as Post);
+        }
+        setInterestedPosts(interested);
+      }
+    }
+
     if (user) {
       fetchMyPosts();
+      fetchInterestedPosts();
     }
   }, [user]);
 
@@ -341,18 +383,56 @@ export default function MyActivityPage() {
               fontSize: '20px', 
               fontWeight: 600, 
               color: '#000',
-              marginBottom: '8px',
+              marginBottom: '16px',
             }}>
               My activity
             </h1>
-            <p style={{ 
-              fontSize: '14px', 
-              color: '#666',
+
+            {/* Tabs */}
+            <div style={{
+              display: 'flex',
+              gap: '0',
+              borderBottom: '1px solid #e0e0e0',
               marginBottom: '24px',
             }}>
-              Posts you've shared that are still visible to others
-            </p>
+              <button
+                onClick={() => setActiveTab('yours')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  fontWeight: activeTab === 'yours' ? 600 : 400,
+                  color: activeTab === 'yours' ? '#000' : '#888',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'yours' ? '2px solid #000' : '2px solid transparent',
+                  marginBottom: '-1px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Your posts
+              </button>
+              <button
+                onClick={() => setActiveTab('interested')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  fontWeight: activeTab === 'interested' ? 600 : 400,
+                  color: activeTab === 'interested' ? '#000' : '#888',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'interested' ? '2px solid #000' : '2px solid transparent',
+                  marginBottom: '-1px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Interested in
+              </button>
+            </div>
 
+            {activeTab === 'yours' && (
+              <>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '48px', color: '#888' }}>
                 Loading...
@@ -375,7 +455,7 @@ export default function MyActivityPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  Share what I'm doing
+                  Share an activity
                 </button>
               </div>
             ) : (
@@ -599,6 +679,115 @@ export default function MyActivityPage() {
                   </div>
                 ))}
               </div>
+            )}
+              </>
+            )}
+
+            {activeTab === 'interested' && (
+              <>
+                {loading ? (
+                  <div style={{ textAlign: 'center', padding: '48px', color: '#888' }}>
+                    Loading...
+                  </div>
+                ) : interestedPosts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '48px' }}>
+                    <p style={{ color: '#666', marginBottom: '16px' }}>
+                      You haven't expressed interest in any activities yet.
+                    </p>
+                    <button
+                      onClick={() => router.push('/')}
+                      style={{
+                        background: '#000',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '12px 24px',
+                        borderRadius: '24px',
+                        fontWeight: 600,
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Explore activities
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {interestedPosts.map((post) => {
+                      const isExpired = post.expires_at ? new Date(post.expires_at) < new Date() : false;
+                      const isClosed = post.status === 'closed' || isExpired;
+                      return (
+                        <div
+                          key={post.id}
+                          style={{
+                            background: '#fff',
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '16px',
+                            padding: '20px',
+                            marginBottom: '16px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                            overflowWrap: 'break-word',
+                            wordBreak: 'break-word',
+                            opacity: isClosed ? 0.6 : 1,
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#000', margin: 0 }}>
+                              {post.title}
+                            </h3>
+                            {isClosed && <ClosedBadge />}
+                          </div>
+                          <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0' }}>
+                            <a
+                              href={post.latitude && post.longitude
+                                ? `https://www.google.com/maps/search/?api=1&query=${post.latitude},${post.longitude}`
+                                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(post.location)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#666', textDecoration: 'underline' }}
+                            >
+                              {post.location}
+                            </a>
+                          </p>
+                          <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            {post.time}
+                            {post.recurrence_rule && (
+                              <span style={{
+                                fontSize: '12px', color: '#888', background: '#fafafa',
+                                border: '1px solid #e0e0e0', padding: '4px 10px', borderRadius: '12px',
+                              }}>
+                                repeats {post.recurrence_rule === 'biweekly' ? 'every 2 weeks' : post.recurrence_rule}
+                              </span>
+                            )}
+                          </p>
+                          {post.notes && (
+                            <p style={{ fontSize: '15px', fontStyle: 'italic', color: '#666', margin: '8px 0 0 0' }}>
+                              &ldquo;{post.notes}&rdquo;
+                            </p>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                            <span style={{ fontSize: '13px', color: '#888' }}>
+                              {post.name}
+                            </span>
+                            <button
+                              onClick={() => router.push(`/post/${post.id}`)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                fontSize: '13px',
+                                color: '#888',
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                              }}
+                            >
+                              View post
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

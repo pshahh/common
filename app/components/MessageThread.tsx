@@ -77,6 +77,7 @@ export default function MessageThread({
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [threadNotesExpanded, setThreadNotesExpanded] = useState(false);
 
   // Check if thread is closed
   const isThreadClosed = (): boolean => {
@@ -159,6 +160,13 @@ export default function MessageThread({
 
       if (threadError) {
         console.error('Error fetching thread:', threadError);
+        setLoading(false);
+        return;
+      }
+
+      // Check if the current user is still a participant
+      if (!threadData.participant_ids.includes(currentUserId)) {
+        setThread(null);
         setLoading(false);
         return;
       }
@@ -616,12 +624,28 @@ export default function MessageThread({
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <span style={{ fontSize: '16px', fontWeight: 600 }}>Thread not found</span>
+          <span style={{ fontSize: '16px', fontWeight: 600 }}>Conversation unavailable</span>
           <button onClick={onClose} style={{
             background: '#fff', border: '1px solid #e0e0e0', fontSize: '18px',
             color: '#444', cursor: 'pointer', width: '36px', height: '36px',
             borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>×</button>
+        </div>
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+        }}>
+          <p style={{
+            fontSize: '14px',
+            color: 'var(--text-tertiary)',
+            textAlign: 'center',
+            lineHeight: 1.5,
+          }}>
+            This conversation is no longer available. The other person may have left.
+          </p>
         </div>
       </div>
     );
@@ -736,7 +760,44 @@ export default function MessageThread({
             <span style={{ margin: '0 8px', color: '#888' }}>·</span>
             <span>{post.time}</span>
           </div>
-          {post.notes && <div style={{ fontSize: '12px', color: '#444', marginTop: '4px', whiteSpace: 'pre-line' }}>{renderTextWithLinks(post.notes)}</div>}
+          {post.notes && (
+            <div style={{ marginTop: '4px' }}>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: '#444',
+                  whiteSpace: 'pre-line',
+                  ...(!threadNotesExpanded ? {
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical' as const,
+                    overflow: 'hidden',
+                    lineClamp: 3,
+                  } : {}),
+                  cursor: !threadNotesExpanded ? 'pointer' : undefined,
+                }}
+                onClick={!threadNotesExpanded ? () => setThreadNotesExpanded(true) : undefined}
+              >
+                {renderTextWithLinks(post.notes)}
+              </div>
+              {post.notes.length > 120 && (
+                <button
+                  onClick={() => setThreadNotesExpanded(!threadNotesExpanded)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '11px',
+                    color: '#888',
+                    cursor: 'pointer',
+                    padding: '2px 0',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  {threadNotesExpanded ? 'Show less' : 'Show more'}
+                </button>
+              )}
+            </div>
+          )}
           {post.preference && post.preference !== 'anyone' && (
             <span style={{
               display: 'inline-block', fontSize: '12px', color: '#888',
