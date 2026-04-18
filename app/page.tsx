@@ -1344,12 +1344,6 @@ const sortedPosts = useMemo(() => {
         />
       )}
 
-{showInterestRegisteredModal && (
-  <InterestRegisteredModal
-    posterName={interestPosterName}
-    onClose={handleInterestRegisteredClose}
-  />
-)}
 
       {showProfileCompletionModal && currentUserProfile && (
         <ProfileCompletionModal
