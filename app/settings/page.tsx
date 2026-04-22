@@ -500,7 +500,7 @@ const { error: updateError } = await supabase
                     Email notifications
                   </label>
                   <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>
-                    Get notified when you receive a new message
+                    Get notified for new messages and posts
                   </p>
                 </div>
                 <button
@@ -735,7 +735,6 @@ const { error: updateError } = await supabase
           onTabChange={handleMobileTabChange}
           onLogout={handleLogout}
           isAdmin={isAdmin}
-          pendingPostsCount={pendingPostsCount}
           pendingReportsCount={pendingReportsCount}
         />
       )}

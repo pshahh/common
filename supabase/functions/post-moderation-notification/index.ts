@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const EMAIL_FROM = 'Common <notifications@common-social.com>';
+const EMAIL_FROM = 'common <notifications@common-social.com>';
 const BASE_URL = 'https://common-social.com';
 
 // @ts-ignore - Deno.serve
@@ -196,7 +196,7 @@ function generateApprovedEmail(params: {
           <tr>
             <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
               <p style="margin: 0; font-size: 12px; color: #888888; line-height: 1.5;">
-                You're receiving this because you posted on Common.
+                You're receiving this because you posted on common.
               </p>
             </td>
           </tr>
@@ -242,7 +242,7 @@ function generateRejectedEmail(params: {
                 Unfortunately, your post <strong>"${postTitle}"</strong> wasn't approved because it doesn't meet our community guidelines.
               </p>
               <p style="margin: 0 0 24px; font-size: 14px; color: #444444; line-height: 1.6;">
-                Common is for sharing real activities you'd like to do with others nearby. Please review our guidelines and feel free to post again.
+                common is for sharing real activities you'd like to do with others nearby. Please review our guidelines and feel free to post again.
               </p>
               <a href="${guidelinesUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 24px;">
                 Read community guidelines
@@ -298,7 +298,7 @@ function generateRemovedEmail(params: {
                 Your post <strong>"${postTitle}"</strong> has been removed following a review. It was found to not meet our community guidelines.
               </p>
               <p style="margin: 0 0 24px; font-size: 14px; color: #444444; line-height: 1.6;">
-                Please take a moment to review our guidelines. We want Common to be a safe and welcoming place for everyone to connect.
+                Please take a moment to review our guidelines. We want common to be a safe and welcoming place for everyone to connect.
               </p>
               <a href="${guidelinesUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 24px;">
                 Read community guidelines

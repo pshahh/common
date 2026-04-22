@@ -60,7 +60,7 @@ function generateEmailHtml({
         </div>
         <div style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 16px; padding: 24px;">
           <p style="font-size: 14px; color: #444; margin: 0 0 16px 0;">Hi ${recipientName},</p>
-          <p style="font-size: 14px; color: #444; margin: 0 0 20px 0;">There's a new activity near you:</p>
+          <p style="font-size: 14px; color: #444; margin: 0 0 20px 0;">There's a new activity on common:</p>
           
           <div style="background: #fafafa; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
             <p style="font-size: 16px; font-weight: 600; color: #000; margin: 0 0 4px 0;">${postTitle}</p>
