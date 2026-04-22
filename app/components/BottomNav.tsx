@@ -9,7 +9,6 @@ interface BottomNavProps {
   messageCount?: number;
   onLogout: () => void;
   isAdmin?: boolean;
-  pendingPostsCount?: number;
   pendingReportsCount?: number;
 }
 
@@ -18,7 +17,6 @@ export default function BottomNav({
   onTabChange,
   onLogout,
   isAdmin = false,
-  pendingPostsCount = 0,
   pendingReportsCount = 0,
 }: BottomNavProps) {
   const router = useRouter();
@@ -221,42 +219,6 @@ export default function BottomNav({
 
               {isAdmin && (
                 <>
-                  <button
-                    onClick={() => {
-                      router.push('/admin/posts');
-                      handleCloseMenu();
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                      padding: '16px',
-                      background: 'none',
-                      border: 'none',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: 500,
-                      color: '#000000',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <span>Post approval</span>
-                    {pendingPostsCount > 0 && (
-                      <span style={{
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: '#D4594F',
-                        background: '#FBEEED',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                      }}>
-                        {pendingPostsCount}
-                      </span>
-                    )}
-                  </button>
-
                   <button
                     onClick={() => {
                       router.push('/admin/reports');

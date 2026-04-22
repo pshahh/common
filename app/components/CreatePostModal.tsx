@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { generateSlug } from '@/lib/slug';
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -215,6 +216,8 @@ const { error: insertError } = await supabase
   user_id: user.id,
   expires_at: expiryDate,
   recurrence_rule: frequency === 'repeats' ? recurrenceRule : null,
+  status: 'approved',
+  slug: generateSlug(title),
 });
 
     if (insertError) {
@@ -275,10 +278,10 @@ const { error: insertError } = await supabase
             ✓
           </div>
           <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#000' }}>
-            Thanks
+            You're live
           </h2>
           <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>
-            We're checking this now. It should appear shortly.
+            We'll email you when people respond.
           </p>
           <button
             onClick={handleConfirmationClose}
@@ -735,8 +738,8 @@ const { error: insertError } = await supabase
             backgroundColor: '#fafafa',
             borderRadius: '0 0 16px 16px',
           }}>
-            <p style={{ fontSize: '12px', color: '#888', maxWidth: '250px' }}>
-              Posts are reviewed before appearing to help keep things safe
+            <p style={{ fontSize: '12px', color: '#888', maxWidth: '250px', lineHeight: 1.5 }}>
+              Posts go live straight away.<br />Be a good human.
             </p>
             <button
               type="submit"

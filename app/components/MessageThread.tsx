@@ -30,6 +30,7 @@ interface Post {
   expires_at: string | null;
   user_id: string;
   status: string;
+  slug: string | null;
 }
 
 interface Thread {
@@ -150,7 +151,8 @@ export default function MessageThread({
             preference,
             expires_at,
             user_id,
-            status
+            status,
+            slug
           )
         `)
         .eq('id', threadId)
@@ -324,7 +326,8 @@ export default function MessageThread({
 
   const handleShare = () => {
     if (!thread?.post) return;
-    const url = `${window.location.origin}/post/${thread.post.id}`;
+    const postPath = thread.post.slug || thread.post.id;
+    const url = `${window.location.origin}/post/${postPath}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

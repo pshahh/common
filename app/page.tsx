@@ -13,6 +13,7 @@ import MessageSentModal from './components/MessageSentModal';
 import ProfileCompletionModal from './components/ProfileCompletionModal';
 import ReportModal from './components/ReportModal';
 import ReportConfirmationModal from './components/ReportConfirmationModal';
+
 import Sidebar from './components/Sidebar';
 import MessageThread from './components/MessageThread';
 import BottomNav from './components/BottomNav';
@@ -36,6 +37,7 @@ interface Post {
   created_at: string;
   expires_at: string | null;
   recurrence_rule: string | null;
+  slug: string | null;
 }
 
 interface Profile {
@@ -288,8 +290,7 @@ function HomeContent() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInterestedModal, setShowInterestedModal] = useState(false);
   const [showMessageSentModal, setShowMessageSentModal] = useState(false);
-  const [showInterestRegisteredModal, setShowInterestRegisteredModal] = useState(false);
-  const [interestPosterName, setInterestPosterName] = useState('');
+
   const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<'post' | 'interest' | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -301,6 +302,11 @@ function HomeContent() {
   const [showReportConfirmation, setShowReportConfirmation] = useState(false);
   const [reportPostId, setReportPostId] = useState<string | null>(null);
   const [reportThreadId, setReportThreadId] = useState<string | null>(null);
+
+  // Admin remove state
+  const [showAdminRemoveModal, setShowAdminRemoveModal] = useState(false);
+  const [adminRemovePostId, setAdminRemovePostId] = useState<string | null>(null);
+  const [adminRemoveLoading, setAdminRemoveLoading] = useState(false);
 
   // Track posts user has expressed interest in
   const [userInterestedPostIds, setUserInterestedPostIds] = useState<Set<string>>(new Set());
@@ -784,6 +790,53 @@ const sortedPosts = useMemo(() => {
     setShowReportConfirmation(true);
   };
 
+  const handleAdminRemoveClick = (postId: string) => {
+    setAdminRemovePostId(postId);
+    setShowAdminRemoveModal(true);
+  };
+
+  const handleAdminRemoveConfirm = async () => {
+    if (!adminRemovePostId) return;
+    setAdminRemoveLoading(true);
+
+    // Get post details for notification
+    const postToRemove = posts.find(p => p.id === adminRemovePostId);
+
+    // Set post status to hidden
+    const { error } = await supabase
+      .from('posts')
+      .update({ status: 'hidden' })
+      .eq('id', adminRemovePostId);
+
+    if (error) {
+      console.error('Error removing post:', error);
+      alert('Failed to remove post. Please try again.');
+      setAdminRemoveLoading(false);
+      return;
+    }
+
+    // Send removal notification email to the poster
+    if (postToRemove) {
+      try {
+        await supabase.functions.invoke('post-moderation-notification', {
+          body: {
+            postId: adminRemovePostId,
+            userId: postToRemove.user_id,
+            postTitle: postToRemove.title,
+            action: 'removed',
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send removal email:', emailError);
+      }
+    }
+
+    setAdminRemoveLoading(false);
+    setShowAdminRemoveModal(false);
+    setAdminRemovePostId(null);
+    refreshPosts();
+  };
+
   
   const handleInterestedSuccess = (threadId: string, messageSent: boolean) => {
     setShowInterestedModal(false);
@@ -797,10 +850,6 @@ const sortedPosts = useMemo(() => {
       // User sent a message - just show confirmation, DON'T open thread
       setShowMessageSentModal(true);
       // Don't set selectedThreadId or show mobile thread
-    } else {
-      // User clicked "Send later" - show interest registered modal
-      setInterestPosterName(selectedPost?.name || 'the organizer');
-      setShowInterestRegisteredModal(true);
     }
 
     setSelectedPost(null);
@@ -816,15 +865,6 @@ const sortedPosts = useMemo(() => {
   const handleMessageSentClose = () => {
     setShowMessageSentModal(false);
     // Show profile completion modal after message sent if profile is incomplete
-    if (pendingAction === 'interest' && currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
-      setShowProfileCompletionModal(true);
-    }
-    setPendingAction(null);
-  };
-
-  const handleInterestRegisteredClose = () => {
-    setShowInterestRegisteredModal(false);
-    // Show profile completion modal if profile is incomplete
     if (pendingAction === 'interest' && currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
       setShowProfileCompletionModal(true);
     }
@@ -1055,6 +1095,7 @@ const sortedPosts = useMemo(() => {
                     onReport={() => handleReportClick(post.id)}
                     distance={getPostDistance(post)}
                     recurrenceRule={post.recurrence_rule}
+                    slug={post.slug}
                     authorAvatarUrl={authorProfile?.avatar_url}
                     authorDateOfBirth={authorProfile?.date_of_birth}
                   />
@@ -1232,6 +1273,9 @@ const sortedPosts = useMemo(() => {
                       authorAvatarUrl={authorProfile?.avatar_url}
                       authorDateOfBirth={authorProfile?.date_of_birth}
                       recurrenceRule={post.recurrence_rule}
+                      slug={post.slug}
+                      isAdmin={isAdmin}
+                      onAdminRemove={() => handleAdminRemoveClick(post.id)}
                     />
                   );
                 })}
@@ -1272,7 +1316,6 @@ const sortedPosts = useMemo(() => {
           messageCount={threadCount}
           onLogout={handleLogout}
           isAdmin={isAdmin}
-          pendingPostsCount={pendingPostsCount}
           pendingReportsCount={pendingReportsCount}
         />
       )}
@@ -1345,6 +1388,7 @@ const sortedPosts = useMemo(() => {
       )}
 
 
+
       {showProfileCompletionModal && currentUserProfile && (
         <ProfileCompletionModal
           userId={user.id}
@@ -1374,6 +1418,75 @@ const sortedPosts = useMemo(() => {
         <ReportConfirmationModal
           onClose={() => setShowReportConfirmation(false)}
         />
+      )}
+
+      {/* Admin Remove Post Modal */}
+      {showAdminRemoveModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 60,
+            padding: '16px',
+          }}
+          onClick={() => !adminRemoveLoading && setShowAdminRemoveModal(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>
+              Remove this post?
+            </h3>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px', lineHeight: 1.5 }}>
+              This will hide the post from the feed and notify the poster that it was removed.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowAdminRemoveModal(false)}
+                disabled={adminRemoveLoading}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '24px',
+                  background: '#fff',
+                  cursor: adminRemoveLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAdminRemoveConfirm}
+                disabled={adminRemoveLoading}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  border: 'none',
+                  borderRadius: '24px',
+                  background: '#dc2626',
+                  color: '#fff',
+                  cursor: adminRemoveLoading ? 'not-allowed' : 'pointer',
+                  opacity: adminRemoveLoading ? 0.6 : 1,
+                }}
+              >
+                {adminRemoveLoading ? 'Removing...' : 'Remove post'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
 {isMobile && user && <InstallPrompt />}

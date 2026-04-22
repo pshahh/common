@@ -47,7 +47,6 @@ export default function Sidebar({
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
-  const [pendingPostsCount, setPendingPostsCount] = useState(0);
 
   // Check if user is admin and fetch pending counts
   useEffect(() => {
@@ -64,11 +63,6 @@ export default function Sidebar({
           .select('*', { count: 'exact', head: true })
           .eq('status', 'pending');
         setPendingReportsCount(reportsCount || 0);
-        const { count: postsCount } = await supabase
-          .from('posts')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending');
-        setPendingPostsCount(postsCount || 0);
       }
     }
     if (userId) {
@@ -483,13 +477,6 @@ export default function Sidebar({
             }}>
               Admin
             </div>
-            <NavItem
-              onClick={() => router.push('/admin/posts')}
-              isActive={activeItem === 'admin-posts'}
-              badge={pendingPostsCount}
-            >
-              Post approval
-            </NavItem>
             <NavItem
               onClick={() => router.push('/admin/reports')}
               isActive={activeItem === 'admin-reports'}

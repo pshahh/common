@@ -35,7 +35,7 @@ export default function MessageSentModal({
           </div>
           <h2 className="confirmation-title">Message sent</h2>
           <p className="confirmation-text">
-            You'll be notified when they reply.
+            We'll email you when they reply.
           </p>
           {onCreatePost && (
             <div className="confirmation-actions">

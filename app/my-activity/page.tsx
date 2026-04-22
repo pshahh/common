@@ -9,6 +9,7 @@ import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
 import AuthModal from '../components/AuthModal';
 import ClosedBadge from '../components/ClosedBadge';
+import PostCard from '../components/PostCard';
 import EditPostModal from '../components/EditPostModal';
 import CreatePostModal from '../components/CreatePostModal';
 import MobileMessageList from '../components/MobileMessageList';
@@ -30,6 +31,7 @@ interface Post {
   expires_at: string | null;
   status: string;
   recurrence_rule: string | null;
+  slug: string | null;
 }
 
 export default function MyActivityPage() {
@@ -189,7 +191,8 @@ export default function MyActivityPage() {
   const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
 
   const handleShare = async (post: Post) => {
-    const url = `${window.location.origin}/post/${post.id}`;
+    const postPath = post.slug || post.id;
+    const url = `${window.location.origin}/post/${postPath}`;
     await navigator.clipboard.writeText(url);
     setCopiedPostId(post.id);
     setTimeout(() => setCopiedPostId(null), 2000);
@@ -475,7 +478,7 @@ export default function MyActivityPage() {
                       wordBreak: 'break-word',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                     <div style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -489,17 +492,6 @@ export default function MyActivityPage() {
   </h3>
   {post.status === 'closed' && <ClosedBadge />}
 </div>
-                          {post.status === 'pending' && (
-                            <span style={{
-                              fontSize: '11px',
-                              color: '#92400e',
-                              background: '#fef3c7',
-                              padding: '2px 8px',
-                              borderRadius: '10px',
-                            }}>
-                              Pending review
-                            </span>
-                          )}
                         </div>
 
                         <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0' }}>
@@ -716,73 +708,25 @@ export default function MyActivityPage() {
                       const isExpired = post.expires_at ? new Date(post.expires_at) < new Date() : false;
                       const isClosed = post.status === 'closed' || isExpired;
                       return (
-                        <div
+                        <PostCard
                           key={post.id}
-                          style={{
-                            background: '#fff',
-                            border: '1px solid #e0e0e0',
-                            borderRadius: '16px',
-                            padding: '20px',
-                            marginBottom: '16px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                            overflowWrap: 'break-word',
-                            wordBreak: 'break-word',
-                            opacity: isClosed ? 0.6 : 1,
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                            <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#000', margin: 0 }}>
-                              {post.title}
-                            </h3>
-                            {isClosed && <ClosedBadge />}
-                          </div>
-                          <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0' }}>
-                            <a
-                              href={post.latitude && post.longitude
-                                ? `https://www.google.com/maps/search/?api=1&query=${post.latitude},${post.longitude}`
-                                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(post.location)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: '#666', textDecoration: 'underline' }}
-                            >
-                              {post.location}
-                            </a>
-                          </p>
-                          <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            {post.time}
-                            {post.recurrence_rule && (
-                              <span style={{
-                                fontSize: '12px', color: '#888', background: '#fafafa',
-                                border: '1px solid #e0e0e0', padding: '4px 10px', borderRadius: '12px',
-                              }}>
-                                repeats {post.recurrence_rule === 'biweekly' ? 'every 2 weeks' : post.recurrence_rule}
-                              </span>
-                            )}
-                          </p>
-                          {post.notes && (
-                            <p style={{ fontSize: '15px', fontStyle: 'italic', color: '#666', margin: '8px 0 0 0' }}>
-                              &ldquo;{post.notes}&rdquo;
-                            </p>
-                          )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-                            <span style={{ fontSize: '13px', color: '#888' }}>
-                              {post.name}
-                            </span>
-                            <button
-                              onClick={() => router.push(`/post/${post.id}`)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                fontSize: '13px',
-                                color: '#888',
-                                cursor: 'pointer',
-                                textDecoration: 'underline',
-                              }}
-                            >
-                              View post
-                            </button>
-                          </div>
-                        </div>
+                          id={post.id}
+                          title={post.title}
+                          location={post.location}
+                          latitude={post.latitude}
+                          longitude={post.longitude}
+                          time={post.time}
+                          notes={post.notes || undefined}
+                          name={post.name}
+                          peopleInterested={post.people_interested}
+                          preference={post.preference || undefined}
+                          isLoggedIn={true}
+                          onImInterested={() => {}}
+                          hideInterestButton={true}
+                          status={isClosed ? 'closed' : post.status}
+                          recurrenceRule={post.recurrence_rule}
+                          slug={post.slug}
+                        />
                       );
                     })}
                   </div>
@@ -833,7 +777,6 @@ export default function MyActivityPage() {
           onTabChange={handleMobileTabChange}
           onLogout={handleLogout}
           isAdmin={isAdmin}
-          pendingPostsCount={pendingPostsCount}
           pendingReportsCount={pendingReportsCount}
         />
       )}

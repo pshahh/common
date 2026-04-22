@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import SinglePostClient from './SinglePostClient';
+import { isUUID } from '@/lib/slug';
 
 // Create a server-side Supabase client for metadata generation
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -15,11 +16,13 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   
+  // Try by UUID first, then by slug
+  const column = isUUID(id) ? 'id' : 'slug';
   const { data: post } = await supabase
     .from('posts')
     .select('title, location, time, notes')
-    .eq('id', id)
-    .eq('status', 'approved')
+    .eq(column, id)
+    .in('status', ['approved', 'closed'])
     .single();
 
   if (!post) {

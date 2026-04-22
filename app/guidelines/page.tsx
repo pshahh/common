@@ -301,7 +301,7 @@ export default function GuidelinesPage() {
       <li style={{ marginBottom: '8px' }}>Commercial promotions, advertising, or selling things</li>
       <li style={{ marginBottom: '8px' }}>Promoting events or gatherings you're organising but not joining as a participant</li>
       <li style={{ marginBottom: '8px' }}>Dating or romantic meetup requests</li>
-      <li style={{ marginBottom: '8px' }}>Vague posts without a clear activity (e.g., "looking for friends")</li>
+      <li style={{ marginBottom: '8px' }}>Vague posts without a clear activity (e.g. "looking for friends")</li>
       <li style={{ marginBottom: '8px' }}>Anything illegal, harmful, or discriminatory</li>
       <li style={{ marginBottom: '8px' }}>Spam or repeated similar posts</li>
       <li>Posts that don't include a time or location</li>
@@ -361,7 +361,7 @@ export default function GuidelinesPage() {
     lineHeight: 1.6,
     margin: 0,
   }}>
-    Posts that don't follow these guidelines won't be approved. If you have questions, reach out to us at <a href="mailto:hello@common-social.com" style={{ color: '#444' }}>hello@common-social.com</a>
+    Posts that don't follow these guidelines will be removed. If you have questions, reach out to us at <a href="mailto:hello@common-social.com" style={{ color: '#444' }}>hello@common-social.com</a>
   </p>
 </div>
           </div>
@@ -375,7 +375,6 @@ export default function GuidelinesPage() {
           onTabChange={handleMobileTabChange}
           onLogout={handleLogout}
           isAdmin={isAdmin}
-          pendingPostsCount={pendingPostsCount}
           pendingReportsCount={pendingReportsCount}
         />
       )}

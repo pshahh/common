@@ -26,6 +26,9 @@ interface PostCardProps {
   hideInterestButton?: boolean;
   status?: string;
   recurrenceRule?: string | null;
+  slug?: string | null;
+  isAdmin?: boolean;
+  onAdminRemove?: () => void;
 }
 
 
@@ -49,6 +52,9 @@ export default function PostCard({
   hideInterestButton = false,
   status,
   recurrenceRule,
+  slug,
+  isAdmin = false,
+  onAdminRemove,
 }: PostCardProps) {
   const [showNameTooltip, setShowNameTooltip] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -123,7 +129,8 @@ export default function PostCard({
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/post/${id}`;
+    const postPath = slug || id;
+    const url = `${window.location.origin}/post/${postPath}`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -296,6 +303,18 @@ export default function PostCard({
                   >
                     Report post
                   </button>
+                  {isAdmin && onAdminRemove && (
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onAdminRemove();
+                      }}
+                      style={{ color: '#dc2626' }}
+                    >
+                      Remove post
+                    </button>
+                  )}
                 </div>
               )}
             </div>
