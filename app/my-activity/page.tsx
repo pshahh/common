@@ -52,6 +52,7 @@ export default function MyActivityPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [mobileTab, setMobileTab] = useState<'home' | 'messages' | 'activity' | 'menu'>('activity');
   
@@ -109,6 +110,7 @@ export default function MyActivityPage() {
           supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
         ]);
         
+        setPendingPostsCount(postsRes.count || 0);
         setPendingReportsCount(reportsRes.count || 0);
       }
     }
@@ -148,7 +150,7 @@ export default function MyActivityPage() {
           posts (
             id, title, location, latitude, longitude, time,
             notes, name, preference, people_interested,
-            user_id, created_at, expires_at, status, recurrence_rule
+            user_id, created_at, expires_at, status, recurrence_rule, slug
           )
         `)
         .contains('participant_ids', [user.id])
