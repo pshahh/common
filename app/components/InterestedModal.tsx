@@ -110,8 +110,11 @@ await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
           {/* Message input */}
           <div className="form-group">
             <label className="form-label">
-              A quick note to get things moving
+              Introduce yourself
             </label>
+            <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
+              A personal message goes a long way
+            </p>
             <textarea
               className="form-textarea"
               placeholder="hey, I'm interested in joining you"

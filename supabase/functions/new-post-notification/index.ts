@@ -60,7 +60,7 @@ function generateEmailHtml({
         </div>
         <div style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 16px; padding: 24px;">
           <p style="font-size: 14px; color: #444; margin: 0 0 16px 0;">Hi ${recipientName},</p>
-          <p style="font-size: 14px; color: #444; margin: 0 0 20px 0;">There's a new activity on common:</p>
+          <p style="font-size: 14px; color: #444; margin: 0 0 20px 0;">There's a new activity near you:</p>
           
           <div style="background: #fafafa; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
             <p style="font-size: 16px; font-weight: 600; color: #000; margin: 0 0 4px 0;">${postTitle}</p>
@@ -153,22 +153,23 @@ serve(async (req: Request) => {
       return new Response("No eligible recipients", { status: 200 });
     }
 
-    // Send emails
-    const emailPromises = recipients.map(
-      async (recipient: { id: string; first_name?: string }) => {
-        const recipientEmail = emailMap.get(recipient.id)!;
-        const recipientName = recipient.first_name || "there";
+    // Send emails sequentially with delay to respect Resend rate limit (5/sec)
+    const results: { success: boolean; email: string }[] = [];
+    for (const recipient of recipients) {
+      const recipientEmail = emailMap.get((recipient as { id: string }).id)!;
+      const recipientName = (recipient as { id: string; first_name?: string }).first_name || "there";
 
-        const emailHtml = generateEmailHtml({
-          recipientName,
-          postTitle: post.title,
-          postLocation: post.location,
-          postTime: post.time,
-          postNotes: post.notes,
-          posterName: post.name,
-          postUrl,
-        });
+      const emailHtml = generateEmailHtml({
+        recipientName,
+        postTitle: post.title,
+        postLocation: post.location,
+        postTime: post.time,
+        postNotes: post.notes,
+        posterName: post.name,
+        postUrl,
+      });
 
+      try {
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -186,18 +187,21 @@ serve(async (req: Request) => {
         if (!res.ok) {
           const error = await res.text();
           console.error("Failed to send to " + recipientEmail + ":", error);
-          return { success: false, email: recipientEmail };
+          results.push({ success: false, email: recipientEmail });
+        } else {
+          console.log("Sent new post notification to " + recipientEmail);
+          results.push({ success: true, email: recipientEmail });
         }
-
-        console.log("Sent new post notification to " + recipientEmail);
-        return { success: true, email: recipientEmail };
+      } catch (err) {
+        console.error("Error sending to " + recipientEmail + ":", err);
+        results.push({ success: false, email: recipientEmail });
       }
-    );
 
-    const results = await Promise.all(emailPromises);
-    const successCount = results.filter(
-      (r: { success: boolean }) => r.success
-    ).length;
+      // Wait 250ms between sends (max 4/sec, safely under the 5/sec limit)
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+
+    const successCount = results.filter((r) => r.success).length;
 
     return new Response(
       JSON.stringify({
