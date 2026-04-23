@@ -24,7 +24,6 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [pendingPostsCount, setPendingPostsCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [mobileTab, setMobileTab] = useState<'home' | 'messages' | 'activity' | 'menu'>('menu');
 
@@ -98,7 +97,6 @@ export default function SettingsPage() {
           supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
         ]);
         
-        setPendingPostsCount(postsRes.count || 0);
         setPendingReportsCount(reportsRes.count || 0);
       }
     }

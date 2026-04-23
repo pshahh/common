@@ -32,7 +32,6 @@ export default function AdminPostsPage() {
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [actioningPost, setActioningPost] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [pendingPostsCount, setPendingPostsCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [confirmReject, setConfirmReject] = useState<{
     postId: string;
@@ -109,7 +108,6 @@ export default function AdminPostsPage() {
         supabase.from('posts').select('id', { count: 'exact' }).eq('status', 'pending'),
         supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
       ]);
-      setPendingPostsCount(postsRes.count || 0);
       setPendingReportsCount(reportsRes.count || 0);
     }
 
@@ -157,7 +155,6 @@ export default function AdminPostsPage() {
 
     // Update local state
     setPosts(prev => prev.filter(p => p.id !== postId));
-    setPendingPostsCount(prev => Math.max(0, prev - 1));
     setActioningPost(null);
   };
 
@@ -193,7 +190,6 @@ export default function AdminPostsPage() {
 
     // Update local state
     setPosts(prev => prev.filter(p => p.id !== postId));
-    setPendingPostsCount(prev => Math.max(0, prev - 1));
     setActioningPost(null);
     setConfirmReject(null);
   };
@@ -561,7 +557,6 @@ export default function AdminPostsPage() {
           onTabChange={handleMobileTabChange}
           onLogout={handleLogout}
           isAdmin={true}
-          pendingPostsCount={pendingPostsCount}
           pendingReportsCount={pendingReportsCount}
         />
       )}

@@ -13,7 +13,6 @@ export default function GuidelinesPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [pendingPostsCount, setPendingPostsCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [mobileTab, setMobileTab] = useState<'home' | 'messages' | 'activity' | 'menu'>('menu');
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
@@ -52,7 +51,6 @@ export default function GuidelinesPage() {
           supabase.from('posts').select('id', { count: 'exact' }).eq('status', 'pending'),
           supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
         ]);
-        setPendingPostsCount(postsRes.count || 0);
         setPendingReportsCount(reportsRes.count || 0);
       }
     }

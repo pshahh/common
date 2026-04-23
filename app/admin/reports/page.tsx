@@ -36,7 +36,6 @@ export default function AdminReportsPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'reviewed'>('pending');
   const [actioningReport, setActioningReport] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [pendingPostsCount, setPendingPostsCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [confirmRemove, setConfirmRemove] = useState<{
     reportId: string;
@@ -123,7 +122,6 @@ export default function AdminReportsPage() {
         supabase.from('posts').select('id', { count: 'exact' }).eq('status', 'pending'),
         supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
       ]);
-      setPendingPostsCount(postsRes.count || 0);
       setPendingReportsCount(reportsRes.count || 0);
     }
 
@@ -644,7 +642,6 @@ export default function AdminReportsPage() {
           onTabChange={handleMobileTabChange}
           onLogout={handleLogout}
           isAdmin={true}
-          pendingPostsCount={pendingPostsCount}
           pendingReportsCount={pendingReportsCount}
         />
       )}

@@ -371,7 +371,6 @@ useEffect(() => {
 
   // Admin state for mobile nav
   const [isAdmin, setIsAdmin] = useState(false);
-  const [pendingPostsCount, setPendingPostsCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
 
   // Thread count for mobile nav badge
@@ -466,11 +465,6 @@ if (!sessionStorage.getItem('push-subscribed')) {
           .eq('status', 'pending');
         setPendingReportsCount(reportsCount || 0);
 
-        const { count: postsCount } = await supabase
-          .from('posts')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending');
-        setPendingPostsCount(postsCount || 0);
       }
 
       // Fetch thread count for badge
