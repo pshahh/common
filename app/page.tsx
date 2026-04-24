@@ -371,6 +371,7 @@ useEffect(() => {
 
   // Admin state for mobile nav
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
 
   // Thread count for mobile nav badge
@@ -465,18 +466,57 @@ if (!sessionStorage.getItem('push-subscribed')) {
           .eq('status', 'pending');
         setPendingReportsCount(reportsCount || 0);
 
+        const { count: postsCount } = await supabase
+          .from('posts')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        setPendingPostsCount(postsCount || 0);
       }
 
-      // Fetch thread count for badge
-      const { count: threads } = await supabase
-        .from('threads')
-        .select('*', { count: 'exact', head: true })
-        .contains('participant_ids', [user.id]);
-      setThreadCount(threads || 0);
+      // Fetch unread thread count for badge
+      await refreshUnreadCount(user.id);
     }
 
     checkAdminAndCounts();
   }, [user]);
+
+  // Refresh unread count function
+  const refreshUnreadCount = async (userId: string) => {
+    const { data: userThreads } = await supabase
+      .from('threads')
+      .select('id, last_message_at')
+      .contains('participant_ids', [userId]);
+
+    if (userThreads && userThreads.length > 0) {
+      const { data: reads } = await supabase
+        .from('thread_reads')
+        .select('thread_id, last_read_at')
+        .eq('user_id', userId);
+
+      const readMap = new Map<string, string>();
+      (reads || []).forEach((r: { thread_id: string; last_read_at: string }) => {
+        readMap.set(r.thread_id, r.last_read_at);
+      });
+
+      const unreadCount = userThreads.filter((t: { id: string; last_message_at: string | null }) => {
+        if (!t.last_message_at) return false;
+        const lastRead = readMap.get(t.id);
+        if (!lastRead) return true;
+        return new Date(t.last_message_at) > new Date(lastRead);
+      }).length;
+
+      setThreadCount(unreadCount);
+    } else {
+      setThreadCount(0);
+    }
+  };
+
+  // Recalculate unread count when sidebar refreshes (thread opened/closed/message sent)
+  useEffect(() => {
+    if (user) {
+      refreshUnreadCount(user.id);
+    }
+  }, [sidebarRefreshTrigger]);
 
   // Fetch posts and profiles
   useEffect(() => {

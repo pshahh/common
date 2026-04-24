@@ -126,19 +126,27 @@ serve(async (req: Request) => {
       return new Response("No recipients", { status: 200 });
     }
 
-    // Get emails from auth.users
-    const { data: authUsers, error: authError } =
-      await supabase.auth.admin.listUsers();
-
-    if (authError || !authUsers) {
-      console.error("Failed to fetch auth users:", authError);
-      return new Response("Failed to fetch auth users", { status: 500 });
-    }
-
+    // Get emails from auth.users (paginate — listUsers returns max 50 per page)
     const emailMap = new Map<string, string>();
-    authUsers.users.forEach((user: { id: string; email?: string }) => {
-      if (user.email) emailMap.set(user.id, user.email);
-    });
+    let page = 1;
+    const perPage = 50;
+    while (true) {
+      const { data: authUsers, error: authError } =
+        await supabase.auth.admin.listUsers({ page, perPage });
+
+      if (authError || !authUsers) {
+        console.error("Failed to fetch auth users page " + page + ":", authError);
+        break;
+      }
+
+      authUsers.users.forEach((user: { id: string; email?: string }) => {
+        if (user.email) emailMap.set(user.id, user.email);
+      });
+
+      // If we got fewer than perPage, we've reached the last page
+      if (authUsers.users.length < perPage) break;
+      page++;
+    }
 
     // Filter to users who have notifications enabled
     const recipients = profiles.filter(
@@ -197,8 +205,8 @@ serve(async (req: Request) => {
         results.push({ success: false, email: recipientEmail });
       }
 
-      // Wait 250ms between sends (max 4/sec, safely under the 5/sec limit)
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      // Wait 100ms between sends (well under 5/sec rate limit with API latency)
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     const successCount = results.filter((r) => r.success).length;

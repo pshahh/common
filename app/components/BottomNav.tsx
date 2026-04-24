@@ -17,6 +17,7 @@ export default function BottomNav({
   onTabChange,
   onLogout,
   isAdmin = false,
+  messageCount = 0,
   pendingReportsCount = 0,
 }: BottomNavProps) {
   const router = useRouter();
@@ -94,6 +95,7 @@ export default function BottomNav({
             padding: '8px 16px',
             cursor: 'pointer',
             minWidth: '64px',
+            position: 'relative',
           }}
         >
           <span style={{
@@ -103,6 +105,17 @@ export default function BottomNav({
           }}>
             Messages
           </span>
+          {(messageCount ?? 0) > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: '4px',
+              right: '10px',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#D4594F',
+            }} />
+          )}
         </button>
 
         {/* Activity */}
