@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useUnreadCount } from '@/lib/useUnreadCount';
 import { User } from '@supabase/supabase-js';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
@@ -38,6 +39,9 @@ export default function AdminPostsPage() {
     postTitle: string;
     userId: string;
   } | null>(null);
+
+  // Unread thread count for mobile nav badge
+  const { unreadCount: threadCount } = useUnreadCount(user?.id);
 
   // Check screen size
   useEffect(() => {
@@ -557,6 +561,7 @@ export default function AdminPostsPage() {
           onTabChange={handleMobileTabChange}
           onLogout={handleLogout}
           isAdmin={true}
+          messageCount={threadCount}
           pendingReportsCount={pendingReportsCount}
         />
       )}

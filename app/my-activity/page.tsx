@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useUnreadCount } from '@/lib/useUnreadCount';
 import { User } from '@supabase/supabase-js';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -60,6 +61,9 @@ export default function MyActivityPage() {
   const [showMobileMessages, setShowMobileMessages] = useState(false);
   const [mobileSelectedThreadId, setMobileSelectedThreadId] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Unread thread count for mobile nav badge (shared hook)
+  const { unreadCount: threadCount } = useUnreadCount(user?.id, refreshTrigger);
 
   // Check screen size
   useEffect(() => {
@@ -777,6 +781,7 @@ export default function MyActivityPage() {
           onTabChange={handleMobileTabChange}
           onLogout={handleLogout}
           isAdmin={isAdmin}
+          messageCount={threadCount}
           pendingReportsCount={pendingReportsCount}
         />
       )}

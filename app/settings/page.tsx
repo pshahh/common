@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useUnreadCount } from '@/lib/useUnreadCount';
 import { User } from '@supabase/supabase-js';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -26,6 +27,9 @@ export default function SettingsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [mobileTab, setMobileTab] = useState<'home' | 'messages' | 'activity' | 'menu'>('menu');
+
+  // Unread thread count for mobile nav badge
+  const { unreadCount: threadCount } = useUnreadCount(user?.id);
 
   // Form state
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -733,6 +737,7 @@ const { error: updateError } = await supabase
           onTabChange={handleMobileTabChange}
           onLogout={handleLogout}
           isAdmin={isAdmin}
+          messageCount={threadCount}
           pendingReportsCount={pendingReportsCount}
         />
       )}
