@@ -17,6 +17,7 @@ interface Thread {
   created_at: string;
   closed_at: string | null;
   last_message_at: string | null;
+  thread_type: string;
   post: ThreadPost | null;
   otherParticipantName: string | null;
   hasUnread: boolean;
@@ -48,6 +49,7 @@ export default function MobileMessageList({
           created_at,
           closed_at,
           last_message_at,
+          thread_type,
           posts (
             id,
             title,
@@ -134,6 +136,7 @@ export default function MobileMessageList({
           created_at: thread.created_at,
           closed_at: thread.closed_at,
           last_message_at: thread.last_message_at,
+          thread_type: thread.thread_type || '1:1',
           post: post,
           otherParticipantName: otherName,
           hasUnread,
@@ -239,13 +242,15 @@ export default function MobileMessageList({
                   }}>
                     {thread.post?.title || 'Unknown post'}
                   </div>
-                  <div style={{
-                    fontSize: '13px',
-                    color: '#888888',
-                    fontWeight: unread ? 500 : 400,
-                  }}>
-                    {thread.otherParticipantName || thread.post?.location || ''}
-                  </div>
+                  {thread.thread_type !== 'group' && (
+                    <div style={{
+                      fontSize: '13px',
+                      color: '#888888',
+                      fontWeight: unread ? 500 : 400,
+                    }}>
+                      {thread.otherParticipantName || thread.post?.location || ''}
+                    </div>
+                  )}
                   {closed && (
                     <div style={{
                       fontSize: '11px',

@@ -39,6 +39,7 @@ interface Post {
   expires_at: string | null;
   recurrence_rule: string | null;
   slug: string | null;
+  thread_type: string | null;
 }
 
 interface Profile {

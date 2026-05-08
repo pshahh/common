@@ -29,6 +29,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'biweekly' | 'mo
   const [date, setDate] = useState('');
   const [timeDetails, setTimeDetails] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
+  const [threadType, setThreadType] = useState<'1:1' | 'group'>('1:1');
   const [whoCanRespond, setWhoCanRespond] = useState('anyone');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,7 @@ setRecurrenceRule('weekly');
       setDate(getTomorrowDate());
       setTimeDetails('');
       setExpiresAt(defaultExpiry); // Set default expiry
+      setThreadType('1:1');
       setWhoCanRespond('anyone');
       setNotes('');
       setLoading(false);
@@ -218,6 +220,7 @@ const { error: insertError } = await supabase
   recurrence_rule: frequency === 'repeats' ? recurrenceRule : null,
   status: 'approved',
   slug: generateSlug(title),
+  thread_type: threadType,
 });
 
     if (insertError) {
@@ -667,6 +670,49 @@ const { error: insertError } = await supabase
               )}
             </div>
 
+            {/* Chat type */}
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
+                How do you want to chat with people who respond?
+              </label>
+              <p style={{ fontSize: '12px', color: '#888', marginBottom: '12px' }}>
+                {threadType === '1:1' 
+                  ? 'Each person starts a separate conversation with you' 
+                  : 'Everyone joins the same group conversation'}
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setThreadType('1:1')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: 'none',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    backgroundColor: threadType === '1:1' ? '#000' : '#f5f5f5',
+                    color: threadType === '1:1' ? '#FFF' : '#666',
+                  }}
+                >
+                  1:1 chats
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setThreadType('group')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: 'none',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    backgroundColor: threadType === 'group' ? '#000' : '#f5f5f5',
+                    color: threadType === 'group' ? '#FFF' : '#666',
+                  }}
+                >
+                  Group chat
+                </button>
+              </div>
+            </div>
             {/* Who can respond */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>

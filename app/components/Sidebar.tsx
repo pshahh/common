@@ -18,6 +18,7 @@ interface Thread {
   created_at: string;
   closed_at: string | null;
   last_message_at: string | null;
+  thread_type: string;
   post: ThreadPost | null;
   otherParticipantName: string | null;
   hasUnread: boolean;
@@ -80,6 +81,7 @@ export default function Sidebar({
         created_at,
         closed_at,
         last_message_at,
+        thread_type,
         posts (
           id,
           title,
@@ -166,6 +168,7 @@ export default function Sidebar({
         created_at: thread.created_at,
         closed_at: thread.closed_at,
         last_message_at: thread.last_message_at,
+        thread_type: thread.thread_type || '1:1',
         post: post,
         otherParticipantName: otherName,
         hasUnread,
@@ -227,6 +230,7 @@ export default function Sidebar({
                 created_at: newThread.created_at,
                 closed_at: newThread.closed_at,
                 last_message_at: newThread.last_message_at,
+                thread_type: (newThread as any).thread_type || '1:1',
                 post: postData,
                 otherParticipantName: otherName,
                 hasUnread: true,
@@ -425,16 +429,18 @@ export default function Sidebar({
                         }}>
                           {thread.post?.title || 'Unknown post'}
                         </div>
-                        <div style={{
-                          fontSize: '12px',
-                          color: '#888',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          fontWeight: unread ? 500 : 400,
-                        }}>
-                          {thread.otherParticipantName || thread.post?.location || ''}
-                        </div>
+                        {thread.thread_type !== 'group' && (
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#888',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            fontWeight: unread ? 500 : 400,
+                          }}>
+                            {thread.otherParticipantName || thread.post?.location || ''}
+                          </div>
+                        )}
                       </div>
 
                       {/* Unread dot — right side */}

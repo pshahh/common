@@ -28,6 +28,7 @@ interface Post {
   recurrence_rule: string | null;
   expires_at: string | null;
   slug: string | null;
+  thread_type: string | null;
 }
 
 interface SinglePostClientProps {

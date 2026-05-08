@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { renderTextWithLinks } from '@/lib/textUtils';
+
 interface Post {
   id: string;
   title: string;
@@ -11,13 +12,16 @@ interface Post {
   name: string;
   user_id: string;
   preference?: string | null;
+  thread_type?: string | null;
 }
+
 interface InterestedModalProps {
   post: Post;
   currentUserId: string;
   onClose: () => void;
   onSuccess: (threadId: string, messageSent: boolean) => void;
 }
+
 export default function InterestedModal({
   post,
   currentUserId,
@@ -26,6 +30,32 @@ export default function InterestedModal({
 }: InterestedModalProps) {
   const [message, setMessage] = useState('hey, I\'m interested in joining you');
   const [sending, setSending] = useState(false);
+
+  const isGroup = post.thread_type === 'group';
+
+  const handleGroupJoin = async () => {
+    setSending(true);
+    try {
+      const { data, error } = await supabase.rpc('join_group_thread', {
+        post_id_param: post.id,
+      });
+
+      if (error) throw error;
+
+      const threadId = data.thread_id;
+
+      // Mark as read so joiner doesn't see unread dot for their own join
+      await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
+
+      onSuccess(threadId, true);
+    } catch (error) {
+      console.error('Error joining group:', error);
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const createThreadAndMessage = async () => {
     setSending(true);
     try {
@@ -35,8 +65,11 @@ export default function InterestedModal({
         .select('id')
         .eq('post_id', post.id)
         .contains('participant_ids', [currentUserId]);
+
       if (threadCheckError) throw threadCheckError;
+
       let threadId: string;
+
       if (existingThreads && existingThreads.length > 0) {
         // Thread exists, use it
         threadId = existingThreads[0].id;
@@ -51,11 +84,14 @@ export default function InterestedModal({
           })
           .select()
           .single();
+
         if (threadError) throw threadError;
         threadId = newThread.id;
+
         // Increment people_interested count on the post
         await supabase.rpc('increment_interested', { post_id: post.id });
       }
+
       // Send the message (use default if field is empty)
       const messageContent = message.trim() || 'hey, I\'m interested in joining you';
       const { error: messageError } = await supabase
@@ -65,10 +101,13 @@ export default function InterestedModal({
           sender_id: currentUserId,
           content: messageContent,
         });
+
       if (messageError) throw messageError;
+
       // After the message insert succeeds, mark the thread as read
-// so the sender doesn't see an unread dot for their own message
-await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
+      // so the sender doesn't see an unread dot for their own message
+      await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
+
       onSuccess(threadId, true);
     } catch (error) {
       console.error('Error creating thread:', error);
@@ -77,6 +116,7 @@ await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
       setSending(false);
     }
   };
+
   return (
     <div className="modal-overlay" onClick={(e) => {
       if (e.target === e.currentTarget) onClose();
@@ -84,7 +124,7 @@ await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h2 className="modal-title">Say hello</h2>
+            <h2 className="modal-title">{isGroup ? 'Join the group' : 'Say hello'}</h2>
           </div>
           <button className="modal-close" onClick={onClose}>
             ×
@@ -107,38 +147,66 @@ await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
               <span className="post-summary-name">{post.name}</span>
             </div>
           </div>
-          {/* Message input */}
-          <div className="form-group">
-            <label className="form-label">
-              Introduce yourself
-            </label>
-            <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
-              A personal message goes a long way
-            </p>
-            <textarea
-              className="form-textarea"
-              placeholder="hey, I'm interested in joining you"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={4}
-            />
-          </div>
-          {/* Safety tips */}
-          <div className="safety-tips">
-            <p>Meet in public places</p>
-            <p>Decide details together</p>
-            <p>You're free to leave at any time</p>
-          </div>
-          {/* Actions */}
-          <div className="modal-actions">
-            <button
-              className="btn btn-primary"
-              onClick={createThreadAndMessage}
-              disabled={sending}
-            >
-              {sending ? 'Sending...' : 'Send & join'}
-            </button>
-          </div>
+
+          {isGroup ? (
+            <>
+              {/* Group join — no message required */}
+              <p style={{ fontSize: '14px', color: '#444', lineHeight: 1.5 }}>
+                You&apos;ll join the group conversation and can start chatting straight away.
+              </p>
+              {/* Safety tips */}
+              <div className="safety-tips">
+                <p>Meet in public places</p>
+                <p>Decide details together</p>
+                <p>You&apos;re free to leave at any time</p>
+              </div>
+              {/* Actions */}
+              <div className="modal-actions">
+                <button
+                  className="btn btn-primary"
+                  onClick={handleGroupJoin}
+                  disabled={sending}
+                >
+                  {sending ? 'Joining...' : 'Join group'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* 1:1 flow — existing behaviour */}
+              <div className="form-group">
+                <label className="form-label">
+                  Introduce yourself
+                </label>
+                <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
+                  A personal message goes a long way
+                </p>
+                <textarea
+                  className="form-textarea"
+                  placeholder="hey, I'm interested in joining you"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              {/* Safety tips */}
+              <div className="safety-tips">
+                <p>Meet in public places</p>
+                <p>Decide details together</p>
+                <p>You&apos;re free to leave at any time</p>
+              </div>
+              {/* Actions */}
+              <div className="modal-actions">
+                <button
+                  className="btn btn-primary"
+                  onClick={createThreadAndMessage}
+                  disabled={sending}
+                >
+                  {sending ? 'Sending...' : 'Send & join'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

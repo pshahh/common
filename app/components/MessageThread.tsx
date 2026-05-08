@@ -12,6 +12,7 @@ interface Message {
   sender_id: string;
   content: string;
   created_at: string;
+  message_type?: string;
   sender_name?: string;
   sender_avatar_url?: string | null;
   sender_date_of_birth?: string | null;
@@ -38,6 +39,7 @@ interface Thread {
   post_id: string;
   participant_ids: string[];
   closed_at: string | null;
+  thread_type: string;
   post: Post | null;
 }
 
@@ -139,6 +141,7 @@ export default function MessageThread({
           post_id,
           participant_ids,
           closed_at,
+          thread_type,
           posts (
             id,
             title,
@@ -181,12 +184,13 @@ export default function MessageThread({
         post_id: threadData.post_id,
         participant_ids: threadData.participant_ids,
         closed_at: threadData.closed_at,
+        thread_type: threadData.thread_type || '1:1',
         post: post,
       });
 
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
-        .select('id, thread_id, sender_id, content, created_at')
+        .select('id, thread_id, sender_id, content, created_at, message_type')
         .eq('thread_id', threadId)
         .order('created_at', { ascending: true });
 
@@ -215,6 +219,7 @@ export default function MessageThread({
           sender_id: msg.sender_id,
           content: msg.content,
           created_at: msg.created_at,
+          message_type: msg.message_type || 'user',
           sender_name: profileMap[msg.sender_id]?.first_name || 'Unknown',
           sender_avatar_url: profileMap[msg.sender_id]?.avatar_url,
           sender_date_of_birth: profileMap[msg.sender_id]?.date_of_birth,
@@ -264,6 +269,7 @@ export default function MessageThread({
           const profile = await getProfileData(newMsg.sender_id);
           const transformedMessage: Message = {
             ...newMsg,
+            message_type: (newMsg as any).message_type || 'user',
             sender_name: profile.first_name,
             sender_avatar_url: profile.avatar_url,
             sender_date_of_birth: profile.date_of_birth,
@@ -514,7 +520,9 @@ export default function MessageThread({
             Leave this conversation?
           </div>
           <div style={{ fontSize: '14px', color: '#444', marginBottom: '20px', lineHeight: 1.5 }}>
-            You&apos;ll no longer receive messages from this thread. Others will see that you&apos;ve left.
+            {thread?.thread_type === 'group'
+              ? 'You\u2019ll be removed from this group conversation. You can rejoin later from the post.'
+              : 'You\u2019ll no longer receive messages from this thread. Others will see that you\u2019ve left.'}
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button
@@ -825,11 +833,27 @@ export default function MessageThread({
           ) : (
             <>
               {messages.map((msg, idx) => {
+                // System messages render as centered, muted text
+                if (msg.message_type === 'system') {
+                  return (
+                    <div key={msg.id} style={{
+                      textAlign: 'center',
+                      fontSize: '12px',
+                      color: '#888',
+                      padding: '8px 0',
+                      fontStyle: 'italic',
+                    }}>
+                      {msg.content}
+                    </div>
+                  );
+                }
+
                 const prevMsg = messages[idx - 1];
                 const nextMsg = messages[idx + 1];
-                const isFirstFromSender = !prevMsg || prevMsg.sender_id !== msg.sender_id;
-                const isLastFromSender = !nextMsg || nextMsg.sender_id !== msg.sender_id;
+                const isFirstFromSender = !prevMsg || prevMsg.sender_id !== msg.sender_id || prevMsg.message_type === 'system';
+                const isLastFromSender = !nextMsg || nextMsg.sender_id !== msg.sender_id || nextMsg.message_type === 'system';
                 const isSelf = msg.sender_id === currentUserId;
+                const isGroupThread = thread?.thread_type === 'group';
 
                 if (isSelf) {
                   return (
@@ -869,12 +893,25 @@ export default function MessageThread({
                           />
                         )}
                       </div>
-                      <div style={{
-                        background: '#fafafa', color: '#000', padding: '10px 14px',
-                        fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
-                        wordWrap: 'break-word',
-                        whiteSpace: 'pre-line',
-                      }}>{renderTextWithLinks(msg.content)}</div>
+                      <div>
+                        {/* Show sender name in group threads, first message in a group from this sender */}
+                        {isGroupThread && isFirstFromSender && (
+                          <div style={{
+                            fontSize: '11px',
+                            color: '#888',
+                            marginBottom: '2px',
+                            paddingLeft: '2px',
+                          }}>
+                            {msg.sender_name}
+                          </div>
+                        )}
+                        <div style={{
+                          background: '#fafafa', color: '#000', padding: '10px 14px',
+                          fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
+                          wordWrap: 'break-word',
+                          whiteSpace: 'pre-line',
+                        }}>{renderTextWithLinks(msg.content)}</div>
+                      </div>
                     </div>
                   );
                 }
@@ -908,7 +945,7 @@ export default function MessageThread({
             </div>
             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
   <textarea
-    placeholder="Type your message..."
+    placeholder={thread?.thread_type === 'group' ? 'Say hi to the group' : 'Type your message...'}
     value={newMessage}
     onChange={(e) => {
       setNewMessage(e.target.value);

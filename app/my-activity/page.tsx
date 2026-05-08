@@ -33,6 +33,7 @@ interface Post {
   status: string;
   recurrence_rule: string | null;
   slug: string | null;
+  thread_type: string | null;
 }
 
 export default function MyActivityPage() {
@@ -151,10 +152,10 @@ export default function MyActivityPage() {
         .select(`
           id,
           post_id,
-          posts (
+         posts (
             id, title, location, latitude, longitude, time,
             notes, name, preference, people_interested,
-            user_id, created_at, expires_at, status, recurrence_rule, slug
+            user_id, created_at, expires_at, status, recurrence_rule, slug, thread_type
           )
         `)
         .contains('participant_ids', [user.id])
