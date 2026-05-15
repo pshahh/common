@@ -39,8 +39,8 @@ export default function EditPostModal({ post, onClose, onSuccess }: EditPostModa
   const [notes, setNotes] = useState(post.notes || '');
   const [preference, setPreference] = useState(post.preference || 'anyone');
   const [frequency, setFrequency] = useState<'one-off' | 'repeats'>(post.recurrence_rule ? 'repeats' : 'one-off');
-const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'biweekly' | 'monthly'>(
-  (post.recurrence_rule as 'weekly' | 'biweekly' | 'monthly') || 'weekly'
+const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks' | 'monthly'>(
+  (post.recurrence_rule as 'weekly' | 'every two weeks' | 'monthly') || 'weekly'
 );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -430,7 +430,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'biweekly' | 'mo
   </div>
   {frequency === 'repeats' && (
     <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-      {([['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly']] as const).map(([value, label]) => (
+      {([['weekly', 'Weekly'], ['every two weeks', 'Every two weeks'], ['monthly', 'Monthly']] as const).map(([value, label]) => (
         <button
           key={value}
           type="button"

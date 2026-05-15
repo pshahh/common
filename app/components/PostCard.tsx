@@ -245,7 +245,7 @@ export default function PostCard({
   {time}
   {recurrenceRule && (
     <span className="preference-badge" style={{ margin: 0 }}>
-      repeats {recurrenceRule === 'biweekly' ? 'every 2 weeks' : recurrenceRule}
+      repeats {recurrenceRule === 'every two weeks' ? 'every two weeks' : recurrenceRule}
     </span>
   )}
 </div>
