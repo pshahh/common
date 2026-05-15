@@ -366,14 +366,11 @@ const { error: updateError } = await supabase
             margin: '0 auto', 
             padding: isMobile ? '16px' : '24px',
           }}>
-            <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '32px' }}>
-              Settings
-            </h1>
 
             {/* Profile Section */}
             <section style={{ marginBottom: '40px' }}>
               <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', color: '#000' }}>
-                Profile
+                Your profile
               </h2>
 
               {/* First name */}
@@ -440,7 +437,7 @@ const { error: updateError } = await supabase
                         cursor: 'pointer',
                       }}
                     >
-                      {avatarPreview ? 'Change photo' : 'Upload photo'}
+                      {avatarPreview ? 'Change photo' : 'Add a photo'}
                     </button>
                   </div>
                   <input
@@ -478,19 +475,14 @@ const { error: updateError } = await supabase
                 />
                 {dateOfBirth && (
                   <p style={{ fontSize: '13px', color: '#666', marginTop: '6px' }}>
-                    Shown as: {profile?.first_name}, {calculateAge(dateOfBirth)}
+                    People will see: {profile?.first_name}, {calculateAge(dateOfBirth)}
                   </p>
                 )}
               </div>
             </section>
 
-            {/* Notifications Section */}
+            {/* Email notifications toggle */}
             <section style={{ marginBottom: '40px' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', color: '#000' }}>
-                Notifications
-              </h2>
-
-              {/* Email notifications toggle */}
               <div style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -498,12 +490,9 @@ const { error: updateError } = await supabase
                 padding: '16px 0',
               }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>
-                    Email notifications
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500 }}>
+                    Email me about new messages and posts
                   </label>
-                  <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>
-                    Get notified for new messages and posts
-                  </p>
                 </div>
                 <button
                   type="button"
@@ -562,7 +551,7 @@ const { error: updateError } = await supabase
                 marginBottom: '40px',
               }}
             >
-              {saving ? 'Saving...' : 'Save changes'}
+              {saving ? 'Saving...' : 'Save'}
             </button>
 
             {/* Account Section */}
@@ -640,7 +629,7 @@ const { error: updateError } = await supabase
                   Delete account
                 </label>
                 <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
-                  Permanently delete your account and all associated data.
+                This deletes everything. Your posts, messages, all of it. Gone.
                 </p>
                 {!showDeleteConfirm ? (
                   <button
@@ -666,10 +655,10 @@ const { error: updateError } = await supabase
                     borderRadius: '12px',
                   }}>
                     <p style={{ fontSize: '14px', color: '#444', marginBottom: '16px', lineHeight: 1.5 }}>
-                      This will permanently delete your account, posts, and messages. This action cannot be undone.
+                      This can't be undone. All your posts, messages, and data will be deleted for good.
                     </p>
                     <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-                      Type DELETE to confirm
+                      Type DELETE to make it final
                     </label>
                     <input
                       type="text"

@@ -291,7 +291,7 @@ export default function GuidelinesPage() {
       color: '#000',
       marginBottom: '12px',
     }}>
-      What's not allowed
+      Don't do this
     </h2>
     <ul style={{ 
       fontSize: '14px', 

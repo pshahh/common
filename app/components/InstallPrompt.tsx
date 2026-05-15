@@ -112,7 +112,7 @@ export default function InstallPrompt() {
               lineHeight: 1.4,
             }}>
               {deferredPrompt
-                ? 'Get notifications when someone messages you'
+                ? 'Never miss a reply'
                 : 'Open the browser menu (⋮) and tap "Add to Home Screen"'
               }
             </p>

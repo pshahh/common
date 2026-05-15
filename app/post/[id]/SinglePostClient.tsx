@@ -271,7 +271,7 @@ useEffect(() => {
             gap: '4px',
           }}
         >
-          ← Explore other things happening near you
+          ← See what else is going on
         </button>
         {/* Post card */}
         <PostCard

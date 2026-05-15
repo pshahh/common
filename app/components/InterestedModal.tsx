@@ -28,7 +28,7 @@ export default function InterestedModal({
   onClose,
   onSuccess,
 }: InterestedModalProps) {
-  const [message, setMessage] = useState('hey, I\'m interested in joining you');
+  const [message, setMessage] = useState('hey, I\'d be up for joining this');
   const [sending, setSending] = useState(false);
 
   const isGroup = post.thread_type === 'group';
@@ -93,7 +93,7 @@ export default function InterestedModal({
       }
 
       // Send the message (use default if field is empty)
-      const messageContent = message.trim() || 'hey, I\'m interested in joining you';
+      const messageContent = message.trim() || 'hey, I\'d be up for joining this';
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
@@ -152,7 +152,7 @@ export default function InterestedModal({
             <>
               {/* Group join — no message required */}
               <p style={{ fontSize: '14px', color: '#444', lineHeight: 1.5 }}>
-                You&apos;ll join the group conversation and can start chatting straight away.
+                You&apos;ll land in the group chat. Say hello.
               </p>
               {/* Safety tips */}
               <div className="safety-tips">
@@ -176,14 +176,14 @@ export default function InterestedModal({
               {/* 1:1 flow — existing behaviour */}
               <div className="form-group">
                 <label className="form-label">
-                  Introduce yourself
+                  Drop them a message
                 </label>
                 <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
-                  A personal message goes a long way
+                  A little intro goes a long way
                 </p>
                 <textarea
                   className="form-textarea"
-                  placeholder="hey, I'm interested in joining you"
+                  placeholder="hey, I'd be up for joining this"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={4}
@@ -191,9 +191,9 @@ export default function InterestedModal({
               </div>
               {/* Safety tips */}
               <div className="safety-tips">
-                <p>Meet in public places</p>
+                <p>Meet somewhere public</p>
                 <p>Decide details together</p>
-                <p>You&apos;re free to leave at any time</p>
+                <p>Leave when you feel like it</p>
               </div>
               {/* Actions */}
               <div className="modal-actions">

@@ -24,7 +24,7 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchingLocation, setSearchingLocation] = useState(false);
   const [frequency, setFrequency] = useState<'one-off' | 'repeats'>('one-off');
-const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly');
+const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks' | 'monthly'>('weekly');
   const [timingMode, setTimingMode] = useState<'specific' | 'flexible'>('specific');
   const [date, setDate] = useState('');
   const [timeDetails, setTimeDetails] = useState('');
@@ -381,13 +381,13 @@ const { error: insertError } = await supabase
             {/* What */}
             <div>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-  What are you up to?
+  What's the plan?
 </label>
 <input
   type="text"
   value={title}
   onChange={e => setTitle(e.target.value)}
-  placeholder="e.g. Join our writing group, casual badminton, running"
+  placeholder="e.g. pub quiz, morning run, coworking session"
                 required
                 style={{
                   width: '100%',
@@ -407,7 +407,7 @@ const { error: insertError } = await supabase
                 Where?
               </label>
               <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
-                Start typing and select from the suggestions
+                Start typing and pick from the suggestions
               </p>
               <input
                 ref={locationInputRef}
@@ -415,7 +415,7 @@ const { error: insertError } = await supabase
                 value={location}
                 onChange={e => handleLocationChange(e.target.value)}
                 onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
-                placeholder="Search for a location..."
+                placeholder="e.g. Notting Hill, Victoria Park"
                 required
                 style={{
                   width: '100%',
@@ -431,7 +431,7 @@ const { error: insertError } = await supabase
               {/* Location validation feedback */}
               {latitude !== null && longitude !== null && (
                 <p style={{ fontSize: '12px', color: '#16a34a', marginTop: '6px' }}>
-                  ✓ Location selected
+                  ✓ Got it
                 </p>
               )}
               {locationError && (
@@ -490,7 +490,7 @@ const { error: insertError } = await supabase
 {/* How often */}
 <div>
   <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
-    How often?
+    Is this a regular thing?
   </label>
   <div style={{ display: 'flex', gap: '8px' }}>
     <button
@@ -506,7 +506,7 @@ const { error: insertError } = await supabase
         color: frequency === 'one-off' ? '#FFF' : '#666',
       }}
     >
-      One-off
+      Just this once
     </button>
     <button
       type="button"
@@ -521,12 +521,12 @@ const { error: insertError } = await supabase
         color: frequency === 'repeats' ? '#FFF' : '#666',
       }}
     >
-      Repeating activity
+      It repeats
     </button>
   </div>
   {frequency === 'repeats' && (
     <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-      {([['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Monthly']] as const).map(([value, label]) => (
+      {([['weekly', 'Weekly'], ['every two weeks', 'Every two weeks'], ['monthly', 'Monthly']] as const).map(([value, label]) => (
         <button
           key={value}
           type="button"
@@ -551,7 +551,7 @@ const { error: insertError } = await supabase
             {/* When */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
-                When will this happen?
+                When?
               </label>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                 <button
@@ -570,7 +570,7 @@ const { error: insertError } = await supabase
                     color: timingMode === 'specific' ? '#FFF' : '#666',
                   }}
                 >
-                  On a specific date
+                  Specific date
                 </button>
                 <button
                   type="button"
@@ -585,7 +585,7 @@ const { error: insertError } = await supabase
                     color: timingMode === 'flexible' ? '#FFF' : '#666',
                   }}
                 >
-                  Exact date is flexible
+                  Date is flexible
                 </button>
               </div>
               
@@ -593,7 +593,7 @@ const { error: insertError } = await supabase
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {frequency === 'repeats' && (
   <p style={{ fontSize: '12px', color: '#888', margin: '0 0 4px 0' }}>
-    Select the date of your next one
+    When's the next one?
   </p>
 )}
                   <input
@@ -632,7 +632,7 @@ const { error: insertError } = await supabase
                     type="text"
                     value={timeDetails}
                     onChange={e => setTimeDetails(e.target.value)}
-                    placeholder="e.g. weekday evenings, weekends"
+                    placeholder="e.g. weekday evenings, Saturday mornings"
                     required
                     style={{
                       width: '100%',
@@ -647,7 +647,7 @@ const { error: insertError } = await supabase
                   {frequency !== 'repeats' && (
   <div>
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <span style={{ fontSize: '14px', color: '#666' }}>Post expires:</span>
+      <span style={{ fontSize: '14px', color: '#666' }}>Stays up until</span>
       <input
         type="date"
         value={expiresAt}
@@ -662,7 +662,7 @@ const { error: insertError } = await supabase
       />
     </div>
     <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
-      This controls how long your post stays visible.
+      Your post disappears after this date.
     </p>
   </div>
 )}
@@ -673,12 +673,12 @@ const { error: insertError } = await supabase
             {/* Chat type */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-                How do you want to chat with people who respond?
+                How should people chat with you?
               </label>
               <p style={{ fontSize: '12px', color: '#888', marginBottom: '12px' }}>
                 {threadType === '1:1' 
-                  ? 'Each person starts a separate conversation with you' 
-                  : 'Everyone joins the same group conversation'}
+                  ? 'You\'ll chat with each person separately' 
+                  : 'Everyone chats in one group'}
               </p>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -716,7 +716,7 @@ const { error: insertError } = await supabase
             {/* Who can respond */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
-                Who can respond?
+                Who's this for'?
               </label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {['Anyone', 'Men preferred', 'Women preferred'].map(option => (
@@ -740,7 +740,7 @@ const { error: insertError } = await supabase
               </div>
               {whoCanRespond !== 'anyone' && (
                 <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
-                  This is shown as a preference, not a restriction.
+                  Just a preference, not a rule.
                 </p>
               )}
             </div>
@@ -748,12 +748,12 @@ const { error: insertError } = await supabase
             {/* Notes */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-                Notes <span style={{ fontWeight: 400, color: '#888' }}>(optional but worthwhile)</span>
+                Notes
               </label>
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                placeholder="Anything helpful to know? Relevant links welcome here"
+                placeholder="What should people know? Add some sauce."
                 rows={3}
                 style={{
                   width: '100%',
@@ -802,7 +802,7 @@ const { error: insertError } = await supabase
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? 'Sharing...' : 'Share'}
+              {loading ? 'Posting...' : 'Post it'}
             </button>
           </div>
         </form>

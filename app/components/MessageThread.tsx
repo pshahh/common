@@ -517,12 +517,12 @@ export default function MessageThread({
           maxWidth: '340px', width: '100%', margin: '0 16px',
         }}>
           <div style={{ fontSize: '16px', fontWeight: 600, color: '#000', marginBottom: '12px' }}>
-            Leave this conversation?
+            Leave this chat?
           </div>
           <div style={{ fontSize: '14px', color: '#444', marginBottom: '20px', lineHeight: 1.5 }}>
             {thread?.thread_type === 'group'
-              ? 'You\u2019ll be removed from this group conversation. You can rejoin later from the post.'
-              : 'You\u2019ll no longer receive messages from this thread. Others will see that you\u2019ve left.'}
+              ? 'You\u2019ll leave this group chat. You can rejoin from the post.'
+              : 'This closes the chat for both of you'}
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button
@@ -710,7 +710,7 @@ export default function MessageThread({
                   onClick={() => { setShowMenu(false); setShowLeaveModal(true); }} 
                   style={{ padding: '12px 16px', fontSize: '14px', color: '#444', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}
                 >
-                  Leave conversation
+                  Leave this chat?
                 </div>
                 <div 
                   onClick={() => { setShowMenu(false); setShowBlockModal(true); }} 
@@ -828,7 +828,7 @@ export default function MessageThread({
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '14px', color: '#888', textAlign: 'center', minHeight: '100px',
             }}>
-              {threadClosed ? 'This conversation has ended.' : 'Start the conversation when you\'re ready.'}
+              {threadClosed ? 'This chat is closed' : 'Start the conversation when you\'re ready.'}
             </div>
           ) : (
             <>
@@ -945,7 +945,7 @@ export default function MessageThread({
             </div>
             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
   <textarea
-    placeholder={thread?.thread_type === 'group' ? 'Say hi to the group' : 'Type your message...'}
+    placeholder={thread?.thread_type === 'group' ? 'Say hi to the group' : 'Type something...'}
     value={newMessage}
     onChange={(e) => {
       setNewMessage(e.target.value);

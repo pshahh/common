@@ -178,7 +178,7 @@ if (mode === 'forgot-password') {
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>Reset password</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>Reset your password</h2>
           <button
             onClick={handleClose}
             style={{
@@ -201,7 +201,7 @@ if (mode === 'forgot-password') {
         <form onSubmit={handleForgotPassword}>
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <p style={{ fontSize: '14px', color: '#666', margin: 0, lineHeight: 1.5 }}>
-              Enter your email and we'll send you a link to reset your password.
+              Enter your email and we'll send you a reset link.
             </p>
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
@@ -239,7 +239,7 @@ if (mode === 'forgot-password') {
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? 'Please wait...' : 'Send reset link'}
+              {loading ? 'Please wait...' : 'Send link'}
             </button>
           </div>
         </form>
@@ -313,16 +313,16 @@ if (mode === 'reset-sent') {
           ✉
         </div>
         <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
-          Check your email
+          Check your inbox
         </h2>
         <p style={{ fontSize: '14px', color: '#666', marginBottom: '8px', lineHeight: 1.5 }}>
-          We've sent a password reset link to:
+          We've sent a reset link to:
         </p>
         <p style={{ fontSize: '14px', fontWeight: 500, marginBottom: '16px' }}>
           {email}
         </p>
         <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: 1.5 }}>
-          Click the link in the email to set a new password.
+          Tap the link in the email to reset your password, then come back and log in.
         </p>
         <button
           onClick={handleClose}
@@ -388,7 +388,7 @@ if (mode === 'reset-sent') {
           </div>
           
           <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
-            Check your email
+            Check your inbox
           </h2>
           
           <p style={{ fontSize: '14px', color: '#666', marginBottom: '8px', lineHeight: 1.5 }}>
@@ -456,7 +456,7 @@ if (mode === 'reset-sent') {
           alignItems: 'center',
         }}>
           <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>
-            {mode === 'login' ? 'Log in' : 'Create account'}
+          {mode === 'login' ? 'Welcome back' : 'Join common'}
           </h2>
           <button 
             onClick={handleClose}
@@ -563,7 +563,7 @@ if (mode === 'reset-sent') {
       alignSelf: 'flex-start',
     }}
   >
-    Forgot password?
+    Forgot your password?
   </button>
 )}
             
@@ -588,7 +588,7 @@ if (mode === 'reset-sent') {
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? 'Please wait...' : (mode === 'login' ? 'Log in' : 'Create account')}
+              {loading ? 'Please wait...' : (mode === 'login' ? 'Log in' : 'Join common')}
             </button>
           </div>
         </form>
@@ -601,7 +601,7 @@ if (mode === 'reset-sent') {
           backgroundColor: '#fafafa',
         }}>
           <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>
-            {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
+            {mode === 'login' ? "New here? " : "Already on common? "}
             <button
               type="button"
               onClick={() => {
@@ -617,7 +617,7 @@ if (mode === 'reset-sent') {
                 color: '#666',
               }}
             >
-              {mode === 'login' ? 'Create one' : 'Log in'}
+              {mode === 'login' ? 'Sign up' : 'Log in'}
             </button>
           </p>
         </div>

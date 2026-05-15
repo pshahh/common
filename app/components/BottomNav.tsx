@@ -102,7 +102,7 @@ export default function BottomNav({
             fontWeight: activeTab === 'messages' ? 600 : 400,
             color: activeTab === 'messages' ? '#000000' : '#888888',
           }}>
-            Messages
+            Chats
           </span>
         </button>
 

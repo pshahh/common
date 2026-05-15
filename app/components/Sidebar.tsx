@@ -365,7 +365,7 @@ export default function Sidebar({
             padding: '0 12px',
             marginBottom: '12px',
           }}>
-            Messages
+            Chats
           </div>
           {loading ? (
             <div style={{ fontSize: '13px', color: '#888', padding: '8px 12px' }}>
@@ -373,7 +373,7 @@ export default function Sidebar({
             </div>
           ) : threads.length === 0 ? (
             <div style={{ fontSize: '13px', color: '#888', padding: '8px 12px', lineHeight: 1.5 }}>
-              Messages appear here when it&apos;s time to coordinate.
+              Chats appear here when it&apos;s time to coordinate.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

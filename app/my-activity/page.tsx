@@ -521,7 +521,7 @@ export default function MyActivityPage() {
       padding: '4px 10px',
       borderRadius: '12px',
     }}>
-      repeats {post.recurrence_rule === 'biweekly' ? 'every 2 weeks' : post.recurrence_rule}
+      repeats {post.recurrence_rule === 'every two weeks' ? 'every two weeks' : post.recurrence_rule}
     </span>
   )}
 </p>

@@ -1004,16 +1004,16 @@ const sortedPosts = useMemo(() => {
         />
         <main className="main-content">
           <div className="guest-banner">
-            <h1 className="page-title">Do things with people nearby</h1>
+            <h1 className="page-title">What's happening nearby?</h1>
             <p className="page-subtitle">
-              Browsing as a guest.{' '}
+              Just browsing.{' '}
               <button
                 className="text-link"
                 onClick={() => setShowAuthModal(true)}
               >
                 Log in
               </button>{' '}
-              to post or respond.
+              to join in.
             </p>
           </div>
 
@@ -1027,9 +1027,9 @@ const sortedPosts = useMemo(() => {
       value={sortBy}
       onChange={(e) => setSortBy(e.target.value)}
     >
-      <option value="nearest">Sort by: nearest</option>
-      <option value="soon">Sort by: happening soon</option>
-      <option value="recent">Sort by: recently added</option>
+      <option value="nearest">Nearest</option>
+      <option value="soon">Happening soon</option>
+      <option value="recent">Recently added</option>
     </select>
     <select
       className="sort-select"
@@ -1037,7 +1037,7 @@ const sortedPosts = useMemo(() => {
       onChange={(e) => setRadiusFilter(e.target.value === 'any' ? null : Number(e.target.value))}
     >
       <option value="any">Distance: any</option>
-      <option value="1">Within 1 miles</option>
+      <option value="1">Within 1 mile</option>
       <option value="3">Within 3 miles</option>
       <option value="5">Within 5 miles</option>
       <option value="10">Within 10 miles</option>
@@ -1064,7 +1064,7 @@ const sortedPosts = useMemo(() => {
             <div className="loading-state">Loading...</div>
           ) : posts.length === 0 ? (
             <div className="empty-state">
-              <p>Nothing nearby yet. Be the first to share what you're doing.</p>
+              <p>Nothing here yet. Be the one to kick things off.</p>
               <button className="btn btn-primary" onClick={handleShareClick}>
                 Share what I'm doing
               </button>
