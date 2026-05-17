@@ -138,8 +138,11 @@ useEffect(() => {
     setHasExpressedInterest(true);
 
     if (messageSent) {
-      // User sent a message - show message sent modal
+      // 1:1 flow - show message sent modal
       setShowMessageSentModal(true);
+    } else {
+      // Group join - go to homepage with thread open
+      router.push(`/?thread=${threadId}`);
     }
     
     // Refresh post to update interested count

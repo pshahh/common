@@ -15,29 +15,24 @@
 /* CSS Variables - Brand Colors */
 :root {
   /* Backgrounds */
-  --bg: #ffffff;
-  --bg-card: #ffffff;
-  --bg-subtle: #fafafa;
-  
+  --bg: #FFFDF9;
+  --bg-card: #FFFDF9;
+  --bg-subtle: #F8F4EF;
   /* Text */
   --text-primary: #000000;
-  --text-secondary: #444444;
-  --text-tertiary: #888888;
-  --text-inverse: #ffffff;
-  
-  /* Accent (use sparingly) */
-  --accent: #d4594f;
-  --accent-hover: #c04a40;
-  --accent-light: #fbeeed;
-  
+  --text-secondary: #7D7A75;
+  --text-tertiary: #7D7A75;
+  --text-inverse: #FFFDF9;
+  /* Accent */
+  --accent: #144F34;
+  --accent-hover: #0E3D28;
+  --accent-light: #E8F0EC;
   /* Borders */
-  --border: #e0e0e0;
-  --border-light: #f0f0f0;
-  
+  --border: #E5DFD8;
+  --border-light: #F0EBE4;
   /* Semantic */
-  --success: #4a9d6b;
-  --success-light: #edf7f0;
-  
+  --success: #144F34;
+  --success-light: #E8F0EC;
   /* Typography */
   --font-family: 'Satoshi', 'Inter', system-ui, -apple-system, sans-serif;
 }
@@ -293,15 +288,14 @@ body {
   background: none;
   border: none;
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--accent);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 8px;
   transition: all 0.15s ease;
 }
-
 .share-button:hover {
-  color: var(--text-secondary);
+  color: var(--accent-hover);
   background: var(--bg-subtle);
 }
 
@@ -384,7 +378,7 @@ body {
 .interested-badge {
   font-size: 13px;
   color: var(--text-secondary);
-  background: var(--accent-light);
+  background: var(--border-light);
   padding: 6px 12px;
   border-radius: 16px;
 }
@@ -432,7 +426,7 @@ body {
 }
 
 .name-tooltip {
-  background: white;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -492,12 +486,11 @@ body {
 }
 
 .btn-primary {
-  background: var(--text-primary);
+  background: var(--accent);
   color: var(--text-inverse);
 }
-
 .btn-primary:hover:not(:disabled) {
-  background: #333;
+  background: var(--accent-hover);
 }
 
 .btn-secondary {
@@ -825,9 +818,8 @@ body {
   }
 
   .card-footer {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
   }
 
   .footer-left {
@@ -1533,9 +1525,8 @@ body {
   }
 
   .card-footer {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
   }
 
   .footer-left {

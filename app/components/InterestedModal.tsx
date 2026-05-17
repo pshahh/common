@@ -47,7 +47,7 @@ export default function InterestedModal({
       // Mark as read so joiner doesn't see unread dot for their own join
       await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
 
-      onSuccess(threadId, true);
+      onSuccess(threadId, false);
     } catch (error) {
       console.error('Error joining group:', error);
       alert('Something went wrong. Please try again.');

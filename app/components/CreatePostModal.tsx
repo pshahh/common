@@ -24,7 +24,7 @@ export default function CreatePostModal({ isOpen, onClose, onSuccess }: CreatePo
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchingLocation, setSearchingLocation] = useState(false);
   const [frequency, setFrequency] = useState<'one-off' | 'repeats'>('one-off');
-const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks' | 'monthly'>('weekly');
+const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly');
   const [timingMode, setTimingMode] = useState<'specific' | 'flexible'>('specific');
   const [date, setDate] = useState('');
   const [timeDetails, setTimeDetails] = useState('');
@@ -526,7 +526,7 @@ const { error: insertError } = await supabase
   </div>
   {frequency === 'repeats' && (
     <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-      {([['weekly', 'Weekly'], ['every two weeks', 'Every two weeks'], ['monthly', 'Monthly']] as const).map(([value, label]) => (
+      {([['weekly', 'Weekly'], ['biweekly', 'Every other week'], ['monthly', 'Monthly']] as const).map(([value, label]) => (
         <button
           key={value}
           type="button"

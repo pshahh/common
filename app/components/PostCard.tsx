@@ -245,7 +245,7 @@ export default function PostCard({
   {time}
   {recurrenceRule && (
     <span className="preference-badge" style={{ margin: 0 }}>
-      repeats {recurrenceRule === 'every two weeks' ? 'every two weeks' : recurrenceRule}
+      {recurrenceRule === 'weekly' ? 'every week' : recurrenceRule === 'biweekly' ? 'every other week' : recurrenceRule === 'monthly' ? 'every month' : recurrenceRule}
     </span>
   )}
 </div>
@@ -326,10 +326,9 @@ export default function PostCard({
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
-          flexDirection: 'row',
         }}>
           {/* Left side: poster name and interested count */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <div
               ref={nameRef}
               className="poster-name"

@@ -403,6 +403,8 @@ useEffect(() => {
         setShowMobileThread(true);
         window.history.pushState({ mobileThread: true }, '');
       }
+      // Clean up the URL so refresh doesn't reopen the thread
+      window.history.replaceState({}, '', '/');
     }
   }, [searchParams, user, isMobile]);
 
@@ -836,21 +838,23 @@ const sortedPosts = useMemo(() => {
   
   const handleInterestedSuccess = (threadId: string, messageSent: boolean) => {
     setShowInterestedModal(false);
-    
     // Add this post to the interested set so it disappears from feed immediately
     if (selectedPost) {
       setUserInterestedPostIds(prev => new Set([...prev, selectedPost.id]));
     }
-
     if (messageSent) {
-      // User sent a message - just show confirmation, DON'T open thread
+      // 1:1 flow - show confirmation
       setShowMessageSentModal(true);
-      // Don't set selectedThreadId or show mobile thread
+    } else {
+      // Group join - go straight to the thread
+      setSelectedThreadId(threadId);
+      if (isMobile) {
+        setShowMobileThread(true);
+        window.history.pushState({ mobileThread: true }, '');
+      }
     }
-
     setSelectedPost(null);
     refreshPosts();
-
     // Check if profile is incomplete
     if (currentUserProfile && !currentUserProfile.avatar_url && !currentUserProfile.date_of_birth) {
       setPendingAction('interest');
