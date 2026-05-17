@@ -945,7 +945,7 @@ export default function MessageThread({
             </div>
             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
   <textarea
-    placeholder={thread?.thread_type === 'group' ? 'Say hi to the group' : 'Type something...'}
+    placeholder={thread?.thread_type === 'group' ? 'Type something...' : 'Type something...'}
     value={newMessage}
     onChange={(e) => {
       setNewMessage(e.target.value);
