@@ -267,7 +267,7 @@ useEffect(() => {
             padding: 0,
             marginBottom: '20px',
             fontSize: '14px',
-            color: '#888',
+            color: 'var(--text-primary)',
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
@@ -341,7 +341,7 @@ useEffect(() => {
         >
           <div
             style={{
-              background: '#fff',
+              background: '#FEFCF8',
               borderRadius: '16px',
               padding: '24px',
               maxWidth: '400px',
@@ -363,9 +363,9 @@ useEffect(() => {
                   padding: '10px 20px',
                   fontSize: '14px',
                   fontWeight: 500,
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid #E5DFD8',
                   borderRadius: '24px',
-                  background: '#fff',
+                  background: '#FEFCF8',
                   cursor: adminRemoveLoading ? 'not-allowed' : 'pointer',
                 }}
               >

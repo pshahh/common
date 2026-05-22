@@ -15,24 +15,25 @@
 /* CSS Variables - Brand Colors */
 :root {
   /* Backgrounds */
-  --bg: #FFFDF9;
-  --bg-card: #FFFDF9;
-  --bg-subtle: #F8F4EF;
+  --bg: #FEFCF8;
+  --bg-card: #FEFCF8;
+  --bg-subtle: #F5F0E3;
+  --bg-badge: #f7f5ee;
   /* Text */
   --text-primary: #000000;
-  --text-secondary: #7D7A75;
-  --text-tertiary: #7D7A75;
-  --text-inverse: #FFFDF9;
+  --text-secondary: #888888;
+  --text-tertiary: #888888;
+  --text-inverse: #FEFCF8;
   /* Accent */
-  --accent: #144F34;
-  --accent-hover: #0E3D28;
-  --accent-light: #E8F0EC;
+  --accent: #0F4415;
+  --accent-hover: #0B3310;
+  --accent-light: #f7f5ee;
   /* Borders */
   --border: #E5DFD8;
-  --border-light: #F0EBE4;
+  --border-light: #EDEAE4;
   /* Semantic */
-  --success: #144F34;
-  --success-light: #E8F0EC;
+  --success: #0F4415;
+  --success-light: #EDEAE4;
   /* Typography */
   --font-family: 'Satoshi', 'Inter', system-ui, -apple-system, sans-serif;
 }
@@ -64,10 +65,10 @@ body {
    HEADER
    ================================================ */
 
-.header {
-  height: 56px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
+   .header {
+    height: 56px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -80,14 +81,13 @@ body {
 .logo {
   font-size: 20px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--accent);
   text-decoration: none;
   letter-spacing: -0.5px;
   transition: color 0.15s ease;
 }
-
 .logo:hover {
-  color: var(--text-secondary);
+  color: var(--accent-hover);
 }
 
 .header-right {
@@ -165,7 +165,7 @@ body {
   background: none;
   border: none;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   cursor: pointer;
   padding: 8px 0;
 }
@@ -307,7 +307,7 @@ body {
   background: none;
   border: none;
   font-size: 18px;
-  color: var(--text-tertiary);
+  color: var(--accent);
   cursor: pointer;
   width: 32px;
   height: 32px;
@@ -327,7 +327,7 @@ body {
   position: absolute;
   right: 0;
   top: 36px;
-  background: white;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -341,7 +341,7 @@ body {
   width: 100%;
   padding: 12px 16px;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   background: none;
   border: none;
   text-align: left;
@@ -375,22 +375,18 @@ body {
   gap: 12px;
 }
 
-.interested-badge {
+.interested-badge,
+.preference-badge {
+  display: inline-block;
   font-size: 13px;
   color: var(--text-secondary);
-  background: var(--border-light);
-  padding: 6px 12px;
+  background: var(--accent-light);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
   border-radius: 16px;
 }
 
 .preference-badge {
-  display: inline-block;
-  font-size: 12px;
-  color: var(--text-tertiary);
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  padding: 4px 10px;
-  border-radius: 12px;
   margin-top: 8px;
 }
 
@@ -487,7 +483,7 @@ body {
 
 .btn-primary {
   background: var(--accent);
-  color: var(--text-inverse);
+  color: #FFFFFF;
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
@@ -603,42 +599,43 @@ body {
    INTERESTED MODAL SPECIFIC
    ================================================ */
 
-.post-summary {
-  background: var(--bg-subtle);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
-}
-
-.post-summary-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
-}
-
-.post-summary-meta {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin: 0 0 4px 0;
-}
-
-.post-summary-notes {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin: 4px 0;
-}
-
-.post-summary-footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-.post-summary-name {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
+   .post-summary {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .post-summary-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+  }
+  .post-summary-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0 0 8px 0;
+    text-decoration: underline;
+  }
+  .post-summary-notes {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin: 8px 0 0 0;
+    line-height: 1.5;
+  }
+  .post-summary-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .post-summary-name {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
 
 .hint-text {
   font-size: 12px;
@@ -656,7 +653,7 @@ body {
 
 .safety-tips p {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   margin: 0 0 4px 0;
 }
 
@@ -750,10 +747,10 @@ body {
 
 .form-label {
   display: block;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .form-hint {
@@ -869,16 +866,16 @@ body {
   /* ================================================
      SIDEBAR
      ================================================ */
-  .sidebar {
-    width: 224px;
-    min-width: 224px;
-    border-right: 1px solid var(--border-light);
-    background: rgba(250, 250, 250, 0.5);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow-y: auto;
-  }
+     .sidebar {
+      width: 224px;
+      min-width: 224px;
+      border-right: 1px solid var(--border-light);
+      background: var(--bg-badge);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
   
   .sidebar-collapsed {
     width: 56px;
@@ -950,12 +947,12 @@ body {
   }
   
   .sidebar-thread:hover {
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(254, 252, 248, 0.6);
   }
   
   .sidebar-thread-active {
-    background: var(--bg);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    background: var(--bg-card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
   
   .sidebar-thread-active .sidebar-thread-title {
@@ -982,30 +979,30 @@ body {
   
   .sidebar-nav-item {
     font-size: 14px;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     padding: 10px 12px;
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.15s ease;
-  }
+}
   
   .sidebar-nav-item:hover {
-    background: rgba(255, 255, 255, 0.6);
+    background: var(--bg);
   }
   
   /* ================================================
      MESSAGE THREAD
      ================================================ */
-  .message-thread {
-    width: 384px;
-    min-width: 384px;
-    border-left: 1px solid var(--border-light);
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
+     .message-thread {
+      width: 384px;
+      min-width: 384px;
+      border-left: 1px solid var(--border-light);
+      background: var(--bg-badge);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
   
   .message-thread-header {
     padding: 16px;
@@ -1036,7 +1033,7 @@ body {
     background: none;
     border: none;
     font-size: 18px;
-    color: var(--text-tertiary);
+    color: var(--accent);
     cursor: pointer;
     width: 32px;
     height: 32px;
@@ -1091,7 +1088,7 @@ body {
   }
   
   .message-thread-close {
-    background: var(--bg);
+    background: var(--bg-subtle);
     border: 1px solid var(--border);
     font-size: 18px;
     color: var(--text-secondary);
@@ -1115,7 +1112,7 @@ body {
   .message-thread-post-summary {
     margin: 16px;
     padding: 12px;
-    background: rgba(250, 250, 250, 0.8);
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 12px;
     flex-shrink: 0;
@@ -1135,7 +1132,7 @@ body {
   
   .message-thread-post-summary .post-summary-share {
     font-size: 12px;
-    color: var(--text-tertiary);
+    color: var(--accent);
     text-decoration: none;
     transition: color 0.15s ease;
   }
@@ -1446,7 +1443,7 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  background: var(--bg);
+  background: var(--bg-badge);
   z-index: 55;
   flex-direction: column;
 }

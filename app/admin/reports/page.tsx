@@ -321,7 +321,7 @@ export default function AdminReportsPage() {
         <div style={{ 
           flex: 1, 
           overflowY: 'auto',
-          background: '#FAFAFA',
+          background: '#F5F0E3',
           paddingBottom: isMobile ? '80px' : '0',
         }}>
           <div style={{ 
@@ -437,8 +437,8 @@ export default function AdminReportsPage() {
                     <div
                       key={report.id}
                       style={{
-                        background: '#fff',
-                        border: '1px solid #E0E0E0',
+                        background: '#FEFCF8',
+                        border: '1px solid #E5DFD8',
                         borderRadius: '16px',
                         overflow: 'hidden',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
@@ -447,7 +447,7 @@ export default function AdminReportsPage() {
                       {/* Report header */}
                       <div style={{ 
                         padding: isMobile ? '12px 16px' : '16px 20px',
-                        borderBottom: '1px solid #F0F0F0',
+                        borderBottom: '1px solid #E5DFD8',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'flex-start',
@@ -489,10 +489,10 @@ export default function AdminReportsPage() {
                       {report.posts && (
                         <div style={{ padding: isMobile ? '16px' : '20px' }}>
                           <div style={{
-                            background: '#FAFAFA',
+                            background: '#F5F0E3',
                             borderRadius: '12px',
                             padding: isMobile ? '12px' : '16px',
-                            border: '1px solid #F0F0F0',
+                            border: '1px solid #E5DFD8',
                           }}>
                             <div style={{ 
                               display: 'flex', 
@@ -581,8 +581,8 @@ export default function AdminReportsPage() {
                       {report.status === 'pending' && report.posts && (
                         <div style={{ 
                           padding: isMobile ? '12px 16px' : '16px 20px',
-                          borderTop: '1px solid #F0F0F0',
-                          background: '#FAFAFA',
+                          borderTop: '1px solid #E5DFD8',
+                          background: '#F5F0E3',
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
@@ -615,9 +615,9 @@ export default function AdminReportsPage() {
                             disabled={isActioning}
                             style={{
                               padding: '10px 20px',
-                              border: '1px solid #E0E0E0',
+                              border: '1px solid #E5DFD8',
                               borderRadius: '24px',
-                              background: '#fff',
+                              background: '#FEFCF8',
                               color: '#666',
                               fontSize: '14px',
                               fontWeight: 500,
@@ -671,7 +671,7 @@ export default function AdminReportsPage() {
         >
           <div 
             style={{
-              background: '#fff',
+              background: '#FEFCF8',
               borderRadius: '16px',
               padding: isMobile ? '24px' : '32px',
               maxWidth: '400px',
@@ -709,9 +709,9 @@ export default function AdminReportsPage() {
                 onClick={() => setConfirmRemove(null)}
                 style={{
                   padding: '10px 20px',
-                  border: '1px solid #E0E0E0',
+                  border: '1px solid #E5DFD8',
                   borderRadius: '24px',
-                  background: '#fff',
+                  background: '#FEFCF8',
                   color: '#666',
                   fontSize: '14px',
                   fontWeight: 500,

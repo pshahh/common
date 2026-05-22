@@ -179,7 +179,7 @@ export default function MobileMessageList({
       left: 0,
       right: 0,
       bottom: '64px',
-      background: '#FFFFFF',
+      background: 'var(--bg-badge)',
       zIndex: 45,
       display: 'flex',
       flexDirection: 'column',
@@ -190,7 +190,7 @@ export default function MobileMessageList({
         <div style={{
           textAlign: 'center',
           padding: '48px 24px',
-          color: '#888888',
+          color: 'var(--text-secondary)',
           fontSize: '14px',
         }}>
           Loading...
@@ -199,7 +199,7 @@ export default function MobileMessageList({
         <div style={{
           textAlign: 'center',
           padding: '48px 24px',
-          color: '#888888',
+          color: 'var(--text-secondary)',
           fontSize: '14px',
           lineHeight: 1.5,
         }}>
@@ -222,10 +222,9 @@ export default function MobileMessageList({
                   onSelectThread(thread.id);
                 }}
                 style={{
-                  padding: '16px',
-                  background: '#FFFFFF',
-                  border: '1px solid #E0E0E0',
-                  borderRadius: '12px',
+                  padding: '16px 0',
+                  background: 'var(--bg-badge)',
+                  borderBottom: '1px solid var(--border)',
                   cursor: 'pointer',
                   opacity: closed ? 0.5 : 1,
                   display: 'flex',
@@ -237,7 +236,7 @@ export default function MobileMessageList({
                   <div style={{
                     fontSize: '15px',
                     fontWeight: unread ? 600 : 500,
-                    color: closed ? '#888888' : '#000000',
+                    color: closed ? 'var(--text-secondary)' : 'var(--text-primary)',
                     marginBottom: '4px',
                   }}>
                     {thread.post?.title || 'Unknown post'}
@@ -245,7 +244,7 @@ export default function MobileMessageList({
                   {thread.thread_type !== 'group' && (
                     <div style={{
                       fontSize: '13px',
-                      color: '#888888',
+                      color: 'var(--text-secondary)',
                       fontWeight: unread ? 500 : 400,
                     }}>
                       {thread.otherParticipantName || thread.post?.location || ''}
@@ -254,7 +253,7 @@ export default function MobileMessageList({
                   {closed && (
                     <div style={{
                       fontSize: '11px',
-                      color: '#888888',
+                      color: 'var(--text-secondary)',
                       marginTop: '8px',
                       fontStyle: 'italic',
                     }}>
@@ -269,7 +268,7 @@ export default function MobileMessageList({
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    background: '#1A1A1A',
+                    background: 'var(--accent)',
                     flexShrink: 0,
                   }} />
                 )}

@@ -4,8 +4,8 @@
     "description": "Find people to do things with nearby",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#000000",
+    "background_color": "#F5F0E3",
+    "theme_color": "#F5F0E3",
     "orientation": "portrait-primary",
     "icons": [
       {

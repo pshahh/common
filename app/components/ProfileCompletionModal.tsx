@@ -148,7 +148,7 @@ export default function ProfileCompletionModal({
       >
         <div
           style={{
-            background: '#fff',
+            background: 'var(--bg-card)',
             borderRadius: '16px',
             width: '100%',
             maxWidth: '400px',
@@ -173,14 +173,14 @@ export default function ProfileCompletionModal({
           <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
             Profile updated
           </h2>
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>
             You can edit your details anytime in Settings.
           </p>
           <button
             onClick={onComplete}
             style={{
-              background: '#000',
-              color: '#fff',
+              background: 'var(--accent)',
+              color: 'var(--text-inverse)',
               border: 'none',
               padding: '12px 24px',
               borderRadius: '24px',
@@ -211,7 +211,7 @@ export default function ProfileCompletionModal({
     >
       <div
         style={{
-          background: '#fff',
+          background: 'var(--bg-card)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '400px',
@@ -226,7 +226,7 @@ export default function ProfileCompletionModal({
           <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
             Complete your profile
           </h2>
-          <p style={{ fontSize: '14px', color: '#666', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             Adding a photo and age helps others know who they're connecting with and builds trust.
           </p>
         </div>
@@ -236,7 +236,7 @@ export default function ProfileCompletionModal({
           {/* Avatar upload */}
           <div style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
-              Profile photo <span style={{ fontWeight: 400, color: '#888' }}>(optional)</span>
+              Profile photo <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(optional)</span>
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               {/* Avatar preview */}
@@ -246,7 +246,7 @@ export default function ProfileCompletionModal({
                   width: '80px',
                   height: '80px',
                   borderRadius: '50%',
-                  background: avatarPreview ? `url(${avatarPreview}) center/cover` : '#f0f0f0',
+                  background: avatarPreview ? `url(${avatarPreview}) center/cover` : 'var(--bg-badge)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -255,11 +255,11 @@ export default function ProfileCompletionModal({
                   flexShrink: 0,
                   transition: 'border-color 0.15s ease',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#888'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e0e0e0'}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--text-secondary)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
               >
                 {!avatarPreview && (
-                  <span style={{ fontSize: '24px', color: '#888', fontWeight: 600 }}>
+                  <span style={{ fontSize: '24px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                     {getInitials(userName)}
                   </span>
                 )}
@@ -269,8 +269,8 @@ export default function ProfileCompletionModal({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   style={{
-                    background: '#fafafa',
-                    border: '1px solid #e0e0e0',
+                    background: 'var(--bg-subtle)',
+                    border: '1px solid var(--border)',
                     padding: '8px 16px',
                     borderRadius: '20px',
                     fontSize: '14px',
@@ -280,7 +280,7 @@ export default function ProfileCompletionModal({
                 >
                   {avatarPreview ? 'Change photo' : 'Upload photo'}
                 </button>
-                <p style={{ fontSize: '12px', color: '#888' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                   JPG, PNG up to 5MB
                 </p>
               </div>
@@ -297,7 +297,7 @@ export default function ProfileCompletionModal({
           {/* Date of birth */}
           <div style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-              Date of birth <span style={{ fontWeight: 400, color: '#888' }}>(optional)</span>
+              Date of birth <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(optional)</span>
             </label>
             <input
               type="date"
@@ -306,7 +306,7 @@ export default function ProfileCompletionModal({
               max={new Date().toISOString().split('T')[0]} // Can't be in the future
               style={{
                 padding: '12px 16px',
-                border: '1px solid #e0e0e0',
+                border: '1px solid var(--border)',
                 borderRadius: '12px',
                 fontSize: '14px',
                 outline: 'none',
@@ -314,13 +314,13 @@ export default function ProfileCompletionModal({
                 boxSizing: 'border-box',
               }}
             />
-            <p style={{ fontSize: '12px', color: '#888', marginTop: '6px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
               Your age will be shown on your profile, not your birth date
             </p>
           </div>
 
           {error && (
-            <p style={{ color: '#dc2626', fontSize: '14px', marginBottom: '16px' }}>{error}</p>
+            <p style={{ color: 'var(--danger)', fontSize: '14px', marginBottom: '16px' }}>{error}</p>
           )}
 
           {/* Actions */}
@@ -331,8 +331,8 @@ export default function ProfileCompletionModal({
               style={{
                 width: '100%',
                 padding: '12px 24px',
-                background: '#000',
-                color: '#fff',
+                background: 'var(--accent)',
+                color: 'var(--text-inverse)',
                 border: 'none',
                 borderRadius: '24px',
                 fontSize: '14px',
@@ -350,7 +350,7 @@ export default function ProfileCompletionModal({
                 width: '100%',
                 padding: '12px 24px',
                 background: 'transparent',
-                color: '#666',
+                color: 'var(--text-secondary)',
                 border: 'none',
                 borderRadius: '24px',
                 fontSize: '14px',

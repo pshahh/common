@@ -49,26 +49,46 @@ export async function POST(req: Request) {
           to: email,
           subject: 'Reset your password',
           html: `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 24px;">
-              <div style="margin-bottom: 32px;">
-                <span style="font-size: 20px; font-weight: 600; color: #000;">common</span>
-              </div>
-              <h1 style="font-size: 18px; font-weight: 600; color: #000; margin-bottom: 12px;">
-                Reset your password
-              </h1>
-              <p style="font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 24px;">
-                We received a request to reset your password. Click the button below to choose a new one.
-              </p>
-              <a href="${resetLink}" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; border-radius: 24px; font-size: 14px; font-weight: 600; text-decoration: none;">
-                Reset password
-              </a>
-              <p style="font-size: 13px; color: #999; line-height: 1.6; margin-top: 32px;">
-                If you didn't request this, you can safely ignore this email. The link expires in 24 hours.
-              </p>
-              <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 32px 0 16px;" />
-              <p style="font-size: 12px; color: #999;">
-                do things with people nearby
-              </p>
+            <div style="margin: 0; padding: 0; background-color: #F5F0E3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F5F0E3; padding: 40px 16px;">
+                <tr>
+                  <td align="center">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #FEFCF8; border-radius: 16px; border: 1px solid #E5DFD8; overflow: hidden;">
+                      <tr>
+                        <td style="padding: 32px 32px 0;">
+                          <div style="font-size: 20px; font-weight: 700; color: #0F4415; letter-spacing: -0.5px;">common</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 24px 32px 32px;">
+                          <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #000000; letter-spacing: -0.3px;">
+                            Reset your password
+                          </h1>
+                          <p style="margin: 0 0 24px; font-size: 15px; color: #888888; line-height: 1.6;">
+                            Tap below to choose a new password.
+                          </p>
+                          <table cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td style="background-color: #0F4415; border-radius: 24px; padding: 12px 24px;">
+                                <a href="${resetLink}" style="color: #FEFCF8; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block;">
+                                  Reset password
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 24px 32px; background-color: #f7f5ee; border-top: 1px solid #E5DFD8;">
+                          <p style="margin: 0; font-size: 12px; color: #888888; line-height: 1.5;">
+                            If you didn't ask for this, just ignore it. The link expires in 24 hours.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
             </div>
           `,
         }),

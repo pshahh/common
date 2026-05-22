@@ -106,7 +106,7 @@ export default function GuidelinesPage() {
             style={{
               width: '224px',
               flexShrink: 0,
-              borderRight: '1px solid #f0f0f0',
+              borderRight: 'var(--border-light)',
               background: 'rgba(250, 250, 250, 0.5)',
               overflow: 'hidden',
             }}
@@ -129,15 +129,15 @@ export default function GuidelinesPage() {
         <div style={{ 
           flex: 1, 
           overflowY: 'auto',
-          background: '#FAFAFA',
+          background: '#F5F0E3',
           padding: isMobile ? '24px 16px 100px' : '48px 24px',
         }}>
           <div style={{ 
             maxWidth: '640px', 
             margin: '0 auto',
-            background: '#fff',
+            background: '#FEFCF8',
             borderRadius: '16px',
-            border: '1px solid #E0E0E0',
+            border: '1px solid #E5DFD8',
             padding: isMobile ? '24px' : '48px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
           }}>
@@ -161,9 +161,9 @@ export default function GuidelinesPage() {
 {/* The rule */}
 <div style={{
   padding: '16px 20px',
-  background: '#FAFAFA',
+  background: '#F5F0E3',
   borderRadius: '12px',
-  border: '1px solid #E0E0E0',
+  border: '1px solid #E5DFD8',
   marginBottom: '32px',
 }}>
   <p style={{ 
@@ -178,25 +178,6 @@ export default function GuidelinesPage() {
 </div>
 
 <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-  {/* What Common is for */}
-  <section>
-    <h2 style={{ 
-      fontSize: '18px', 
-      fontWeight: 600, 
-      color: '#000',
-      marginBottom: '12px',
-    }}>
-      What common is for
-    </h2>
-    <p style={{ 
-      fontSize: '14px', 
-      color: '#444', 
-      lineHeight: 1.7,
-      margin: 0,
-    }}>
-      common helps you find people to do real activities with nearby. The best posts are from someone who's doing something and is genuinely open to others joining them.
-    </p>
-  </section>
 
   {/* Examples - two columns */}
   <section>
@@ -214,28 +195,28 @@ export default function GuidelinesPage() {
       gap: '12px',
     }}>
       {/* Column headers */}
-      <p style={{ fontSize: '13px', fontWeight: 600, color: '#444', margin: '0 0 4px 0' }}>
+      <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
         ✓ Belongs on common
       </p>
-      <p style={{ fontSize: '13px', fontWeight: 600, color: '#444', margin: '0 0 4px 0' }}>
+      <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
         ✗ Doesn't belong on common
       </p>
 
       {/* Pair 1 - casual activity */}
       <div style={{
         padding: '12px 16px',
-        background: '#FAFAFA',
+        background: '#F5F0E3',
         borderRadius: '12px',
-        border: '1px solid #E0E0E0',
+        border: '1px solid #E5DFD8',
       }}>
         <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Going for a run around Highbury Fields</p>
         <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Personal activity, open to company</p>
       </div>
       <div style={{
         padding: '12px 16px',
-        background: '#FAFAFA',
+        background: '#F5F0E3',
         borderRadius: '12px',
-        border: '1px solid #E0E0E0',
+        border: '1px solid #E5DFD8',
       }}>
         <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Free yoga classes every Sunday at our studio</p>
         <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Business promotion disguised as an activity</p>
@@ -244,18 +225,18 @@ export default function GuidelinesPage() {
       {/* Pair 2 - going to an event */}
       <div style={{
         padding: '12px 16px',
-        background: '#FAFAFA',
+        background: '#F5F0E3',
         borderRadius: '12px',
-        border: '1px solid #E0E0E0',
+        border: '1px solid #E5DFD8',
       }}>
         <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Come to this gig with me. Ticket link below.</p>
         <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>You're going, looking for someone to go with</p>
       </div>
       <div style={{
         padding: '12px 16px',
-        background: '#FAFAFA',
+        background: '#F5F0E3',
         borderRadius: '12px',
-        border: '1px solid #E0E0E0',
+        border: '1px solid #E5DFD8',
       }}>
         <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>New music night - buy tickets here</p>
         <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Promoting an event, not a personal invitation</p>
@@ -264,18 +245,18 @@ export default function GuidelinesPage() {
       {/* Pair 3 - recurring group activity */}
       <div style={{
         padding: '12px 16px',
-        background: '#FAFAFA',
+        background: '#F5F0E3',
         borderRadius: '12px',
-        border: '1px solid #E0E0E0',
+        border: '1px solid #E5DFD8',
       }}>
         <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>I run a writers' group at the pub - come write with us</p>
         <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>You organise it and participate alongside everyone else</p>
       </div>
       <div style={{
         padding: '12px 16px',
-        background: '#FAFAFA',
+        background: '#F5F0E3',
         borderRadius: '12px',
-        border: '1px solid #E0E0E0',
+        border: '1px solid #E5DFD8',
       }}>
         <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>We host an arts and crafts night. Info and tickets here</p>
         <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Reads like you're only running the event, not participating as an equal</p>
@@ -346,7 +327,7 @@ export default function GuidelinesPage() {
       lineHeight: 1.7,
       margin: 0,
     }}>
-      Always meet in public places for the first time. Tell a friend where you're going. Trust your instincts — if something feels off, it's okay to leave. You can report any post or conversation that makes you uncomfortable.
+      Always meet in public places for the first time. Tell a friend where you're going. Trust your instincts - if something feels off, it's okay to leave. You can report any post or conversation that makes you uncomfortable.
     </p>
   </section>
 </div>

@@ -97,41 +97,46 @@ function generateWelcomeEmail(params: { recipientName: string }): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <title>Welcome to common</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fafafa; padding: 40px 16px;">
+<body style="margin: 0; padding: 0; background-color: #F5F0E3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F5F0E3; padding: 40px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e0e0e0; overflow: hidden;">
-          <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #FEFCF8; border-radius: 16px; border: 1px solid #E5DFD8; overflow: hidden;">
           <tr>
             <td style="padding: 32px 32px 0;">
-              <div style="font-size: 20px; font-weight: 700; color: #000000; letter-spacing: -0.5px;">common</div>
+              <div style="font-size: 20px; font-weight: 700; color: #0F4415; letter-spacing: -0.5px;">common</div>
             </td>
           </tr>
-          <!-- Body -->
           <tr>
             <td style="padding: 24px 32px 32px;">
               <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #000000; letter-spacing: -0.3px;">
-                You're in
+                You're in, ${recipientName}
               </h1>
-              <p style="margin: 0 0 8px; font-size: 15px; color: #444444; line-height: 1.6;">
-                Welcome to common - a place to find people to do things with nearby.
+              <p style="margin: 0 0 8px; font-size: 15px; color: #888888; line-height: 1.6;">
+                common is where people find others to do things with nearby.
               </p>
-              <p style="margin: 0 0 24px; font-size: 15px; color: #444444; line-height: 1.6;">
-                Have a look at what's happening around you, or share what you're doing if you're open to company.
+              <p style="margin: 0 0 24px; font-size: 15px; color: #888888; line-height: 1.6;">
+                Have a look at what's happening around you, or share what you're up to if you're open to company.
               </p>
-              <a href="${BASE_URL}" style="display: inline-block; background-color: #000000; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 24px;">
-                Browse what's nearby
-              </a>
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background-color: #0F4415; border-radius: 24px; padding: 12px 24px;">
+                    <a href="${BASE_URL}" style="color: #FEFCF8; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block;">
+                      See what's nearby
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
-          <!-- Footer -->
           <tr>
-            <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
+            <td style="padding: 24px 32px; background-color: #f7f5ee; border-top: 1px solid #E5DFD8;">
               <p style="margin: 0; font-size: 12px; color: #888888; line-height: 1.5;">
-                You're receiving this because you signed up for common.
+                You're getting this because you just signed up for common.
               </p>
             </td>
           </tr>

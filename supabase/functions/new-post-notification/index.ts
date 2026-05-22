@@ -46,40 +46,67 @@ function generateEmailHtml({
   postUrl: string;
 }): string {
   const notesHtml = postNotes
-    ? `<p style="font-size: 14px; color: #666; font-style: italic; margin: 12px 0 0 0;">${postNotes.substring(0, 200).replace(/\n/g, "<br>")}${postNotes.length > 200 ? "..." : ""}</p>`
+    ? '<p style="font-size: 14px; color: #000000; font-style: italic; margin: 12px 0 0 0; line-height: 1.5;">' + postNotes.substring(0, 200).replace(/\n/g, "<br>") + (postNotes.length > 200 ? "..." : "") + '</p>'
     : "";
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-      <div style="max-width: 480px; margin: 0 auto; padding: 24px 16px;">
-        <div style="margin-bottom: 24px;">
-          <span style="font-size: 18px; font-weight: 700; color: #000;">common</span>
-        </div>
-        <div style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 16px; padding: 24px;">
-          <p style="font-size: 14px; color: #444; margin: 0 0 16px 0;">Hi ${recipientName},</p>
-          <p style="font-size: 14px; color: #444; margin: 0 0 20px 0;">There's a new activity near you:</p>
-          
-          <div style="background: #fafafa; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-            <p style="font-size: 16px; font-weight: 600; color: #000; margin: 0 0 4px 0;">${postTitle}</p>
-            <p style="font-size: 13px; color: #666; margin: 0 0 2px 0;">${postLocation}</p>
-            <p style="font-size: 13px; color: #666; margin: 0;">${postTime}</p>
-            ${notesHtml}
-            <p style="font-size: 12px; color: #888; margin: 12px 0 0 0;">${posterName}</p>
-          </div>
-
-          <a href="${postUrl}" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 24px; font-size: 14px; font-weight: 600;">Take a look</a>
-        </div>
-        <div style="margin-top: 24px; text-align: center;">
-          <p style="font-size: 12px; color: #888; margin: 0;">You're receiving this because you have notifications enabled on common.</p>
-          <p style="font-size: 12px; color: #888; margin: 4px 0 0 0;">To stop these emails, update your <a href="${BASE_URL}/settings" style="color: #888;">notification preferences</a>.</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  return '<!DOCTYPE html>' +
+'<html>' +
+'<head>' +
+'  <meta charset="utf-8">' +
+'  <meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+'  <meta name="color-scheme" content="light">' +
+'  <meta name="supported-color-schemes" content="light">' +
+'</head>' +
+'<body style="margin: 0; padding: 0; background-color: #F5F0E3; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">' +
+'  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F5F0E3; padding: 40px 16px;">' +
+'    <tr>' +
+'      <td align="center">' +
+'        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #FEFCF8; border-radius: 16px; border: 1px solid #E5DFD8; overflow: hidden;">' +
+'          <tr>' +
+'            <td style="padding: 32px 32px 0;">' +
+'              <div style="font-size: 20px; font-weight: 700; color: #0F4415; letter-spacing: -0.5px;">common</div>' +
+'            </td>' +
+'          </tr>' +
+'          <tr>' +
+'            <td style="padding: 24px 32px 32px;">' +
+'              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 600; color: #000000; letter-spacing: -0.3px;">' +
+'                Something new near you' +
+'              </h1>' +
+'              <p style="margin: 0 0 20px; font-size: 15px; color: #888888; line-height: 1.6;">' +
+                 posterName + ' just shared something you might want to join.' +
+'              </p>' +
+'              <div style="background-color: #f7f5ee; border-radius: 12px; padding: 16px; margin-bottom: 24px;">' +
+'                <p style="font-size: 16px; font-weight: 600; color: #000000; margin: 0 0 4px 0;">' + postTitle + '</p>' +
+'                <p style="font-size: 13px; color: #888888; margin: 0 0 2px 0;">' + postLocation + '</p>' +
+'                <p style="font-size: 13px; color: #888888; margin: 0;">' + postTime + '</p>' +
+                 notesHtml +
+'              </div>' +
+'              <table cellpadding="0" cellspacing="0" border="0">' +
+'                <tr>' +
+'                  <td style="background-color: #0F4415; border-radius: 24px; padding: 12px 24px;">' +
+'                    <a href="' + postUrl + '" style="color: #FEFCF8; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block;">' +
+'                      Take a look' +
+'                    </a>' +
+'                  </td>' +
+'                </tr>' +
+'              </table>' +
+'            </td>' +
+'          </tr>' +
+'          <tr>' +
+'            <td style="padding: 24px 32px; background-color: #f7f5ee; border-top: 1px solid #E5DFD8;">' +
+'              <p style="margin: 0; font-size: 12px; color: #888888; line-height: 1.5;">' +
+'                You\'re getting this because you have notifications enabled on common.' +
+'                <br>' +
+'                <a href="https://www.common-social.com/settings" style="color: #888888;">Manage preferences</a>' +
+'              </p>' +
+'            </td>' +
+'          </tr>' +
+'        </table>' +
+'      </td>' +
+'    </tr>' +
+'  </table>' +
+'</body>' +
+'</html>';
 }
 
 serve(async (req: Request) => {
@@ -187,7 +214,7 @@ serve(async (req: Request) => {
           body: JSON.stringify({
             from: EMAIL_FROM,
             to: [recipientEmail],
-            subject: `New on common: "${post.title}"`,
+            subject: post.name + ' just posted "' + post.title + '" on common',
             html: emailHtml,
           }),
         });

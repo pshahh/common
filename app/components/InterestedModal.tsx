@@ -134,13 +134,16 @@ export default function InterestedModal({
           {/* Post summary card */}
           <div className="post-summary">
             <h4 className="post-summary-title">{post.title}</h4>
-            <p className="post-summary-meta">
-              {post.location} · {post.time}
-            </p>
+            <p className="post-summary-meta">{post.location}</p>
+            {post.time && (
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 4px 0' }}>
+                {post.time}
+              </p>
+            )}
             {post.notes && (
               <p className="post-summary-notes" style={{ whiteSpace: 'pre-line' }}>{renderTextWithLinks(post.notes)}</p>
             )}
-            {post.preference && post.preference !== 'Anyone' && (
+            {post.preference && post.preference !== 'anyone' && (
               <span className="preference-badge small">{post.preference}</span>
             )}
             <div className="post-summary-footer">
@@ -151,7 +154,7 @@ export default function InterestedModal({
           {isGroup ? (
             <>
               {/* Group join — no message required */}
-              <p style={{ fontSize: '14px', color: '#444', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
                 You&apos;ll land in the group chat. Say hello.
               </p>
               {/* Safety tips */}
@@ -178,7 +181,7 @@ export default function InterestedModal({
                 <label className="form-label">
                   Drop them a message
                 </label>
-                <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
                   A little intro goes a long way
                 </p>
                 <textarea

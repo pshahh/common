@@ -21,7 +21,7 @@ export default function ReportConfirmationModal({ onClose }: ReportConfirmationM
     >
       <div
         style={{
-          background: '#fff',
+          background: 'var(--bg-card)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '400px',
@@ -36,7 +36,7 @@ export default function ReportConfirmationModal({ onClose }: ReportConfirmationM
             width: '48px',
             height: '48px',
             borderRadius: '50%',
-            background: '#f0f0f0',
+            background: 'var(--bg-badge)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -50,7 +50,7 @@ export default function ReportConfirmationModal({ onClose }: ReportConfirmationM
         <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
           Report submitted
         </h2>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>
           Thanks for letting us know. We'll review this against our guidelines.
         </p>
 
@@ -60,8 +60,8 @@ export default function ReportConfirmationModal({ onClose }: ReportConfirmationM
             padding: '12px 24px',
             border: 'none',
             borderRadius: '24px',
-            background: '#000',
-            color: '#fff',
+            background: 'var(--accent)',
+            color: 'var(--text-inverse)',
             fontSize: '14px',
             fontWeight: 600,
             cursor: 'pointer',

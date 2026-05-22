@@ -163,7 +163,7 @@ export default function PostCard({
           <div 
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: '#fff',
+              background: 'var(--bg-card)',
               borderRadius: '16px',
               padding: '24px',
               maxWidth: '400px',
@@ -184,7 +184,7 @@ export default function PostCard({
               {name}
             </h3>
             {age !== null && (
-              <p style={{ fontSize: '14px', color: '#666' }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
                 {age} years old
               </p>
             )}
@@ -193,8 +193,8 @@ export default function PostCard({
               style={{
                 marginTop: '20px',
                 padding: '10px 24px',
-                background: '#000',
-                color: '#fff',
+                background: 'var(--accent)',
+                color: 'var(--text-inverse)',
                 border: 'none',
                 borderRadius: '24px',
                 fontSize: '14px',
@@ -212,10 +212,10 @@ export default function PostCard({
         <div className="card-header">
           <div className="card-content">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-  <h3 style={{ 
+            <h3 style={{ 
     fontSize: '16px', 
-    fontWeight: 600, 
-    color: '#000',
+    fontWeight: 500, 
+    color: 'var(--text-primary)',
     margin: 0,
   }}>
     {title}
@@ -278,13 +278,6 @@ export default function PostCard({
             )}
           </div>
           <div className="card-actions">
-            <button 
-              className="share-button" 
-              onClick={handleShare}
-              style={{ color: copied ? 'var(--success)' : undefined }}
-            >
-              {copied ? '✓ Copied!' : 'Share ↗'}
-            </button>
             <div className="menu-container" ref={menuRef}>
               <button
                 className="menu-button"
@@ -294,6 +287,16 @@ export default function PostCard({
               </button>
               {showMenu && (
                 <div className="dropdown-menu">
+                  <button
+                    className="dropdown-item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      handleShare();
+                    }}
+                  >
+                    {copied ? '✓ Copied!' : 'Share'}
+                  </button>
                   <button
                     className="dropdown-item"
                     onClick={() => {
@@ -310,7 +313,7 @@ export default function PostCard({
                         setShowMenu(false);
                         onAdminRemove();
                       }}
-                      style={{ color: '#dc2626' }}
+                      style={{ color: 'var(--danger)' }}
                     >
                       Remove post
                     </button>
@@ -321,13 +324,21 @@ export default function PostCard({
           </div>
         </div>
 
-        {/* Footer - Rearranged: poster name on left, button on right */}
+        {/* Divider */}
+        <div style={{ 
+          borderTop: '1px solid var(--border)', 
+          margin: '16px 0 0 0',
+        }} />
+
+        {/* Footer - name + interested stacked left, button right */}
         <div className="card-footer" style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
+          paddingTop: '12px',
+          marginTop: '0',
         }}>
-          {/* Left side: poster name and interested count */}
+          {/* Left side: name above interested count */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <div
               ref={nameRef}
@@ -363,7 +374,7 @@ export default function PostCard({
                         justifyContent: 'center',
                         fontSize: '14px',
                         fontWeight: 600,
-                        color: '#888',
+                        color: 'var(--text-secondary)',
                       }}
                     >
                       {getInitials(name)}
@@ -379,7 +390,7 @@ export default function PostCard({
               )}
             </div>
             {peopleInterested > 0 && (
-              <span className="interested-badge" style={{ alignSelf: 'flex-start' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                 {peopleInterested} interested
               </span>
             )}

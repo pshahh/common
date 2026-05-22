@@ -33,8 +33,7 @@ export default function Header({ onLoginClick, user, onLogout }: HeaderProps) {
   return (
     <header style={{
       height: '56px',
-      background: '#fff',
-      borderBottom: '1px solid #e0e0e0',
+      borderBottom: '1px solid var(--border)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -48,7 +47,7 @@ export default function Header({ onLoginClick, user, onLogout }: HeaderProps) {
         style={{
           fontSize: '20px',
           fontWeight: 700,
-          color: '#000',
+          color: 'var(--accent)',
           textDecoration: 'none',
           letterSpacing: '-0.5px',
         }}
@@ -58,28 +57,28 @@ export default function Header({ onLoginClick, user, onLogout }: HeaderProps) {
       <div>
         {user ? (
           // When logged in, just show the name (logout is in sidebar)
-          <span style={{ fontSize: '14px', color: '#666' }}>
+          <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
             {firstName}
           </span>
         ) : (
-          <button 
-            onClick={onLoginClick} 
+          <button
+            onClick={onLoginClick}
             style={{
               background: 'none',
               border: 'none',
               fontSize: '14px',
-              color: '#666',
+              color: 'var(--text-secondary)',
               cursor: 'pointer',
               textDecoration: 'underline',
               textDecorationColor: 'transparent',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#000';
-              e.currentTarget.style.textDecorationColor = '#666';
+              e.currentTarget.style.color = 'var(--text-primary)';
+              e.currentTarget.style.textDecorationColor = 'var(--text-secondary)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#666';
+              e.currentTarget.style.color = 'var(--text-secondary)';
               e.currentTarget.style.textDecorationColor = 'transparent';
             }}
           >

@@ -257,7 +257,7 @@ const { error: insertError } = await supabase
       >
         <div 
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'var(--bg-card)',
             borderRadius: '16px',
             width: '100%',
             maxWidth: '400px',
@@ -270,27 +270,27 @@ const { error: insertError } = await supabase
             width: '48px',
             height: '48px',
             borderRadius: '50%',
-            backgroundColor: '#f0fdf4',
+            backgroundColor: 'var(--bg-badge)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 16px',
             fontSize: '20px',
-            color: '#16a34a',
+            color: 'var(--accent)',
           }}>
             ✓
           </div>
-          <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#000' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: 'var(--text-primary)' }}>
             You're live
           </h2>
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
             We'll email you when people respond.
           </p>
           <button
             onClick={handleConfirmationClose}
             style={{
-              background: '#000',
-              color: '#fff',
+              background: 'var(--accent)',
+              color: 'var(--text-inverse)',
               border: 'none',
               padding: '12px 24px',
               borderRadius: '24px',
@@ -323,7 +323,7 @@ const { error: insertError } = await supabase
     >
       <div 
         style={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--bg-subtle)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '500px',
@@ -335,13 +335,13 @@ const { error: insertError } = await supabase
         {/* Header */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
           position: 'sticky',
           top: 0,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--bg-subtle)',
           borderRadius: '16px 16px 0 0',
           zIndex: 10
         }}>
@@ -349,12 +349,12 @@ const { error: insertError } = await supabase
             <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>
               Share what you're doing
             </h2>
-            <p style={{ fontSize: '13px', color: '#888', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
   If it's not a personal invitation to an activity you're also participating in, it doesn't belong on common.{' '}
   <a 
     href="/guidelines" 
     target="_blank" 
-    style={{ color: '#888', textDecoration: 'underline' }}
+    style={{ color: 'var(--text-secondary)', textDecoration: 'underline' }}
   >
     Guidelines & examples
   </a>
@@ -367,7 +367,7 @@ const { error: insertError } = await supabase
               border: 'none',
               fontSize: '24px',
               cursor: 'pointer',
-              color: '#888',
+              color: 'var(--text-secondary)',
               lineHeight: 1,
             }}
           >
@@ -392,7 +392,7 @@ const { error: insertError } = await supabase
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid var(--border)',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -406,7 +406,7 @@ const { error: insertError } = await supabase
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>
                 Where?
               </label>
-              <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
                 Start typing and pick from the suggestions
               </p>
               <input
@@ -420,7 +420,7 @@ const { error: insertError } = await supabase
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: `1px solid ${locationError ? '#dc2626' : '#e0e0e0'}`,
+                  border: `1px solid ${locationError ? '#dc2626' : 'var(--border)'}`,
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -430,7 +430,7 @@ const { error: insertError } = await supabase
               
               {/* Location validation feedback */}
               {latitude !== null && longitude !== null && (
-                <p style={{ fontSize: '12px', color: '#16a34a', marginTop: '6px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--accent)', marginTop: '6px' }}>
                   ✓ Got it
                 </p>
               )}
@@ -440,7 +440,7 @@ const { error: insertError } = await supabase
                 </p>
               )}
               {searchingLocation && (
-                <p style={{ fontSize: '12px', color: '#888', marginTop: '6px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
                   Searching...
                 </p>
               )}
@@ -454,8 +454,8 @@ const { error: insertError } = await supabase
                     top: '100%',
                     left: 0,
                     right: 0,
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #e0e0e0',
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
                     borderRadius: '12px',
                     marginTop: '4px',
                     zIndex: 20,
@@ -472,13 +472,13 @@ const { error: insertError } = await supabase
                       style={{
                         padding: '12px 16px',
                         cursor: 'pointer',
-                        borderBottom: index < locationSuggestions.length - 1 ? '1px solid #f0f0f0' : 'none',
+                        borderBottom: index < locationSuggestions.length - 1 ? '1px solid var(--border-light)' : 'none',
                         fontSize: '14px',
-                        color: '#444',
-                        backgroundColor: '#fff',
+                        color: 'var(--text-primary)',
+                        backgroundColor: 'var(--bg-card)',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-subtle)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
                     >
                       {suggestion.display_name}
                     </div>
@@ -499,11 +499,11 @@ const { error: insertError } = await supabase
       style={{
         padding: '8px 16px',
         borderRadius: '20px',
-        border: 'none',
+        border: frequency === 'one-off' ? 'none' : '1px solid var(--border)',
         fontSize: '14px',
         cursor: 'pointer',
-        backgroundColor: frequency === 'one-off' ? '#000' : '#f5f5f5',
-        color: frequency === 'one-off' ? '#FFF' : '#666',
+        backgroundColor: frequency === 'one-off' ? 'var(--accent)' : 'var(--bg-badge)',
+        color: frequency === 'one-off' ? 'var(--text-inverse)' : 'var(--text-primary)',
       }}
     >
       Just this once
@@ -514,11 +514,11 @@ const { error: insertError } = await supabase
       style={{
         padding: '8px 16px',
         borderRadius: '20px',
-        border: 'none',
+        border: frequency === 'repeats' ? 'none' : '1px solid var(--border)',
         fontSize: '14px',
         cursor: 'pointer',
-        backgroundColor: frequency === 'repeats' ? '#000' : '#f5f5f5',
-        color: frequency === 'repeats' ? '#FFF' : '#666',
+        backgroundColor: frequency === 'repeats' ? 'var(--accent)' : 'var(--bg-badge)',
+        color: frequency === 'repeats' ? 'var(--text-inverse)' : 'var(--text-primary)',
       }}
     >
       It repeats
@@ -534,11 +534,11 @@ const { error: insertError } = await supabase
           style={{
             padding: '8px 16px',
             borderRadius: '20px',
-            border: frequency === 'repeats' && recurrenceRule === value ? 'none' : '1px solid #e0e0e0',
+            border: frequency === 'repeats' && recurrenceRule === value ? 'none' : '1px solid var(--border)',
             fontSize: '13px',
             cursor: 'pointer',
-            backgroundColor: recurrenceRule === value ? '#000' : '#fff',
-            color: recurrenceRule === value ? '#FFF' : '#666',
+            backgroundColor: recurrenceRule === value ? 'var(--accent)' : 'var(--bg-badge)',
+            color: recurrenceRule === value ? 'var(--text-inverse)' : 'var(--text-primary)',
           }}
         >
           {label}
@@ -563,11 +563,11 @@ const { error: insertError } = await supabase
                   style={{
                     padding: '8px 16px',
                     borderRadius: '20px',
-                    border: 'none',
+                    border: timingMode === 'specific' ? 'none' : '1px solid var(--border)',
                     fontSize: '14px',
                     cursor: 'pointer',
-                    backgroundColor: timingMode === 'specific' ? '#000' : '#f5f5f5',
-                    color: timingMode === 'specific' ? '#FFF' : '#666',
+                    backgroundColor: timingMode === 'specific' ? 'var(--accent)' : 'var(--bg-badge)',
+                    color: timingMode === 'specific' ? 'var(--text-inverse)' : 'var(--text-primary)',
                   }}
                 >
                   Specific date
@@ -578,11 +578,11 @@ const { error: insertError } = await supabase
                   style={{
                     padding: '8px 16px',
                     borderRadius: '20px',
-                    border: 'none',
+                    border: timingMode === 'flexible' ? 'none' : '1px solid var(--border)',
                     fontSize: '14px',
                     cursor: 'pointer',
-                    backgroundColor: timingMode === 'flexible' ? '#000' : '#f5f5f5',
-                    color: timingMode === 'flexible' ? '#FFF' : '#666',
+                    backgroundColor: timingMode === 'flexible' ? 'var(--accent)' : 'var(--bg-badge)',
+                    color: timingMode === 'flexible' ? 'var(--text-inverse)' : 'var(--text-primary)',
                   }}
                 >
                   Date is flexible
@@ -592,7 +592,7 @@ const { error: insertError } = await supabase
               {timingMode === 'specific' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {frequency === 'repeats' && (
-  <p style={{ fontSize: '12px', color: '#888', margin: '0 0 4px 0' }}>
+  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 4px 0' }}>
     When's the next one?
   </p>
 )}
@@ -603,7 +603,7 @@ const { error: insertError } = await supabase
                     required
                     style={{
                       padding: '12px 16px',
-                      border: '1px solid #e0e0e0',
+                      border: '1px solid var(--border)',
                       borderRadius: '12px',
                       fontSize: '14px',
                       outline: 'none',
@@ -618,7 +618,7 @@ const { error: insertError } = await supabase
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #e0e0e0',
+                      border: '1px solid var(--border)',
                       borderRadius: '12px',
                       fontSize: '14px',
                       outline: 'none',
@@ -637,7 +637,7 @@ const { error: insertError } = await supabase
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #e0e0e0',
+                      border: '1px solid var(--border)',
                       borderRadius: '12px',
                       fontSize: '14px',
                       outline: 'none',
@@ -647,21 +647,21 @@ const { error: insertError } = await supabase
                   {frequency !== 'repeats' && (
   <div>
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <span style={{ fontSize: '14px', color: '#666' }}>Stays up until</span>
+      <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Stays up until</span>
       <input
         type="date"
         value={expiresAt}
         onChange={e => setExpiresAt(e.target.value)}
         style={{
           padding: '12px 16px',
-          border: '1px solid #e0e0e0',
+          border: '1px solid var(--border)',
           borderRadius: '12px',
           fontSize: '14px',
           outline: 'none',
         }}
       />
     </div>
-    <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
+    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
       Your post disappears after this date.
     </p>
   </div>
@@ -675,7 +675,7 @@ const { error: insertError } = await supabase
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
                 How should people chat with you?
               </label>
-              <p style={{ fontSize: '12px', color: '#888', marginBottom: '12px' }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
                 {threadType === '1:1' 
                   ? 'You\'ll chat with each person separately' 
                   : 'Everyone chats in one group'}
@@ -687,11 +687,11 @@ const { error: insertError } = await supabase
                   style={{
                     padding: '8px 16px',
                     borderRadius: '20px',
-                    border: 'none',
+                    border: threadType === '1:1' ? 'none' : '1px solid var(--border)',
                     fontSize: '14px',
                     cursor: 'pointer',
-                    backgroundColor: threadType === '1:1' ? '#000' : '#f5f5f5',
-                    color: threadType === '1:1' ? '#FFF' : '#666',
+                    backgroundColor: threadType === '1:1' ? 'var(--accent)' : 'var(--bg-badge)',
+                    color: threadType === '1:1' ? 'var(--text-inverse)' : 'var(--text-primary)',
                   }}
                 >
                   1:1 chats
@@ -702,11 +702,11 @@ const { error: insertError } = await supabase
                   style={{
                     padding: '8px 16px',
                     borderRadius: '20px',
-                    border: 'none',
+                    border: threadType === 'group' ? 'none' : '1px solid var(--border)',
                     fontSize: '14px',
                     cursor: 'pointer',
-                    backgroundColor: threadType === 'group' ? '#000' : '#f5f5f5',
-                    color: threadType === 'group' ? '#FFF' : '#666',
+                    backgroundColor: threadType === 'group' ? 'var(--accent)' : 'var(--bg-badge)',
+                    color: threadType === 'group' ? 'var(--text-inverse)' : 'var(--text-primary)',
                   }}
                 >
                   Group chat
@@ -727,11 +727,11 @@ const { error: insertError } = await supabase
                     style={{
                       padding: '8px 16px',
                       borderRadius: '20px',
-                      border: 'none',
+                      border: whoCanRespond === option.toLowerCase() ? '1px solid var(--accent)' : '1px solid var(--border)',
                       fontSize: '14px',
                       cursor: 'pointer',
-                      backgroundColor: whoCanRespond === option.toLowerCase() ? '#000' : '#f5f5f5',
-                      color: whoCanRespond === option.toLowerCase() ? '#FFF' : '#666',
+                      backgroundColor: whoCanRespond === option.toLowerCase() ? 'var(--accent)' : 'var(--bg-badge)',
+                      color: whoCanRespond === option.toLowerCase() ? 'var(--text-inverse)' : 'var(--text-primary)',
                     }}
                   >
                     {option}
@@ -739,7 +739,7 @@ const { error: insertError } = await supabase
                 ))}
               </div>
               {whoCanRespond !== 'anyone' && (
-                <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
                   Just a preference, not a rule.
                 </p>
               )}
@@ -758,7 +758,7 @@ const { error: insertError } = await supabase
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid var(--border)',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -770,29 +770,29 @@ const { error: insertError } = await supabase
             </div>
 
             {error && (
-              <p style={{ color: '#DC2626', fontSize: '14px' }}>{error}</p>
+              <p style={{ color: 'var(--danger)', fontSize: '14px' }}>{error}</p>
             )}
           </div>
 
           {/* Footer */}
           <div style={{
             padding: '16px 24px',
-            borderTop: '1px solid #e0e0e0',
+            borderTop: '1px solid var(--border)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: '#fafafa',
+            backgroundColor: 'var(--bg-subtle)',
             borderRadius: '0 0 16px 16px',
           }}>
-            <p style={{ fontSize: '12px', color: '#888', maxWidth: '250px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '250px', lineHeight: 1.5 }}>
               Posts go live straight away.<br />Be a good human.
             </p>
             <button
               type="submit"
               disabled={loading}
               style={{
-                background: '#000',
-                color: '#fff',
+                background: 'var(--accent)',
+                color: 'var(--text-inverse)',
                 border: 'none',
                 padding: '12px 24px',
                 borderRadius: '24px',

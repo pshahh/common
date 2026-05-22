@@ -99,7 +99,7 @@ function LocationSection({
     return (
       <div style={{
         padding: '12px 16px',
-        background: '#fafafa',
+        background: '#F5F0E3',
         borderRadius: '12px',
         marginBottom: '16px',
         display: 'flex',
@@ -163,7 +163,7 @@ function LocationSection({
     return (
       <div style={{
         padding: '16px',
-        background: '#fafafa',
+        background: '#F5F0E3',
         borderRadius: '12px',
         marginBottom: '16px',
       }}>
@@ -206,7 +206,7 @@ function LocationSection({
             style={{
               width: '100%',
               padding: '12px 16px',
-              border: '1px solid #e0e0e0',
+              border: '1px solid #E5DFD8',
               borderRadius: '12px',
               fontSize: '14px',
               outline: 'none',
@@ -231,8 +231,8 @@ function LocationSection({
               top: '100%',
               left: 0,
               right: 0,
-              background: '#fff',
-              border: '1px solid #e0e0e0',
+              background: '#FEFCF8',
+              border: '1px solid #E5DFD8',
               borderRadius: '12px',
               marginTop: '4px',
               zIndex: 10,
@@ -1189,7 +1189,7 @@ const sortedPosts = useMemo(() => {
     color: '#000',
     marginBottom: '16px',
   }}>
-    Do things with people nearby
+    What's happening nearby?
   </h1>
   <div 
   className="feed-header"
@@ -1291,8 +1291,8 @@ const sortedPosts = useMemo(() => {
             style={{
               width: '384px',
               flexShrink: 0,
-              borderLeft: '1px solid #f0f0f0',
-              background: '#fff',
+              borderLeft: '1px solid var(--border)',
+              background: 'var(--bg-badge)',
               overflow: 'hidden',
             }}
           >
@@ -1439,7 +1439,7 @@ const sortedPosts = useMemo(() => {
         >
           <div
             style={{
-              background: '#fff',
+              background: '#FEFCF8',
               borderRadius: '16px',
               padding: '24px',
               maxWidth: '400px',
@@ -1461,9 +1461,9 @@ const sortedPosts = useMemo(() => {
                   padding: '10px 20px',
                   fontSize: '14px',
                   fontWeight: 500,
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid #E5DFD8',
                   borderRadius: '24px',
-                  background: '#fff',
+                  background: '#FEFCF8',
                   cursor: adminRemoveLoading ? 'not-allowed' : 'pointer',
                 }}
               >

@@ -294,7 +294,7 @@ export default function AdminPostsPage() {
         <div style={{ 
           flex: 1, 
           overflowY: 'auto',
-          background: '#FAFAFA',
+          background: '#F5F0E3',
           paddingBottom: isMobile ? '80px' : '0',
         }}>
           <div style={{ 
@@ -409,8 +409,8 @@ export default function AdminPostsPage() {
                     <div
                       key={post.id}
                       style={{
-                        background: '#fff',
-                        border: '1px solid #E0E0E0',
+                        background: '#FEFCF8',
+                        border: '1px solid #E5DFD8',
                         borderRadius: '16px',
                         overflow: 'hidden',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
@@ -471,8 +471,8 @@ export default function AdminPostsPage() {
                             display: 'inline-block',
                             fontSize: '12px',
                             color: '#888',
-                            background: '#fafafa',
-                            border: '1px solid #e0e0e0',
+                            background: '#F5F0E3',
+                            border: '1px solid #E5DFD8',
                             padding: '4px 10px',
                             borderRadius: '12px',
                             marginBottom: '12px',
@@ -486,7 +486,7 @@ export default function AdminPostsPage() {
                           fontSize: '13px', 
                           color: '#888',
                           paddingTop: '12px',
-                          borderTop: '1px solid #F0F0F0',
+                          borderTop: '1px solid #E5DFD8',
                         }}>
                           Posted by {post.name}
                         </div>
@@ -496,8 +496,8 @@ export default function AdminPostsPage() {
                       {filter === 'pending' && (
                         <div style={{ 
                           padding: isMobile ? '12px 16px' : '16px 20px',
-                          borderTop: '1px solid #F0F0F0',
-                          background: '#FAFAFA',
+                          borderTop: '1px solid #E5DFD8',
+                          background: '#F5F0E3',
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
@@ -510,8 +510,8 @@ export default function AdminPostsPage() {
                               padding: isMobile ? '10px 20px' : '10px 24px',
                               border: 'none',
                               borderRadius: '24px',
-                              background: '#000',
-                              color: '#fff',
+                              background: '#0F4415',
+                              color: '#FEFCF8',
                               fontSize: '14px',
                               fontWeight: 600,
                               cursor: isActioning ? 'not-allowed' : 'pointer',
@@ -530,9 +530,9 @@ export default function AdminPostsPage() {
                             disabled={isActioning}
                             style={{
                               padding: isMobile ? '10px 20px' : '10px 24px',
-                              border: '1px solid #E0E0E0',
+                              border: '1px solid #E5DFD8',
                               borderRadius: '24px',
-                              background: '#fff',
+                              background: '#FEFCF8',
                               color: '#666',
                               fontSize: '14px',
                               fontWeight: 500,
@@ -586,7 +586,7 @@ export default function AdminPostsPage() {
         >
           <div 
             style={{
-              background: '#fff',
+              background: '#FEFCF8',
               borderRadius: '16px',
               padding: isMobile ? '24px' : '32px',
               maxWidth: '400px',
@@ -624,9 +624,9 @@ export default function AdminPostsPage() {
                 onClick={() => setConfirmReject(null)}
                 style={{
                   padding: '10px 20px',
-                  border: '1px solid #E0E0E0',
+                  border: '1px solid #E5DFD8',
                   borderRadius: '24px',
-                  background: '#fff',
+                  background: '#FEFCF8',
                   color: '#666',
                   fontSize: '14px',
                   fontWeight: 500,

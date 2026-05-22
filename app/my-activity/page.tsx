@@ -453,8 +453,8 @@ export default function MyActivityPage() {
                 <button
                   onClick={() => setShowCreateModal(true)}
                   style={{
-                    background: '#000',
-                    color: '#fff',
+                    background: '#0F4415',
+                    color: '#FEFCF8',
                     border: 'none',
                     padding: '12px 24px',
                     borderRadius: '24px',
@@ -472,8 +472,8 @@ export default function MyActivityPage() {
                   <div
                     key={post.id}
                     style={{
-                      background: '#fff',
-                      border: '1px solid #e0e0e0',
+                      background: '#FEFCF8',
+                      border: '1px solid #E5DFD8',
                       borderRadius: '16px',
                       padding: '20px',
                       marginBottom: '16px',
@@ -516,8 +516,8 @@ export default function MyActivityPage() {
     <span style={{
       fontSize: '12px',
       color: '#888',
-      background: '#fafafa',
-      border: '1px solid #e0e0e0',
+      background: '#F5F0E3',
+      border: '1px solid #E5DFD8',
       padding: '4px 10px',
       borderRadius: '12px',
     }}>
@@ -542,8 +542,8 @@ export default function MyActivityPage() {
                             display: 'inline-block',
                             fontSize: '12px',
                             color: '#888',
-                            background: '#fafafa',
-                            border: '1px solid #e0e0e0',
+                            background: '#F5F0E3',
+                            border: '1px solid #E5DFD8',
                             padding: '4px 10px',
                             borderRadius: '12px',
                             marginTop: '8px',
@@ -607,8 +607,8 @@ export default function MyActivityPage() {
                                 position: 'absolute',
                                 right: 0,
                                 top: '36px',
-                                background: '#fff',
-                                border: '1px solid #e0e0e0',
+                                background: '#FEFCF8',
+                                border: '1px solid #E5DFD8',
                                 borderRadius: '12px',
                                 boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
                                 overflow: 'hidden',
@@ -624,7 +624,7 @@ export default function MyActivityPage() {
                                     width: '100%',
                                     padding: '12px 16px',
                                     fontSize: '14px',
-                                    color: '#444',
+                                    color: 'var(--text-primary)',
                                     background: 'none',
                                     border: 'none',
                                     textAlign: 'left',
@@ -642,7 +642,7 @@ export default function MyActivityPage() {
                                     width: '100%',
                                     padding: '12px 16px',
                                     fontSize: '14px',
-                                    color: '#444',
+                                    color: 'var(--text-primary)',
                                     background: 'none',
                                     border: 'none',
                                     textAlign: 'left',
@@ -694,8 +694,8 @@ export default function MyActivityPage() {
                     <button
                       onClick={() => router.push('/')}
                       style={{
-                        background: '#000',
-                        color: '#fff',
+                        background: '#0F4415',
+                        color: '#FEFCF8',
                         border: 'none',
                         padding: '12px 24px',
                         borderRadius: '24px',
@@ -839,7 +839,7 @@ export default function MyActivityPage() {
         >
           <div
             style={{
-              background: '#fff',
+              background: '#FEFCF8',
               borderRadius: '16px',
               padding: '24px',
               maxWidth: '400px',
@@ -860,9 +860,9 @@ export default function MyActivityPage() {
                   padding: '10px 20px',
                   fontSize: '14px',
                   fontWeight: 500,
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid #E5DFD8',
                   borderRadius: '24px',
-                  background: '#fff',
+                  background: '#FEFCF8',
                   cursor: 'pointer',
                 }}
               >
@@ -877,8 +877,8 @@ export default function MyActivityPage() {
                   fontWeight: 600,
                   border: 'none',
                   borderRadius: '24px',
-                  background: '#000',
-                  color: '#fff',
+                  background: '#0F4415',
+                  color: '#FEFCF8',
                   cursor: actionLoading ? 'not-allowed' : 'pointer',
                   opacity: actionLoading ? 0.6 : 1,
                 }}
@@ -907,7 +907,7 @@ export default function MyActivityPage() {
         >
           <div
             style={{
-              background: '#fff',
+              background: '#FEFCF8',
               borderRadius: '16px',
               padding: '24px',
               maxWidth: '400px',
@@ -928,9 +928,9 @@ export default function MyActivityPage() {
                   padding: '10px 20px',
                   fontSize: '14px',
                   fontWeight: 500,
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid #E5DFD8',
                   borderRadius: '24px',
-                  background: '#fff',
+                  background: '#FEFCF8',
                   cursor: 'pointer',
                 }}
               >

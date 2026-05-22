@@ -339,7 +339,7 @@ const { error: updateError } = await supabase
           <div style={{
             width: '224px',
             flexShrink: 0,
-            borderRight: '1px solid #f0f0f0',
+            borderRight: 'var(--border-light)',
             background: 'rgba(250, 250, 250, 0.5)',
             overflow: 'hidden',
           }}>
@@ -387,7 +387,7 @@ const { error: updateError } = await supabase
     }}
     style={{
       padding: '12px 16px',
-      border: '1px solid #e0e0e0',
+      border: '1px solid #E5DFD8',
       borderRadius: '12px',
       fontSize: '14px',
       outline: 'none',
@@ -409,7 +409,7 @@ const { error: updateError } = await supabase
                       width: '80px',
                       height: '80px',
                       borderRadius: '50%',
-                      background: avatarPreview ? `url(${avatarPreview}) center/cover` : '#f0f0f0',
+                      background: avatarPreview ? `url(${avatarPreview}) center/cover` : 'var(--bg-badge)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -429,8 +429,9 @@ const { error: updateError } = await supabase
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       style={{
-                        background: '#fafafa',
-                        border: '1px solid #e0e0e0',
+                        background: 'var(--accent)',
+                        color: 'var(--text-inverse)',
+                        border: '1px solid #E5DFD8',
                         padding: '8px 16px',
                         borderRadius: '20px',
                         fontSize: '14px',
@@ -465,7 +466,7 @@ const { error: updateError } = await supabase
                   max={new Date().toISOString().split('T')[0]}
                   style={{
                     padding: '12px 16px',
-                    border: '1px solid #e0e0e0',
+                    border: '1px solid #E5DFD8',
                     borderRadius: '12px',
                     fontSize: '14px',
                     outline: 'none',
@@ -505,7 +506,7 @@ const { error: updateError } = await supabase
                     height: '28px',
                     borderRadius: '14px',
                     border: 'none',
-                    background: emailNotifications ? '#000' : '#e0e0e0',
+                    background: emailNotifications ? '#0F4415' : '#f7f5ee',
                     cursor: 'pointer',
                     position: 'relative',
                     transition: 'background 0.2s ease',
@@ -519,7 +520,7 @@ const { error: updateError } = await supabase
                     width: '24px',
                     height: '24px',
                     borderRadius: '50%',
-                    background: '#fff',
+                    background: '#FEFCF8',
                     transition: 'left 0.2s ease',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                   }} />
@@ -540,9 +541,9 @@ const { error: updateError } = await supabase
               disabled={saving}
               style={{
                 padding: '12px 24px',
-                background: '#000',
-                color: '#fff',
-                border: 'none',
+                background: 'var(--accent)',
+                color: 'var(--text-inverse)',
+                border: 'var(--border-light)',
                 borderRadius: '24px',
                 fontSize: '14px',
                 fontWeight: 600,
@@ -598,8 +599,8 @@ const { error: updateError } = await supabase
                       onClick={handlePasswordReset}
                       style={{
                         padding: '8px 16px',
-                        background: '#fafafa',
-                        border: '1px solid #e0e0e0',
+                        background: '#F5F0E3',
+                        border: '1px solid #E5DFD8',
                         borderRadius: '20px',
                         fontSize: '14px',
                         cursor: 'pointer',
@@ -624,7 +625,7 @@ const { error: updateError } = await supabase
               </div>
 
               {/* Delete Account */}
-              <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #e0e0e0' }}>
+              <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: 'var(--border)' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
                   Delete account
                 </label>
@@ -636,9 +637,9 @@ const { error: updateError } = await supabase
                     onClick={() => setShowDeleteConfirm(true)}
                     style={{
                       padding: '12px 24px',
-                      background: '#fff',
+                      background: '#FEFCF8',
                       color: '#444',
-                      border: '1px solid #e0e0e0',
+                      border: '1px solid #E5DFD8',
                       borderRadius: '24px',
                       fontSize: '14px',
                       fontWeight: 500,
@@ -650,8 +651,8 @@ const { error: updateError } = await supabase
                 ) : (
                   <div style={{
                     padding: '20px',
-                    background: '#fafafa',
-                    border: '1px solid #e0e0e0',
+                    background: '#F5F0E3',
+                    border: '1px solid #E5DFD8',
                     borderRadius: '12px',
                   }}>
                     <p style={{ fontSize: '14px', color: '#444', marginBottom: '16px', lineHeight: 1.5 }}>
@@ -667,7 +668,7 @@ const { error: updateError } = await supabase
                       placeholder="DELETE"
                       style={{
                         padding: '12px 16px',
-                        border: '1px solid #e0e0e0',
+                        border: '1px solid #E5DFD8',
                         borderRadius: '12px',
                         fontSize: '14px',
                         outline: 'none',
@@ -682,7 +683,7 @@ const { error: updateError } = await supabase
                         disabled={deleteConfirmText !== 'DELETE' || deleting}
                         style={{
                           padding: '10px 20px',
-                          background: deleteConfirmText === 'DELETE' ? '#000' : '#e0e0e0',
+                          background: deleteConfirmText === 'DELETE' ? '#000' : 'var(--border)',
                           color: '#fff',
                           border: 'none',
                           borderRadius: '20px',

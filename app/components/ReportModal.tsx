@@ -80,7 +80,7 @@ export default function ReportModal({
     >
       <div
         style={{
-          background: '#fff',
+          background: 'var(--bg-card)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '400px',
@@ -92,7 +92,7 @@ export default function ReportModal({
         <div
           style={{
             padding: '20px 24px',
-            borderBottom: '1px solid #f0f0f0',
+            borderBottom: '1px solid var(--border)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -107,7 +107,7 @@ export default function ReportModal({
               background: 'none',
               border: 'none',
               fontSize: '24px',
-              color: '#888',
+              color: 'var(--text-secondary)',
               cursor: 'pointer',
               lineHeight: 1,
               width: '32px',
@@ -124,7 +124,7 @@ export default function ReportModal({
 
         {/* Body */}
         <div style={{ padding: '24px' }}>
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
             Why are you reporting this? Your report is anonymous.
           </p>
 
@@ -137,11 +137,11 @@ export default function ReportModal({
                 style={{
                   padding: '12px 16px',
                   border: '1px solid',
-                  borderColor: selectedReason === r ? '#000' : '#e0e0e0',
+                  borderColor: selectedReason === r ? 'var(--text-primary)' : 'var(--border)',
                   borderRadius: '12px',
-                  background: selectedReason === r ? '#fafafa' : '#fff',
+                  background: selectedReason === r ? 'var(--bg-subtle)' : 'var(--bg-card)',
                   fontSize: '14px',
-                  color: '#444',
+                  color: 'var(--text-primary)',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'all 0.15s ease',
@@ -173,7 +173,7 @@ export default function ReportModal({
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid var(--border)',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -186,7 +186,7 @@ export default function ReportModal({
           )}
 
           {error && (
-            <p style={{ fontSize: '14px', color: '#dc2626', marginBottom: '16px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--danger)', marginBottom: '16px' }}>
               {error}
             </p>
           )}
@@ -197,9 +197,9 @@ export default function ReportModal({
               onClick={onClose}
               style={{
                 padding: '12px 24px',
-                border: '1px solid #e0e0e0',
+                border: '1px solid var(--border)',
                 borderRadius: '24px',
-                background: '#fff',
+                background: 'var(--bg-card)',
                 fontSize: '14px',
                 fontWeight: 500,
                 cursor: 'pointer',
@@ -214,8 +214,8 @@ export default function ReportModal({
                 padding: '12px 24px',
                 border: 'none',
                 borderRadius: '24px',
-                background: selectedReason ? '#000' : '#e0e0e0',
-                color: '#fff',
+                background: selectedReason ? 'var(--accent)' : 'var(--border)',
+                color: 'var(--text-inverse)',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: selectedReason && !submitting ? 'pointer' : 'not-allowed',

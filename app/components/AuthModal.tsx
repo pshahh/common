@@ -163,7 +163,7 @@ if (mode === 'forgot-password') {
     >
       <div
         style={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--bg-card)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '400px',
@@ -173,7 +173,7 @@ if (mode === 'forgot-password') {
       >
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -185,7 +185,7 @@ if (mode === 'forgot-password') {
               background: 'none',
               border: 'none',
               fontSize: '24px',
-              color: '#999',
+              color: 'var(--text-secondary)',
               cursor: 'pointer',
               width: '32px',
               height: '32px',
@@ -200,7 +200,7 @@ if (mode === 'forgot-password') {
         </div>
         <form onSubmit={handleForgotPassword}>
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <p style={{ fontSize: '14px', color: '#666', margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
               Enter your email and we'll send you a reset link.
             </p>
             <div>
@@ -214,7 +214,7 @@ if (mode === 'forgot-password') {
   style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid var(--border)',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -228,8 +228,8 @@ if (mode === 'forgot-password') {
               style={{
                 width: '100%',
                 marginTop: '8px',
-                background: '#000',
-                color: '#fff',
+                background: 'var(--accent)',
+                color: 'var(--text-inverse)',
                 border: 'none',
                 padding: '12px 24px',
                 borderRadius: '24px',
@@ -245,11 +245,11 @@ if (mode === 'forgot-password') {
         </form>
         <div style={{
           padding: '16px 24px',
-          borderTop: '1px solid #e0e0e0',
+          borderTop: '1px solid var(--border)',
           textAlign: 'center',
-          backgroundColor: '#fafafa',
+          backgroundColor: 'var(--bg-subtle)',
         }}>
-          <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
             <button
               type="button"
               onClick={() => { setMode('login'); setError(null); }}
@@ -259,7 +259,7 @@ if (mode === 'forgot-password') {
                 textDecoration: 'underline',
                 cursor: 'pointer',
                 fontSize: '14px',
-                color: '#666',
+                color: 'var(--text-secondary)',
               }}
             >
               Back to log in
@@ -289,7 +289,7 @@ if (mode === 'reset-sent') {
     >
       <div
         style={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--bg-subtle)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '400px',
@@ -303,7 +303,7 @@ if (mode === 'reset-sent') {
           width: '48px',
           height: '48px',
           borderRadius: '50%',
-          background: '#f0f0f0',
+          background: 'var(--bg-badge)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -315,20 +315,20 @@ if (mode === 'reset-sent') {
         <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
           Check your inbox
         </h2>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '8px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.5 }}>
           We've sent a reset link to:
         </p>
         <p style={{ fontSize: '14px', fontWeight: 500, marginBottom: '16px' }}>
           {email}
         </p>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>
           Tap the link in the email to reset your password, then come back and log in.
         </p>
         <button
           onClick={handleClose}
           style={{
-            background: '#000',
-            color: '#fff',
+            background: 'var(--accent)',
+            color: 'var(--text-inverse)',
             border: 'none',
             padding: '12px 24px',
             borderRadius: '24px',
@@ -362,7 +362,7 @@ if (mode === 'reset-sent') {
       >
         <div 
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'var(--bg-subtle)',
             borderRadius: '16px',
             width: '100%',
             maxWidth: '400px',
@@ -377,7 +377,7 @@ if (mode === 'reset-sent') {
             width: '48px',
             height: '48px',
             borderRadius: '50%',
-            background: '#f0f0f0',
+            background: 'var(--bg-badge)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -391,7 +391,7 @@ if (mode === 'reset-sent') {
             Check your inbox
           </h2>
           
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '8px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.5 }}>
             We've sent a confirmation link to:
           </p>
           
@@ -399,15 +399,15 @@ if (mode === 'reset-sent') {
             {email}
           </p>
           
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>
             Click the link in the email to activate your account, then come back here to log in.
           </p>
           
           <button
             onClick={handleClose}
             style={{
-              background: '#000',
-              color: '#fff',
+              background: 'var(--accent)',
+              color: 'var(--text-inverse)',
               border: 'none',
               padding: '12px 24px',
               borderRadius: '24px',
@@ -439,7 +439,7 @@ if (mode === 'reset-sent') {
     >
       <div 
         style={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--bg-subtle)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '400px',
@@ -450,7 +450,7 @@ if (mode === 'reset-sent') {
         {/* Header */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -465,7 +465,7 @@ if (mode === 'reset-sent') {
               border: 'none',
               fontSize: '24px',
               cursor: 'pointer',
-              color: '#888',
+              color: 'var(--text-secondary)',
               lineHeight: 1,
               width: '32px',
               height: '32px',
@@ -494,7 +494,7 @@ if (mode === 'reset-sent') {
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid var(--border)',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -516,7 +516,7 @@ if (mode === 'reset-sent') {
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid var(--border)',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -538,7 +538,7 @@ if (mode === 'reset-sent') {
                   style={{
                     width: '100%',
                     padding: '12px 16px',
-                    border: '1px solid #e0e0e0',
+                    border: '1px solid var(--border)',
                     borderRadius: '12px',
                     fontSize: '14px',
                     outline: 'none',
@@ -556,7 +556,7 @@ if (mode === 'reset-sent') {
       background: 'none',
       border: 'none',
       fontSize: '13px',
-      color: '#666',
+      color: 'var(--text-secondary)',
       cursor: 'pointer',
       textDecoration: 'underline',
       padding: 0,
@@ -568,7 +568,7 @@ if (mode === 'reset-sent') {
 )}
             
             {error && (
-              <p style={{ color: '#DC2626', fontSize: '14px', margin: 0 }}>{error}</p>
+              <p style={{ color: 'var(--danger)', fontSize: '14px', margin: 0 }}>{error}</p>
             )}
             
             <button
@@ -577,8 +577,8 @@ if (mode === 'reset-sent') {
               style={{
                 width: '100%',
                 marginTop: '8px',
-                background: '#000',
-                color: '#fff',
+                background: 'var(--accent)',
+                color: 'var(--text-inverse)',
                 border: 'none',
                 padding: '12px 24px',
                 borderRadius: '24px',
@@ -596,11 +596,11 @@ if (mode === 'reset-sent') {
         {/* Footer */}
         <div style={{
           padding: '16px 24px',
-          borderTop: '1px solid #e0e0e0',
+          borderTop: '1px solid var(--border)',
           textAlign: 'center',
-          backgroundColor: '#fafafa',
+          backgroundColor: 'var(--bg-subtle)',
         }}>
-          <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
             {mode === 'login' ? "New here? " : "Already on common? "}
             <button
               type="button"
@@ -614,7 +614,7 @@ if (mode === 'reset-sent') {
                 textDecoration: 'underline',
                 cursor: 'pointer',
                 fontSize: '14px',
-                color: '#666',
+                color: 'var(--text-secondary)',
               }}
             >
               {mode === 'login' ? 'Sign up' : 'Log in'}

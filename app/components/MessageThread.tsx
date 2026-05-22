@@ -86,6 +86,7 @@ export default function MessageThread({
   const isThreadClosed = (): boolean => {
     if (!thread) return false;
     if (thread.closed_at) return true;
+    if (thread.post?.status === 'closed') return true;
     if (thread.post?.expires_at) {
       const expiresAt = new Date(thread.post.expires_at);
       const closeTime = new Date(expiresAt.getTime() + 24 * 60 * 60 * 1000);
@@ -440,8 +441,8 @@ export default function MessageThread({
               left: '50%',
               transform: 'translateX(-50%)',
               marginBottom: '4px',
-              background: '#333',
-              color: '#fff',
+              background: 'var(--tooltip-bg)',
+              color: 'var(--text-inverse)',
               padding: '4px 8px',
               borderRadius: '6px',
               fontSize: '11px',
@@ -460,13 +461,13 @@ export default function MessageThread({
         width: '28px',
         height: '28px',
         borderRadius: '50%',
-        background: '#f0f0f0',
+        background: 'var(--bg-badge)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
         fontSize: '11px',
-        color: '#888',
+        color: 'var(--text-secondary)',
         fontWeight: 500,
       }}>
         {getInitials(senderName)}
@@ -494,7 +495,7 @@ export default function MessageThread({
               objectFit: 'cover', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
             }}
           />
-          <div style={{ color: '#fff', marginTop: '12px', fontSize: '14px', fontWeight: 500 }}>
+          <div style={{ color: 'var(--text-inverse)', marginTop: '12px', fontSize: '14px', fontWeight: 500 }}>
             {expandedPhoto.name}{expandedPhoto.age ? `, ${expandedPhoto.age}` : ''}
           </div>
         </div>
@@ -513,13 +514,13 @@ export default function MessageThread({
         }}
       >
         <div onClick={(e) => e.stopPropagation()} style={{
-          background: '#fff', borderRadius: '16px', padding: '24px',
+          background: 'var(--bg-card)', borderRadius: '16px', padding: '24px',
           maxWidth: '340px', width: '100%', margin: '0 16px',
         }}>
-          <div style={{ fontSize: '16px', fontWeight: 600, color: '#000', marginBottom: '12px' }}>
+          <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
             Leave this chat?
           </div>
-          <div style={{ fontSize: '14px', color: '#444', marginBottom: '20px', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-primary)', marginBottom: '20px', lineHeight: 1.5 }}>
             {thread?.thread_type === 'group'
               ? 'You\u2019ll leave this group chat. You can rejoin from the post.'
               : 'This closes the chat for both of you'}
@@ -530,8 +531,8 @@ export default function MessageThread({
               disabled={actionLoading}
               style={{
                 padding: '10px 20px', borderRadius: '20px', fontSize: '14px',
-                fontWeight: 500, border: '1px solid #e0e0e0', background: '#fff',
-                cursor: actionLoading ? 'not-allowed' : 'pointer', color: '#444',
+                fontWeight: 500, border: '1px solid var(--border)', background: 'var(--bg-card)',
+                cursor: actionLoading ? 'not-allowed' : 'pointer', color: 'var(--text-primary)',
               }}
             >
               Cancel
@@ -541,9 +542,9 @@ export default function MessageThread({
               disabled={actionLoading}
               style={{
                 padding: '10px 20px', borderRadius: '20px', fontSize: '14px',
-                fontWeight: 500, border: 'none', background: '#000',
+                fontWeight: 500, border: 'none', background: 'var(--accent)',
                 cursor: actionLoading ? 'not-allowed' : 'pointer',
-                color: '#fff', opacity: actionLoading ? 0.6 : 1,
+                color: 'var(--text-inverse)', opacity: actionLoading ? 0.6 : 1,
               }}
             >
               {actionLoading ? 'Leaving...' : 'Leave'}
@@ -565,13 +566,13 @@ export default function MessageThread({
         }}
       >
         <div onClick={(e) => e.stopPropagation()} style={{
-          background: '#fff', borderRadius: '16px', padding: '24px',
+          background: 'var(--bg-card)', borderRadius: '16px', padding: '24px',
           maxWidth: '340px', width: '100%', margin: '0 16px',
         }}>
-          <div style={{ fontSize: '16px', fontWeight: 600, color: '#000', marginBottom: '12px' }}>
+          <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
             Block this person?
           </div>
-          <div style={{ fontSize: '14px', color: '#444', marginBottom: '20px', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-primary)', marginBottom: '20px', lineHeight: 1.5 }}>
             You won&apos;t see their posts and will be removed from any shared conversations. They won&apos;t be notified that you&apos;ve blocked them.
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -580,8 +581,8 @@ export default function MessageThread({
               disabled={actionLoading}
               style={{
                 padding: '10px 20px', borderRadius: '20px', fontSize: '14px',
-                fontWeight: 500, border: '1px solid #e0e0e0', background: '#fff',
-                cursor: actionLoading ? 'not-allowed' : 'pointer', color: '#444',
+                fontWeight: 500, border: '1px solid var(--border)', background: 'var(--bg-card)',
+                cursor: actionLoading ? 'not-allowed' : 'pointer', color: 'var(--text-primary)',
               }}
             >
               Cancel
@@ -591,9 +592,9 @@ export default function MessageThread({
               disabled={actionLoading}
               style={{
                 padding: '10px 20px', borderRadius: '20px', fontSize: '14px',
-                fontWeight: 500, border: 'none', background: '#000',
+                fontWeight: 500, border: 'none', background: 'var(--accent)',
                 cursor: actionLoading ? 'not-allowed' : 'pointer',
-                color: '#fff', opacity: actionLoading ? 0.6 : 1,
+                color: 'var(--text-inverse)', opacity: actionLoading ? 0.6 : 1,
               }}
             >
               {actionLoading ? 'Blocking...' : 'Block'}
@@ -609,15 +610,15 @@ export default function MessageThread({
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <div style={{
           padding: '16px',
-          borderBottom: '1px solid #f0f0f0',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
           <span style={{ fontSize: '16px', fontWeight: 600 }}>Loading...</span>
           <button onClick={onClose} style={{
-            background: '#fff', border: '1px solid #e0e0e0', fontSize: '18px',
-            color: '#444', cursor: 'pointer', width: '36px', height: '36px',
+            background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '18px',
+            color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px',
             borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>×</button>
         </div>
@@ -630,15 +631,15 @@ export default function MessageThread({
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <div style={{
           padding: '16px',
-          borderBottom: '1px solid #f0f0f0',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
           <span style={{ fontSize: '16px', fontWeight: 600 }}>Conversation unavailable</span>
           <button onClick={onClose} style={{
-            background: '#fff', border: '1px solid #e0e0e0', fontSize: '18px',
-            color: '#444', cursor: 'pointer', width: '36px', height: '36px',
+            background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '18px',
+            color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px',
             borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>×</button>
         </div>
@@ -673,14 +674,14 @@ export default function MessageThread({
       {/* Header */}
       <div style={{
         padding: '16px',
-        borderBottom: '1px solid #f0f0f0',
+        borderBottom: '1px solid var(--border)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '16px', fontWeight: 600, color: '#000' }}>{post.title}</span>
+          <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>{post.title}</span>
           {post.status === 'closed' && <ClosedBadge size="small" />}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -688,33 +689,33 @@ export default function MessageThread({
             <button
               onClick={() => setShowMenu(!showMenu)}
               style={{
-                background: 'none', border: 'none', fontSize: '18px', color: '#888',
+                background: 'none', border: 'none', fontSize: '18px', color: 'var(--accent)',
                 cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >⋯</button>
             {showMenu && (
               <div style={{
-                position: 'absolute', right: 0, top: '36px', background: '#fff',
-                border: '1px solid #e0e0e0', borderRadius: '12px',
+                position: 'absolute', right: 0, top: '36px', background: 'var(--bg-card)',
+                border: '1px solid var(--border)', borderRadius: '12px',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '176px',
                 zIndex: 20, overflow: 'hidden',
               }}>
                 <div 
                   onClick={() => { setShowMenu(false); if (post) onReport?.(post.id, threadId); }} 
-                  style={{ padding: '12px 16px', fontSize: '14px', color: '#444', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}
+                  style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
                 >
                   Report post
                 </div>
-                <div 
-                  onClick={() => { setShowMenu(false); setShowLeaveModal(true); }} 
-                  style={{ padding: '12px 16px', fontSize: '14px', color: '#444', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}
+                <div
+                  onClick={() => { setShowMenu(false); setShowLeaveModal(true); }}
+                  style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
                 >
                   Leave this chat?
                 </div>
-                <div 
-                  onClick={() => { setShowMenu(false); setShowBlockModal(true); }} 
-                  style={{ padding: '12px 16px', fontSize: '14px', color: '#dc2626', cursor: 'pointer' }}
+                <div
+                  onClick={() => { setShowMenu(false); setShowBlockModal(true); }}
+                  style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--danger)', cursor: 'pointer' }}
                 >
                   Block this person
                 </div>
@@ -722,8 +723,8 @@ export default function MessageThread({
             )}
           </div>
           <button onClick={onClose} style={{
-            background: '#fff', border: '1px solid #e0e0e0', fontSize: '18px',
-            color: '#444', cursor: 'pointer', width: '36px', height: '36px',
+            background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '18px',
+            color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px',
             borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
           }}>×</button>
@@ -742,14 +743,14 @@ export default function MessageThread({
         <div style={{
           margin: '16px',
           padding: '12px',
-          background: 'rgba(250,250,250,0.8)',
-          border: '1px solid #e0e0e0',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
           borderRadius: '12px',
           flexShrink: 0,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '14px', fontWeight: 500, color: '#000' }}>{post.title}</span>
+              <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{post.title}</span>
               {post.status === 'closed' && <ClosedBadge size="small" />}
             </div>
             <button 
@@ -758,7 +759,7 @@ export default function MessageThread({
                 background: 'none', 
                 border: 'none', 
                 fontSize: '12px', 
-                color: copied ? '#4a9d6b' : '#888', 
+                color: copied ? '#4a9d6b' : 'var(--accent)',
                 cursor: 'pointer', 
                 padding: 0 
               }}
@@ -766,9 +767,9 @@ export default function MessageThread({
               {copied ? '✓ Copied!' : 'Share ↗'}
             </button>
           </div>
-          <div style={{ fontSize: '12px', color: '#444', marginTop: '4px' }}>
-            <a href={getMapUrl()} target="_blank" rel="noopener noreferrer" style={{ color: '#444', textDecoration: 'underline' }}>{post.location}</a>
-            <span style={{ margin: '0 8px', color: '#888' }}>·</span>
+          <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginTop: '4px' }}>
+            <a href={getMapUrl()} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', textDecoration: 'underline' }}>{post.location}</a>
+            <span style={{ margin: '0 8px', color: 'var(--text-secondary)' }}>·</span>
             <span>{post.time}</span>
           </div>
           {post.notes && (
@@ -776,7 +777,7 @@ export default function MessageThread({
               <div
                 style={{
                   fontSize: '12px',
-                  color: '#444',
+                  color: 'var(--text-primary)',
                   whiteSpace: 'pre-line',
                   ...(!threadNotesExpanded ? {
                     display: '-webkit-box',
@@ -798,7 +799,7 @@ export default function MessageThread({
                     background: 'none',
                     border: 'none',
                     fontSize: '11px',
-                    color: '#888',
+                    color: 'var(--text-secondary)',
                     cursor: 'pointer',
                     padding: '2px 0',
                     fontStyle: 'italic',
@@ -811,13 +812,13 @@ export default function MessageThread({
           )}
           {post.preference && post.preference !== 'anyone' && (
             <span style={{
-              display: 'inline-block', fontSize: '12px', color: '#888',
-              background: '#fafafa', border: '1px solid #e0e0e0',
+              display: 'inline-block', fontSize: '12px', color: 'var(--text-secondary)',
+              background: 'var(--bg-badge)', border: 'none',
               padding: '2px 8px', borderRadius: '12px', marginTop: '8px',
             }}>{post.preference}</span>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#888' }}>{post.name}</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{post.name}</span>
           </div>
         </div>
 
@@ -826,7 +827,7 @@ export default function MessageThread({
           {messages.length === 0 ? (
             <div style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '14px', color: '#888', textAlign: 'center', minHeight: '100px',
+              fontSize: '14px', color: 'var(--text-secondary)', textAlign: 'center', minHeight: '100px',
             }}>
               {threadClosed ? 'This chat is closed' : 'Start the conversation when you\'re ready.'}
             </div>
@@ -839,7 +840,7 @@ export default function MessageThread({
                     <div key={msg.id} style={{
                       textAlign: 'center',
                       fontSize: '12px',
-                      color: '#888',
+                      color: 'var(--text-secondary)',
                       padding: '8px 0',
                       fontStyle: 'italic',
                     }}>
@@ -862,11 +863,11 @@ export default function MessageThread({
                       marginBottom: isLastFromSender ? '12px' : '4px',
                     }}>
                       <div style={{
-                        background: '#000', color: '#fff', padding: '10px 14px',
+                        background: 'var(--accent)', color: 'var(--text-inverse)', padding: '10px 14px',
                         fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 6px 18px',
                         wordWrap: 'break-word',
                         whiteSpace: 'pre-line',
-                      }}>{renderTextWithLinks(msg.content, '#fff')}</div>
+                      }}>{renderTextWithLinks(msg.content, 'var(--text-inverse)')}</div>
                     </div>
                   );
                 } else {
@@ -898,16 +899,17 @@ export default function MessageThread({
                         {isGroupThread && isFirstFromSender && (
                           <div style={{
                             fontSize: '11px',
-                            color: '#888',
+                            color: 'var(--text-secondary)',
                             marginBottom: '2px',
                             paddingLeft: '2px',
                           }}>
                             {msg.sender_name}
                           </div>
                         )}
-                        <div style={{
-                          background: '#fafafa', color: '#000', padding: '10px 14px',
+                       <div style={{
+                          background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '10px 14px',
                           fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
+                          border: '1px solid var(--border)',
                           wordWrap: 'break-word',
                           whiteSpace: 'pre-line',
                         }}>{renderTextWithLinks(msg.content)}</div>
@@ -925,14 +927,14 @@ export default function MessageThread({
       {/* Input area */}
       <div style={{
         padding: '16px',
-        borderTop: '1px solid #f0f0f0',
+        borderTop: '1px solid var(--border)',
         flexShrink: 0,
-        background: threadClosed ? '#fafafa' : '#fff',
+        background: 'var(--bg-badge)',
       }}>
         {threadClosed ? (
           <div style={{ 
-            fontSize: '13px', 
-            color: '#888', 
+            fontSize: '13px',
+            color: 'var(--text-secondary)',
             textAlign: 'center',
             padding: '8px 0',
           }}>
@@ -940,9 +942,11 @@ export default function MessageThread({
           </div>
         ) : (
           <>
-            <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px', lineHeight: 1.4 }}>
-              Conversations close 24 hours after the activity ends. You can still read past messages.
-            </div>
+            {post.expires_at && new Date(post.expires_at).getFullYear() < 2099 && (
+  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.4 }}>
+    Conversations close 24 hours after the activity ends. You can still read past messages.
+  </div>
+)}
             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
   <textarea
     placeholder={thread?.thread_type === 'group' ? 'Type something...' : 'Type something...'}
@@ -963,7 +967,7 @@ export default function MessageThread({
     rows={1}
     style={{
       flex: 1, 
-      border: '1px solid #e0e0e0', 
+      border: '1px solid var(--border)',
       borderRadius: '12px',
       padding: '10px 16px', 
       fontSize: '14px', 
@@ -980,7 +984,7 @@ export default function MessageThread({
     disabled={!newMessage.trim() || sending}
     style={{
       background: 'none', border: 'none', fontSize: '18px',
-      color: newMessage.trim() && !sending ? '#000' : '#888',
+      color: newMessage.trim() && !sending ? 'var(--accent)' : 'var(--accent)',
       cursor: newMessage.trim() && !sending ? 'pointer' : 'not-allowed',
       padding: '0 8px',
       marginBottom: '4px',

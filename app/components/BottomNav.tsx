@@ -50,8 +50,8 @@ export default function BottomNav({
         left: 0,
         right: 0,
         height: '64px',
-        background: '#FFFFFF',
-        borderTop: '1px solid #E0E0E0',
+        background: 'var(--bg-subtle)',
+        borderTop: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
@@ -76,7 +76,7 @@ export default function BottomNav({
           <span style={{
             fontSize: '14px',
             fontWeight: activeTab === 'home' ? 600 : 400,
-            color: activeTab === 'home' ? '#000000' : '#888888',
+            color: activeTab === 'home' ? 'var(--text-primary)' : 'var(--text-secondary)',
           }}>
             Home
           </span>
@@ -100,7 +100,7 @@ export default function BottomNav({
           <span style={{
             fontSize: '14px',
             fontWeight: activeTab === 'messages' ? 600 : 400,
-            color: activeTab === 'messages' ? '#000000' : '#888888',
+            color: activeTab === 'messages' ? 'var(--text-primary)' : 'var(--text-secondary)',
           }}>
             Chats
           </span>
@@ -124,7 +124,7 @@ export default function BottomNav({
           <span style={{
             fontSize: '14px',
             fontWeight: activeTab === 'activity' ? 600 : 400,
-            color: activeTab === 'activity' ? '#000000' : '#888888',
+            color: activeTab === 'activity' ? 'var(--text-primary)' : 'var(--text-secondary)',
           }}>
             Activity
           </span>
@@ -148,7 +148,7 @@ export default function BottomNav({
           <span style={{
             fontSize: '14px',
             fontWeight: activeTab === 'menu' ? 600 : 400,
-            color: activeTab === 'menu' ? '#000000' : '#888888',
+            color: activeTab === 'menu' ? 'var(--text-primary)' : 'var(--text-secondary)',
           }}>
             More
           </span>
@@ -172,7 +172,7 @@ export default function BottomNav({
           <div 
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: '#FFFFFF',
+              background: 'var(--bg-subtle)',
               borderRadius: '16px 16px 0 0',
               width: '100%',
               maxWidth: '500px',
@@ -188,7 +188,7 @@ export default function BottomNav({
               <div style={{
                 width: '40px',
                 height: '4px',
-                background: '#E0E0E0',
+                background: 'var(--border)',
                 borderRadius: '2px',
               }} />
             </div>
@@ -211,7 +211,7 @@ export default function BottomNav({
                   cursor: 'pointer',
                   fontSize: '16px',
                   fontWeight: 500,
-                  color: '#000000',
+                  color: 'var(--text-primary)',
                   textAlign: 'left',
                 }}
               >
@@ -237,7 +237,7 @@ export default function BottomNav({
                       cursor: 'pointer',
                       fontSize: '16px',
                       fontWeight: 500,
-                      color: '#000000',
+                      color: 'var(--text-primary)',
                       textAlign: 'left',
                     }}
                   >
@@ -274,14 +274,14 @@ export default function BottomNav({
                   cursor: 'pointer',
                   fontSize: '16px',
                   fontWeight: 500,
-                  color: '#000000',
+                  color: 'var(--text-primary)',
                   textAlign: 'left',
                 }}
               >
               Guidelines & examples
               </button>
 
-              <div style={{ height: '1px', background: '#F0F0F0', margin: '8px 0' }} />
+              <div style={{ height: '1px', background: 'var(--border)', margin: '8px 0' }} />
 
               <button
                 onClick={() => {

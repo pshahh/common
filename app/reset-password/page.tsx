@@ -18,7 +18,7 @@ export default function ResetPasswordPage() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '16px',
-      background: '#fff',
+      background: '#FEFCF8',
     }}>
       <div style={{
         width: '100%',
@@ -29,14 +29,14 @@ export default function ResetPasswordPage() {
         </h1>
         {success ? (
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>
               Your password has been updated. You can now log in with your new password.
             </p>
             <button
               onClick={() => router.push('/')}
               style={{
-                background: '#000',
-                color: '#fff',
+                background: '#0F4415',
+                color: '#FEFCF8',
                 border: 'none',
                 padding: '12px 24px',
                 borderRadius: '24px',
@@ -66,7 +66,7 @@ export default function ResetPasswordPage() {
               setLoading(false);
             }
           }}>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: 1.5, textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5, textAlign: 'center' }}>
               Enter your new password below.
             </p>
             <div style={{ marginBottom: '16px' }}>
@@ -82,7 +82,7 @@ export default function ResetPasswordPage() {
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #e0e0e0',
+                  border: 'var(--border)',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -98,8 +98,8 @@ export default function ResetPasswordPage() {
               disabled={loading}
               style={{
                 width: '100%',
-                background: '#000',
-                color: '#fff',
+                background: '#0F4415',
+                color: '#FEFCF8',
                 border: 'none',
                 padding: '12px 24px',
                 borderRadius: '24px',

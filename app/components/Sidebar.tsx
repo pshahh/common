@@ -316,12 +316,12 @@ export default function Sidebar({
       onClick={onClick}
       style={{
         fontSize: '14px',
-        color: isActive ? '#000' : '#444',
+        color: isActive ? 'var(--text-primary)' : 'var(--text-primary)',
         fontWeight: isActive ? 500 : 400,
         padding: '10px 12px',
         borderRadius: '12px',
         cursor: 'pointer',
-        background: isActive ? '#fff' : 'transparent',
+        background: isActive ? 'var(--bg-card)' : 'transparent',
         boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
         transition: 'background 0.15s ease',
         display: 'flex',
@@ -359,7 +359,7 @@ export default function Sidebar({
           <div style={{
             fontSize: '11px',
             fontWeight: 500,
-            color: '#888',
+            color: 'var(--text-secondary)',
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
             padding: '0 12px',
@@ -368,11 +368,11 @@ export default function Sidebar({
             Chats
           </div>
           {loading ? (
-            <div style={{ fontSize: '13px', color: '#888', padding: '8px 12px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', padding: '8px 12px' }}>
               Loading...
             </div>
           ) : threads.length === 0 ? (
-            <div style={{ fontSize: '13px', color: '#888', padding: '8px 12px', lineHeight: 1.5 }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', padding: '8px 12px', lineHeight: 1.5 }}>
               Chats appear here when it&apos;s time to coordinate.
             </div>
           ) : (
@@ -406,7 +406,7 @@ export default function Sidebar({
                         padding: '10px 12px',
                         borderRadius: '12px',
                         cursor: 'pointer',
-                        background: isSelected ? '#fff' : 'transparent',
+                        background: isSelected ? 'var(--bg-card)' : 'transparent',
                         boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                         transition: 'background 0.15s ease',
                         opacity: closed ? 0.5 : 1,
@@ -419,8 +419,8 @@ export default function Sidebar({
                         <div style={{
                           fontSize: '14px',
                           color: closed
-                            ? '#888'
-                            : isSelected ? '#000' : '#444',
+                            ? 'var(--text-secondary)'
+                            : isSelected ? 'var(--text-primary)' : 'var(--text-primary)',
                           fontWeight: unread ? 600 : (isSelected ? 500 : 400),
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -432,7 +432,7 @@ export default function Sidebar({
                         {thread.thread_type !== 'group' && (
                           <div style={{
                             fontSize: '12px',
-                            color: '#888',
+                            color: 'var(--text-secondary)',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -449,7 +449,7 @@ export default function Sidebar({
                           width: '6px',
                           height: '6px',
                           borderRadius: '50%',
-                          background: '#1A1A1A',
+                          background: 'var(--accent)',
                           flexShrink: 0,
                         }} />
                       )}
@@ -474,7 +474,7 @@ export default function Sidebar({
             <div style={{
               fontSize: '11px',
               fontWeight: 500,
-              color: '#888',
+              color: 'var(--text-secondary)',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               padding: '0 12px',
@@ -522,7 +522,7 @@ export default function Sidebar({
             background: 'none',
             border: 'none',
             fontSize: '14px',
-            color: '#888',
+            color: 'var(--text-primary)',
             cursor: 'pointer',
             padding: '10px 12px',
             width: '100%',
@@ -530,8 +530,6 @@ export default function Sidebar({
             borderRadius: '12px',
             transition: 'color 0.15s ease',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#444'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#888'}
         >
           Log out
         </button>

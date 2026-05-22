@@ -66,8 +66,8 @@ export default function InstallPrompt() {
       bottom: '72px',
       left: '12px',
       right: '12px',
-      background: '#000',
-      color: '#fff',
+      background: 'var(--accent)',
+      color: 'var(--text-inverse)',
       borderRadius: '16px',
       padding: '16px 20px',
       zIndex: 49,
@@ -98,7 +98,7 @@ export default function InstallPrompt() {
           {isIOS ? (
             <p style={{
               fontSize: '13px',
-              color: '#999',
+              color: 'var(--text-inverse)',
               margin: 0,
               lineHeight: 1.4,
             }}>
@@ -107,7 +107,7 @@ export default function InstallPrompt() {
           ) : (
             <p style={{
               fontSize: '13px',
-              color: '#999',
+              color: 'var(--text-inverse)',
               margin: 0,
               lineHeight: 1.4,
             }}>
@@ -124,7 +124,7 @@ export default function InstallPrompt() {
           style={{
             background: 'none',
             border: 'none',
-            color: '#666',
+            color: 'rgba(254, 252, 248, 0.5)',
             fontSize: '18px',
             cursor: 'pointer',
             padding: '0',
@@ -143,8 +143,8 @@ export default function InstallPrompt() {
             marginTop: '12px',
             width: '100%',
             padding: '10px',
-            background: '#fff',
-            color: '#000',
+            background: 'var(--bg-card)',
+            color: 'var(--text-accent)',
             border: 'none',
             borderRadius: '12px',
             fontSize: '14px',

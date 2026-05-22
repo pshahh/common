@@ -179,7 +179,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
       >
         <div 
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: '#FEFCF8',
             borderRadius: '16px',
             width: '100%',
             maxWidth: '400px',
@@ -192,12 +192,12 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
             width: '48px',
             height: '48px',
             borderRadius: '50%',
-            background: '#edf7f0',
+            background: 'var(--bg-badge)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 16px',
-            color: '#4a9d6b',
+            color: 'var(--accent)',
             fontSize: '20px',
           }}>
             ✓
@@ -205,14 +205,14 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
           <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
             Changes saved
           </h2>
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>
+          <p style={{ fontSize: '14px', color: '#888', marginBottom: '24px' }}>
             Your post has been updated.
           </p>
           <button
             onClick={onSuccess}
             style={{
-              background: '#000',
-              color: '#fff',
+              background: 'var(--accent)',
+              color: 'var(--text-inverse)',
               border: 'none',
               padding: '12px 24px',
               borderRadius: '24px',
@@ -245,7 +245,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
     >
       <div 
         style={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor: '#FEFCF8',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '500px',
@@ -257,13 +257,13 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
         {/* Header */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: '1px solid #E5DFD8',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           position: 'sticky',
           top: 0,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: '#FEFCF8',
           borderRadius: '16px 16px 0 0',
           zIndex: 10
         }}>
@@ -297,7 +297,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
             {/* What */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-                What are you up to?
+              What's the plan?
               </label>
               <input
                 type="text"
@@ -307,7 +307,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid #E5DFD8',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -322,7 +322,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                 Where?
               </label>
               <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
-                This helps people find it
+              Start typing and pick from the suggestions
               </p>
               <input
                 type="text"
@@ -332,7 +332,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: `1px solid ${locationError ? '#dc2626' : '#e0e0e0'}`,
+                  border: `1px solid ${locationError ? '#dc2626' : '#E5DFD8'}`,
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -345,8 +345,8 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                   top: '100%',
                   left: 0,
                   right: 0,
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid #e0e0e0',
+                  backgroundColor: '#FEFCF8',
+                  border: '1px solid #E5DFD8',
                   borderRadius: '12px',
                   marginTop: '4px',
                   zIndex: 10,
@@ -362,12 +362,12 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                       style={{
                         padding: '12px 16px',
                         cursor: 'pointer',
-                        borderBottom: index < locationSuggestions.length - 1 ? '1px solid #f0f0f0' : 'none',
+                        borderBottom: index < locationSuggestions.length - 1 ? '1px solid #EDEAE4' : 'none',
                         fontSize: '14px',
-                        color: '#666',
+                        color: '#000',
                       }}
-                      onMouseEnter={e => (e.target as HTMLDivElement).style.backgroundColor = '#fafafa'}
-                      onMouseLeave={e => (e.target as HTMLDivElement).style.backgroundColor = '#FFFFFF'}
+                      onMouseEnter={e => (e.target as HTMLDivElement).style.backgroundColor = '#F5F0E3'}
+                      onMouseLeave={e => (e.target as HTMLDivElement).style.backgroundColor = '#FEFCF8'}
                     >
                       {suggestion.display_name}
                     </div>
@@ -380,7 +380,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                 </p>
               )}
               {latitude && longitude && (
-                <p style={{ fontSize: '12px', color: '#4a9d6b', marginTop: '4px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--accent)', marginTop: '4px' }}>
                   ✓ Location selected
                 </p>
               )}
@@ -394,7 +394,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
             {/* How often */}
 <div>
   <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
-    How often?
+  Is this a regular thing?
   </label>
   <div style={{ display: 'flex', gap: '8px' }}>
     <button
@@ -403,14 +403,14 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
       style={{
         padding: '8px 16px',
         borderRadius: '20px',
-        border: 'none',
+        border: frequency === 'one-off' ? '1px solid var(--accent)' : '1px solid var(--border)',
         fontSize: '14px',
         cursor: 'pointer',
-        backgroundColor: frequency === 'one-off' ? '#000' : '#f5f5f5',
-        color: frequency === 'one-off' ? '#FFF' : '#666',
+        backgroundColor: frequency === 'one-off' ? 'var(--accent)' : 'var(--bg-badge)',
+color: frequency === 'one-off' ? 'var(--text-inverse)' : 'var(--text-primary)',
       }}
     >
-      One-off
+      Just this once
     </button>
     <button
       type="button"
@@ -418,14 +418,14 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
       style={{
         padding: '8px 16px',
         borderRadius: '20px',
-        border: 'none',
+        border: frequency === 'repeats' ? '1px solid var(--accent)' : '1px solid var(--border)',
         fontSize: '14px',
         cursor: 'pointer',
-        backgroundColor: frequency === 'repeats' ? '#000' : '#f5f5f5',
-        color: frequency === 'repeats' ? '#FFF' : '#666',
+        backgroundColor: frequency === 'repeats' ? 'var(--accent)' : 'var(--bg-badge)',
+color: frequency === 'repeats' ? 'var(--text-inverse)' : 'var(--text-primary)',
       }}
     >
-      Repeating activity
+      It repeats
     </button>
   </div>
   {frequency === 'repeats' && (
@@ -438,11 +438,11 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
           style={{
             padding: '8px 16px',
             borderRadius: '20px',
-            border: recurrenceRule === value ? 'none' : '1px solid #e0e0e0',
+            border: recurrenceRule === value ? '1px solid var(--accent)' : '1px solid var(--border)',
             fontSize: '13px',
             cursor: 'pointer',
-            backgroundColor: recurrenceRule === value ? '#000' : '#fff',
-            color: recurrenceRule === value ? '#FFF' : '#666',
+            backgroundColor: recurrenceRule === value ? 'var(--accent)' : 'var(--bg-badge)',
+color: recurrenceRule === value ? 'var(--text-inverse)' : 'var(--text-primary)',
           }}
         >
           {label}
@@ -466,7 +466,7 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid #E5DFD8',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -478,10 +478,10 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
             {/* Who can respond */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
-                Who can respond?
+              Who's this for?
               </label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {['anyone', 'men preferred', 'women preferred'].map(option => (
+              {['Anyone', 'Men preferred', 'Women preferred'].map(option => (
                   <button
                     key={option}
                     type="button"
@@ -489,11 +489,11 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                     style={{
                       padding: '8px 16px',
                       borderRadius: '20px',
-                      border: 'none',
+                      border: preference === option ? '1px solid var(--accent)' : '1px solid var(--border)',
                       fontSize: '14px',
                       cursor: 'pointer',
-                      backgroundColor: preference === option ? '#000' : '#fafafa',
-                      color: preference === option ? '#fff' : '#666',
+                      backgroundColor: preference === option ? 'var(--accent)' : 'var(--bg-badge)',
+color: preference === option ? 'var(--text-inverse)' : 'var(--text-primary)',
                       textTransform: 'capitalize',
                     }}
                   >
@@ -501,22 +501,28 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                   </button>
                 ))}
               </div>
+              {preference !== 'anyone' && (
+  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+    Just a preference, not a rule.
+  </p>
+)}
             </div>
+  
 
             {/* Notes */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
-                Notes <span style={{ fontWeight: 400, color: '#888' }}>(optional)</span>
+              Notes
               </label>
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                placeholder="Anything helpful to know?"
+                placeholder="What should people know? Add some sauce."
                 rows={3}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid #E5DFD8',
                   borderRadius: '12px',
                   fontSize: '14px',
                   outline: 'none',
@@ -535,11 +541,11 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
           {/* Footer */}
           <div style={{
             padding: '16px 24px',
-            borderTop: '1px solid #e0e0e0',
+            borderTop: '1px solid #E5DFD8',
             display: 'flex',
             justifyContent: 'flex-end',
             gap: '12px',
-            backgroundColor: '#fafafa',
+            backgroundColor: 'var(--bg-subtle)',
             borderRadius: '0 0 16px 16px',
           }}>
             <button
@@ -549,9 +555,9 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                 padding: '12px 24px',
                 fontSize: '14px',
                 fontWeight: 500,
-                border: '1px solid #e0e0e0',
+                border: '1px solid #E5DFD8',
                 borderRadius: '24px',
-                background: '#fff',
+                background: '#FEFCF8',
                 cursor: 'pointer',
               }}
             >
@@ -566,8 +572,8 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
                 fontWeight: 600,
                 border: 'none',
                 borderRadius: '24px',
-                background: '#000',
-                color: '#fff',
+                background: '#0F4415',
+                color: '#FEFCF8',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 opacity: loading ? 0.7 : 1,
               }}
