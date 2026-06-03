@@ -20,7 +20,6 @@ interface PostCardProps {
   onImInterested: () => void;
   onReport?: () => void;
   distance?: string | null;
-  // Profile info for the author
   authorAvatarUrl?: string | null;
   authorDateOfBirth?: string | null;
   hideInterestButton?: boolean;
@@ -29,6 +28,7 @@ interface PostCardProps {
   slug?: string | null;
   isAdmin?: boolean;
   onAdminRemove?: () => void;
+  audience?: 'everyone' | 'friends';
 }
 
 
@@ -55,6 +55,7 @@ export default function PostCard({
   slug,
   isAdmin = false,
   onAdminRemove,
+  audience,
 }: PostCardProps) {
   const [showNameTooltip, setShowNameTooltip] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -78,7 +79,6 @@ export default function PostCard({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
 
-  // Calculate fixed tooltip position clamped to viewport
   useEffect(() => {
     if (showNameTooltip && nameRef.current) {
       const rect = nameRef.current.getBoundingClientRect();
@@ -89,7 +89,6 @@ export default function PostCard({
       let left = rect.left;
       let top = rect.top - tooltipHeight - padding;
 
-      // Clamp horizontally
       if (left + tooltipWidth > window.innerWidth - padding) {
         left = window.innerWidth - tooltipWidth - padding;
       }
@@ -97,7 +96,6 @@ export default function PostCard({
         left = padding;
       }
 
-      // If not enough room above, show below
       if (top < padding) {
         top = rect.bottom + padding;
       }
@@ -111,7 +109,6 @@ export default function PostCard({
     }
   }, [showNameTooltip]);
 
-  // Detect if notes text overflows the clamped height
   useEffect(() => {
     if (notesRef.current) {
       setNotesTruncated(notesRef.current.scrollHeight > notesRef.current.clientHeight + 1);
@@ -120,7 +117,6 @@ export default function PostCard({
 
   const age = calculateAge(authorDateOfBirth ?? null);
 
-  // Generate Google Maps URL
   const getMapUrl = () => {
     if (latitude && longitude) {
       return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
@@ -212,16 +208,22 @@ export default function PostCard({
         <div className="card-header">
           <div className="card-content">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h3 style={{ 
-    fontSize: '16px', 
-    fontWeight: 500, 
-    color: 'var(--text-primary)',
-    margin: 0,
-  }}>
-    {title}
-  </h3>
-  {status === 'closed' && <ClosedBadge />}
-</div>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: 500, 
+                color: 'var(--text-primary)',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                {title}
+                {audience === 'friends' && (
+                  <span style={{ fontSize: '14px', lineHeight: 1 }} title="Friends only">👥</span>
+                )}
+              </h3>
+              {status === 'closed' && <ClosedBadge />}
+            </div>
             {/* Location line */}
             <div className="card-meta">
               <a
@@ -241,38 +243,38 @@ export default function PostCard({
               )}
             </div>
             {/* Time on separate line */}
-<div className="card-time" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-  {time}
-  {recurrenceRule && (
-    <span className="preference-badge" style={{ margin: 0 }}>
-      {recurrenceRule === 'weekly' ? 'every week' : recurrenceRule === 'biweekly' ? 'every other week' : recurrenceRule === 'monthly' ? 'every month' : recurrenceRule}
-    </span>
-  )}
-</div>
+            <div className="card-time" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {time}
+              {recurrenceRule && (
+                <span className="preference-badge" style={{ margin: 0 }}>
+                  {recurrenceRule === 'weekly' ? 'every week' : recurrenceRule === 'biweekly' ? 'every other week' : recurrenceRule === 'monthly' ? 'every month' : recurrenceRule}
+                </span>
+              )}
+            </div>
             {/* Notes - styled as personal message, collapsible if long */}
             {notes && (
-  <div className="card-notes-wrapper">
-    <p
-      ref={notesRef}
-      className={`card-notes${!notesExpanded ? ' card-notes-collapsed' : ''}`}
-      style={{ whiteSpace: 'pre-line', cursor: notesTruncated && !notesExpanded ? 'pointer' : undefined }}
-      onClick={notesTruncated && !notesExpanded ? (e) => { e.stopPropagation(); setNotesExpanded(true); } : undefined}
-    >
-      {renderTextWithLinks(notes)}
-    </p>
-    {notesTruncated && (
-      <button
-        className="notes-toggle"
-        onClick={(e) => {
-          e.stopPropagation();
-          setNotesExpanded(!notesExpanded);
-        }}
-      >
-        {notesExpanded ? 'Show less' : 'Show more'}
-      </button>
-    )}
-  </div>
-)}
+              <div className="card-notes-wrapper">
+                <p
+                  ref={notesRef}
+                  className={`card-notes${!notesExpanded ? ' card-notes-collapsed' : ''}`}
+                  style={{ whiteSpace: 'pre-line', cursor: notesTruncated && !notesExpanded ? 'pointer' : undefined }}
+                  onClick={notesTruncated && !notesExpanded ? (e) => { e.stopPropagation(); setNotesExpanded(true); } : undefined}
+                >
+                  {renderTextWithLinks(notes)}
+                </p>
+                {notesTruncated && (
+                  <button
+                    className="notes-toggle"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setNotesExpanded(!notesExpanded);
+                    }}
+                  >
+                    {notesExpanded ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+            )}
             {preference && preference !== 'Anyone' && preference !== 'anyone' && (
               <span className="preference-badge">{preference}</span>
             )}

@@ -29,8 +29,9 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'biweekly' | 'mo
   const [date, setDate] = useState('');
   const [timeDetails, setTimeDetails] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
-  const [threadType, setThreadType] = useState<'1:1' | 'group'>('1:1');
+  const [threadType, setThreadType] = useState<'1:1' | 'group'>('group');
   const [whoCanRespond, setWhoCanRespond] = useState('anyone');
+  const [audience, setAudience] = useState<'everyone' | 'friends'>('everyone');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,8 +65,9 @@ setRecurrenceRule('weekly');
       setDate(getTomorrowDate());
       setTimeDetails('');
       setExpiresAt(defaultExpiry); // Set default expiry
-      setThreadType('1:1');
+      setThreadType('group');
       setWhoCanRespond('anyone');
+      setAudience('everyone');
       setNotes('');
       setLoading(false);
       setError(null);
@@ -221,6 +223,7 @@ const { error: insertError } = await supabase
   status: 'approved',
   slug: generateSlug(title),
   thread_type: threadType,
+  audience: audience,
 });
 
     if (insertError) {
@@ -681,6 +684,21 @@ const { error: insertError } = await supabase
                   : 'Everyone chats in one group'}
               </p>
               <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                  type="button"
+                  onClick={() => setThreadType('group')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: threadType === 'group' ? 'none' : '1px solid var(--border)',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    backgroundColor: threadType === 'group' ? 'var(--accent)' : 'var(--bg-badge)',
+                    color: threadType === 'group' ? 'var(--text-inverse)' : 'var(--text-primary)',
+                  }}
+                >
+                  Group chat
+                </button>
                 <button
                   type="button"
                   onClick={() => setThreadType('1:1')}
@@ -696,27 +714,56 @@ const { error: insertError } = await supabase
                 >
                   1:1 chats
                 </button>
+              </div>
+            </div>
+            {/* Who can see this */}
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
+                Who can see this?
+              </label>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                {audience === 'everyone' 
+                  ? 'Visible to everyone nearby' 
+                  : 'Only visible to your friends on common'}
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={() => setThreadType('group')}
+                  onClick={() => setAudience('everyone')}
                   style={{
                     padding: '8px 16px',
                     borderRadius: '20px',
-                    border: threadType === 'group' ? 'none' : '1px solid var(--border)',
+                    border: audience === 'everyone' ? 'none' : '1px solid var(--border)',
                     fontSize: '14px',
                     cursor: 'pointer',
-                    backgroundColor: threadType === 'group' ? 'var(--accent)' : 'var(--bg-badge)',
-                    color: threadType === 'group' ? 'var(--text-inverse)' : 'var(--text-primary)',
+                    backgroundColor: audience === 'everyone' ? 'var(--accent)' : 'var(--bg-badge)',
+                    color: audience === 'everyone' ? 'var(--text-inverse)' : 'var(--text-primary)',
                   }}
                 >
-                  Group chat
+                  Everyone
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAudience('friends')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: audience === 'friends' ? 'none' : '1px solid var(--border)',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    backgroundColor: audience === 'friends' ? 'var(--accent)' : 'var(--bg-badge)',
+                    color: audience === 'friends' ? 'var(--text-inverse)' : 'var(--text-primary)',
+                  }}
+                >
+                  Friends only 👥
                 </button>
               </div>
             </div>
+
             {/* Who can respond */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '12px' }}>
-                Who's this for'?
+                Who's this for?
               </label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {['Anyone', 'Men preferred', 'Women preferred'].map(option => (

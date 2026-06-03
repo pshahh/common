@@ -31,6 +31,10 @@ export default function SettingsPage() {
   // Unread thread count for mobile nav badge
   const { unreadCount: threadCount } = useUnreadCount(user?.id);
 
+  const [connectSlug, setConnectSlug] = useState<string | null>(null);
+const [resettingLink, setResettingLink] = useState(false);
+const [linkCopied, setLinkCopied] = useState(false);
+
   // Form state
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -108,6 +112,28 @@ export default function SettingsPage() {
     checkAdmin();
   }, [user]);
 
+  async function copyToClipboard(text: string): Promise<boolean> {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    // Fallback for mobile / non-HTTPS
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return true;
+    } catch {
+      document.body.removeChild(textarea);
+      return false;
+    }
+  }
+
   // Fetch profile
   useEffect(() => {
     async function fetchProfile() {
@@ -125,6 +151,7 @@ export default function SettingsPage() {
           setDateOfBirth(data.date_of_birth || '');
           setEmailNotifications(data.email_notifications !== false);
           setFirstName(data.first_name || '');
+          setConnectSlug(data.connect_slug);
         }
       setLoading(false);
     }
@@ -136,7 +163,25 @@ export default function SettingsPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    window.location.href = '/';
+  };
+
+  const handleResetLink = async () => {
+    if (!user) return;
+    setResettingLink(true);
+    
+    const newSlug = firstName.toLowerCase() + '-' + Math.random().toString(36).substring(2, 6);
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ connect_slug: newSlug })
+      .eq('id', user.id);
+    
+    if (!error) {
+      setConnectSlug(newSlug);
+    }
+    
+    setResettingLink(false);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,7 +326,7 @@ const { error: updateError } = await supabase
       }
   
       await supabase.auth.signOut();
-      router.push('/');
+window.location.href = '/';
     } catch (err) {
       console.error('Delete account error:', err);
       setError('Failed to delete account. Please try again.');
@@ -435,6 +480,7 @@ const { error: updateError } = await supabase
                         padding: '8px 16px',
                         borderRadius: '20px',
                         fontSize: '14px',
+                fontWeight: 600,
                         cursor: 'pointer',
                       }}
                     >
@@ -506,7 +552,7 @@ const { error: updateError } = await supabase
                     height: '28px',
                     borderRadius: '14px',
                     border: 'none',
-                    background: emailNotifications ? '#0F4415' : '#f7f5ee',
+                    background: emailNotifications ? 'var(--accent)' : '#C8C3B8',
                     cursor: 'pointer',
                     position: 'relative',
                     transition: 'background 0.2s ease',
@@ -554,6 +600,87 @@ const { error: updateError } = await supabase
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
+
+             {/* Friendship link section */}
+           <section style={{ marginBottom: '40px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: '#000' }}>
+                Your friendship link
+              </h2>
+              <p style={{
+                fontSize: '13px',
+                color: '#666',
+                marginBottom: '16px',
+              }}>
+                Share this link with friends so they can connect with you on common.
+              </p>
+
+              <div style={{
+                display: 'flex',
+                gap: '10px',
+                alignItems: 'center',
+                marginBottom: '16px',
+              }}>
+                <div style={{
+                  flex: 1,
+                  background: 'var(--bg-badge)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  fontSize: '13px',
+                  color: 'var(--text-primary)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {connectSlug ? `${window.location.origin}/connect/${connectSlug}` : '...'}
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!connectSlug) return;
+                    await copyToClipboard(`${window.location.origin}/connect/${connectSlug}`);
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 2000);
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '20px',
+                    border: 'none',
+                    background: 'var(--accent)',
+                    color: 'var(--text-inverse)',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  {linkCopied ? '✓ Copied!' : 'Copy link'}
+                </button>
+              </div>
+
+              <button
+                onClick={handleResetLink}
+                disabled={resettingLink}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  fontSize: '14px',
+                  color: '#666',
+                  textDecoration: 'underline',
+                  cursor: resettingLink ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {resettingLink ? 'Resetting...' : 'Reset link'}
+              </button>
+              <p style={{
+                fontSize: '13px',
+                color: '#666',
+                marginTop: '6px',
+                lineHeight: 1.4,
+              }}>
+                Resetting creates a new link. Your existing friends won't be affected, but the old link will stop working.
+              </p>
+            </section>
 
             {/* Account Section */}
             <section style={{ marginBottom: '40px' }}>
@@ -625,7 +752,7 @@ const { error: updateError } = await supabase
               </div>
 
               {/* Delete Account */}
-              <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: 'var(--border)' }}>
+              <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: 'var(--border)', color: 'var(--text-primary)'}}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
                   Delete account
                 </label>

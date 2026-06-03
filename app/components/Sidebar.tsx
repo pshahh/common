@@ -30,7 +30,7 @@ interface SidebarProps {
   onSelectThread: (threadId: string) => void;
   onNavigateToMyActivity: () => void;
   onLogout: () => void;
-  activeItem?: 'messages' | 'my-activity' | 'settings' | 'admin-reports' | 'admin-posts' | null;
+  activeItem?: 'messages' | 'my-activity' | 'settings' | 'admin-reports' | 'admin-posts' |  'friends' | null;
   refreshTrigger?: number;
 }
 
@@ -504,6 +504,12 @@ export default function Sidebar({
   Guidelines & examples
 </NavItem>
 
+<NavItem
+  onClick={() => router.push('/friends')}
+  isActive={activeItem === 'friends'}
+>
+  Friends
+</NavItem>
 
         {/* Settings link */}
         <NavItem

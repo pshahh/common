@@ -73,12 +73,14 @@ export async function POST(req: NextRequest) {
       }));
     }
 
-    // 4. Delete everything else in parallel
+   // 4. Delete everything else in parallel
     await Promise.all([
       supabaseAdmin.from('thread_reads').delete().eq('user_id', userId),
       supabaseAdmin.from('messages').delete().eq('sender_id', userId),
       supabaseAdmin.from('reports').delete().eq('reported_by', userId),
       supabaseAdmin.from('blocked_users').delete().or(`user_id.eq.${userId},blocked_user_id.eq.${userId}`),
+      supabaseAdmin.from('friendships').delete().or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`),
+      supabaseAdmin.from('push_subscriptions').delete().eq('user_id', userId),
       supabaseAdmin.from('posts').delete().eq('user_id', userId),
       profile?.avatar_url
         ? supabaseAdmin.storage.from('avatars').remove([profile.avatar_url.split('/avatars/')[1]])

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 interface BottomNavProps {
   activeTab: 'home' | 'messages' | 'activity' | 'menu';
@@ -193,8 +194,33 @@ export default function BottomNav({
               }} />
             </div>
 
+            
+
             {/* Menu items */}
             <div style={{ padding: '0 16px 16px' }}>
+
+            <button
+  onClick={() => {
+    router.push('/friends');
+    handleCloseMenu();
+  }}
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    width: '100%',
+    padding: '16px',
+    background: 'none',
+    border: 'none',
+    borderRadius: '12px',
+    fontWeight: 500,
+    fontSize: '16px',
+    color: 'var(--text-primary)',
+    cursor: 'pointer',
+  }}
+>
+  Friends
+</button>
+
               <button
                 onClick={() => {
                   router.push('/settings');
@@ -284,27 +310,32 @@ export default function BottomNav({
               <div style={{ height: '1px', background: 'var(--border)', margin: '8px 0' }} />
 
               <button
-                onClick={() => {
-                  onLogout();
-                  handleCloseMenu();
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  width: '100%',
-                  padding: '16px',
-                  background: 'none',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                  color: '#D4594F',
-                  textAlign: 'left',
-                }}
-              >
-                Log out
-              </button>
+  onClick={() => {
+    alert('Logout clicked');
+    supabase.auth.signOut().then(() => {
+      alert('Signed out');
+      window.location.href = '/';
+    }).catch((err) => {
+      alert('Error: ' + err.message);
+    });
+  }}
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    width: '100%',
+    padding: '16px',
+    background: 'none',
+    border: 'none',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 500,
+    color: '#D4594F',
+    textAlign: 'left',
+  }}
+>
+  Log out
+</button>
             </div>
           </div>
         </div>

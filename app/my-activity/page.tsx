@@ -123,6 +123,28 @@ export default function MyActivityPage() {
     checkAdmin();
   }, [user]);
 
+  async function copyToClipboard(text: string): Promise<boolean> {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    // Fallback for mobile / non-HTTPS
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return true;
+    } catch {
+      document.body.removeChild(textarea);
+      return false;
+    }
+  }
+
   // Fetch user's posts
   useEffect(() => {
     async function fetchMyPosts() {
@@ -190,7 +212,7 @@ export default function MyActivityPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    window.location.href = '/';
   };
 
   const [copiedPostId, setCopiedPostId] = useState<string | null>(null);

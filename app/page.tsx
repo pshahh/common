@@ -12,9 +12,11 @@ import CreatePostModal from './components/CreatePostModal';
 import InterestedModal from './components/InterestedModal';
 import MessageSentModal from './components/MessageSentModal';
 import ProfileCompletionModal from './components/ProfileCompletionModal';
+import { getAvatarUrl } from '@/lib/profile';
 import ReportModal from './components/ReportModal';
 import ReportConfirmationModal from './components/ReportConfirmationModal';
-
+import { useShareInvite } from '@/lib/useShareInvite';
+import ShareInviteModal from './components/ShareInviteModal';
 import Sidebar from './components/Sidebar';
 import MessageThread from './components/MessageThread';
 import BottomNav from './components/BottomNav';
@@ -40,6 +42,7 @@ interface Post {
   recurrence_rule: string | null;
   slug: string | null;
   thread_type: string | null;
+  audience: 'everyone' | 'friends';
 }
 
 interface Profile {
@@ -298,6 +301,8 @@ function HomeContent() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('recent');
+  const [friendsOnly, setFriendsOnly] = useState(false);
+const [friendIds, setFriendIds] = useState<string[]>([]);
 
   // Report modal state
   const [showReportModal, setShowReportModal] = useState(false);
@@ -312,6 +317,8 @@ function HomeContent() {
 
   // Track posts user has expressed interest in
   const [userInterestedPostIds, setUserInterestedPostIds] = useState<Set<string>>(new Set());
+
+  const { shareUrl, showModal: showShareModal, handleShareClick: handleShareInvite, closeModal: closeShareModal } = useShareInvite({ userId: user?.id });
 
   // Location state
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
@@ -592,6 +599,26 @@ if (!sessionStorage.getItem('push-subscribed')) {
     fetchCurrentUserProfile();
   }, [user]);
 
+  useEffect(() => {
+    async function fetchFriends() {
+      if (!user) {
+        setFriendIds([]);
+        return;
+      }
+      const { data } = await supabase
+        .from('friendships')
+        .select('user_id_1, user_id_2')
+        .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
+      
+      if (data) {
+        setFriendIds(data.map(f => 
+          f.user_id_1 === user.id ? f.user_id_2 : f.user_id_1
+        ));
+      }
+    }
+    fetchFriends();
+  }, [user]);
+
   // Request browser location
   const requestBrowserLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -697,6 +724,11 @@ useEffect(() => {
   // Sort and filter posts based on selected options
 const sortedPosts = useMemo(() => {
   let postsToSort = user ? filteredPosts : posts;
+
+   // Friends filter
+   if (friendsOnly) {
+    postsToSort = postsToSort.filter(post => friendIds.includes(post.user_id));
+  }
   
   // Apply radius filter if user has a location and radius is set
   // radiusFilter is in miles, calculateDistance returns km, so convert
@@ -734,7 +766,7 @@ const sortedPosts = useMemo(() => {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }
-}, [filteredPosts, posts, user, sortBy, userLocation, radiusFilter]);
+}, [filteredPosts, posts, user, sortBy, userLocation, radiusFilter, friendsOnly, friendIds]);
 
   // Get distance string for a post
   const getPostDistance = useCallback((post: Post): string | null => {
@@ -1000,26 +1032,35 @@ const sortedPosts = useMemo(() => {
   // Logged out view (no sidebar)
   if (!user) {
     return (
-      <div className="app">
+      <div style={{
+        height: '100dvh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
         <Header
           onLoginClick={() => setShowAuthModal(true)}
           user={user}
           onLogout={handleLogout}
         />
-        <main className="main-content">
-          <div className="guest-banner">
-            <h1 className="page-title">What's happening nearby?</h1>
-            <p className="page-subtitle">
-              Just browsing.{' '}
-              <button
-                className="text-link"
-                onClick={() => setShowAuthModal(true)}
-              >
-                Log in
-              </button>{' '}
-              to join in.
-            </p>
-          </div>
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+        }}>
+          <main className="main-content">
+            <div className="guest-banner">
+              <h1 className="page-title">What's happening nearby?</h1>
+              <p className="page-subtitle">
+                Just browsing.{' '}
+                <button
+                  className="text-link"
+                  onClick={() => setShowAuthModal(true)}
+                >
+                  Log in
+                </button>{' '}
+                to join in.
+              </p>
+            </div>
 
           <div className="feed-header">
   <button className="btn btn-primary" onClick={handleShareClick}>
@@ -1048,6 +1089,41 @@ const sortedPosts = useMemo(() => {
     </select>
   </div>
 </div>
+
+
+{user && (
+  <div style={{
+    display: 'flex', alignItems: 'center',
+    gap: '10px',
+    marginTop: '8px', marginBottom: '16px',
+  }}>
+    <span style={{
+      fontSize: '13px',
+      color: 'var(--text-primary)',
+      fontWeight: 400,
+      marginRight: '12px',
+    }}>
+      Show posts from friends only
+    </span>
+    <div
+      onClick={() => setFriendsOnly(!friendsOnly)}
+      style={{
+        width: '44px', height: '26px', borderRadius: '13px',
+        background: friendsOnly ? 'var(--accent)' : 'var(--border)',
+        position: 'relative', cursor: 'pointer',
+        transition: 'background 0.2s ease',
+      }}
+    >
+      <div style={{
+        width: '20px', height: '20px', borderRadius: '50%',
+        background: '#FFFFFF', position: 'absolute', top: '3px',
+        left: friendsOnly ? '21px' : '3px',
+        transition: 'left 0.2s ease',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      }} />
+    </div>
+  </div>
+)}
 
           <LocationSection
             sortBy={sortBy}
@@ -1098,13 +1174,14 @@ const sortedPosts = useMemo(() => {
                     slug={post.slug}
                     authorAvatarUrl={authorProfile?.avatar_url}
                     authorDateOfBirth={authorProfile?.date_of_birth}
+                    audience={post.audience}
                   />
                 );
               })}
             </div>
           )}
         </main>
-
+        </div>
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
@@ -1192,34 +1269,64 @@ const sortedPosts = useMemo(() => {
     What's happening nearby?
   </h1>
   <div 
-  className="feed-header"
   onClick={(e) => e.stopPropagation()}
   style={{ pointerEvents: selectedThreadId && !isMobile ? 'none' : 'auto' }}
 >
-  <button className="btn btn-primary" onClick={handleShareClick}>
+  <button className="btn btn-primary" onClick={handleShareClick} style={{ width: '100%', marginBottom: '12px' }}>
     Share what I'm doing
   </button>
-  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-    <select
-      className="sort-select"
-      value={sortBy}
-      onChange={(e) => setSortBy(e.target.value)}
-    >
-      <option value="nearest">Sort by: nearest</option>
-      <option value="soon">Sort by: happening soon</option>
-      <option value="recent">Sort by: recently added</option>
-    </select>
-    <select
-      className="sort-select"
-      value={radiusFilter === null ? 'any' : radiusFilter.toString()}
-      onChange={(e) => setRadiusFilter(e.target.value === 'any' ? null : Number(e.target.value))}
-    >
-      <option value="any">Distance: any</option>
-      <option value="1">Within 1 miles</option>
-      <option value="3">Within 3 miles</option>
-      <option value="5">Within 5 miles</option>
-      <option value="10">Within 10 miles</option>
-    </select>
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+      <select
+        className="sort-select"
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value)}
+      >
+        <option value="nearest">Sort by: nearest</option>
+        <option value="soon">Sort by: happening soon</option>
+        <option value="recent">Sort by: recently added</option>
+      </select>
+      <select
+        className="sort-select"
+        value={radiusFilter === null ? 'any' : radiusFilter.toString()}
+        onChange={(e) => setRadiusFilter(e.target.value === 'any' ? null : Number(e.target.value))}
+      >
+        <option value="any">Distance: any</option>
+        <option value="1">Within 1 mile</option>
+        <option value="3">Within 3 miles</option>
+        <option value="5">Within 5 miles</option>
+        <option value="10">Within 10 miles</option>
+      </select>
+    </div>
+    {user && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{
+          fontSize: '13px',
+          color: 'var(--text-primary)',
+          fontWeight: 400,
+        }}>
+          Friends
+        </span>
+        <div
+          onClick={() => setFriendsOnly(!friendsOnly)}
+          style={{
+            width: '44px', height: '26px', borderRadius: '13px',
+            background: friendsOnly ? 'var(--accent)' : '#C8C3B8',
+            position: 'relative', cursor: 'pointer',
+            transition: 'background 0.2s ease',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{
+            width: '20px', height: '20px', borderRadius: '50%',
+            background: '#FFFFFF', position: 'absolute', top: '3px',
+            left: friendsOnly ? '21px' : '3px',
+            transition: 'left 0.2s ease',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          }} />
+        </div>
+      </div>
+    )}
   </div>
 </div>
 
@@ -1243,13 +1350,26 @@ const sortedPosts = useMemo(() => {
             {loading ? (
               <div className="loading-state">Loading...</div>
             ) : sortedPosts.length === 0 ? (
-              <div className="empty-state" onClick={(e) => e.stopPropagation()}>
-                <p>Nothing nearby yet. Be the first to share what you're doing.</p>
-                <button className="btn btn-primary" onClick={handleShareClick}>
-                  Share what I'm doing
-                </button>
-              </div>
-            ) : (
+              friendsOnly ? (
+                <div className="empty-state" onClick={(e) => e.stopPropagation()}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px'}}>👥</div>
+                  <p style={{ color: 'var(--text-primary)' }}>Share plans just for your friends. Invite them to get started.</p>
+                  <button
+  className="btn btn-primary"
+  onClick={handleShareInvite}
+>
+  Share friendship link
+</button>
+                </div>
+              ) : (
+                <div className="empty-state" onClick={(e) => e.stopPropagation()}>
+                  <p>Nothing nearby yet. Be the first to share what you're doing.</p>
+                  <button className="btn btn-primary" onClick={handleShareClick}>
+                    Share what I'm doing
+                  </button>
+                </div>
+              )
+              ) : (
               <div className="feed" style={{ pointerEvents: selectedThreadId && !isMobile ? 'none' : 'auto' }}>
                 {sortedPosts.map((post) => {
                   const authorProfile = profiles[post.user_id];
@@ -1354,11 +1474,20 @@ const sortedPosts = useMemo(() => {
         </div>
       )}
 
+
       {/* Modals */}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onSuccess={() => setShowAuthModal(false)}
+      />
+
+<ShareInviteModal
+        isOpen={showShareModal}
+        onClose={closeShareModal}
+        userName={currentUserProfile?.first_name || ''}
+        avatarUrl={currentUserProfile?.avatar_url ? getAvatarUrl(currentUserProfile.avatar_url, process.env.NEXT_PUBLIC_SUPABASE_URL!) : null}
+        shareUrl={shareUrl || ''}
       />
 
       <CreatePostModal

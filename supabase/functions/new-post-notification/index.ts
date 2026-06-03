@@ -1,6 +1,8 @@
 // supabase/functions/new-post-notification/index.ts
 // Edge Function to email all users when a new post goes live
 
+// supabase/functions/new-post-notification/index.ts
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -24,6 +26,7 @@ interface WebhookPayload {
     status: string;
     parent_post_id: string | null;
     slug: string | null;
+    audience: string;
   };
   old_record: null;
 }
@@ -138,6 +141,23 @@ serve(async (req: Request) => {
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
+    // For friends-only posts, get the poster's friend list
+    let friendIds: string[] | null = null;
+    if (post.audience === 'friends') {
+      const { data: friendships } = await supabase
+        .from('friendships')
+        .select('user_id_1, user_id_2')
+        .or(`user_id_1.eq.${post.user_id},user_id_2.eq.${post.user_id}`);
+
+      if (!friendships || friendships.length === 0) {
+        return new Response("Friends-only post but no friends to notify", { status: 200 });
+      }
+
+      friendIds = friendships.map(f =>
+        f.user_id_1 === post.user_id ? f.user_id_2 : f.user_id_1
+      );
+    }
+
     // Get all users with notifications enabled, excluding the poster
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
@@ -170,17 +190,18 @@ serve(async (req: Request) => {
         if (user.email) emailMap.set(user.id, user.email);
       });
 
-      // If we got fewer than perPage, we've reached the last page
       if (authUsers.users.length < perPage) break;
       page++;
     }
 
     // Filter to users who have notifications enabled
+    // For friends-only posts, also filter to only the poster's friends
     const recipients = profiles.filter(
       (p: { id: string; email_notifications?: boolean }) => {
         const notificationsEnabled = p.email_notifications !== false;
         const hasEmail = emailMap.has(p.id);
-        return notificationsEnabled && hasEmail;
+        const isFriendOrPublic = friendIds === null || friendIds.includes(p.id);
+        return notificationsEnabled && hasEmail && isFriendOrPublic;
       }
     );
 

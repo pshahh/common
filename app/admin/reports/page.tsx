@@ -137,7 +137,7 @@ export default function AdminReportsPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    window.location.href = '/';
   };
 
   const handleDismiss = async (reportId: string) => {

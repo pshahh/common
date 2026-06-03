@@ -63,7 +63,7 @@ export default function GuidelinesPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    window.location.href = '/';
   };
 
   // Handle mobile tab change

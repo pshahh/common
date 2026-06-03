@@ -124,7 +124,7 @@ export default function AdminPostsPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    window.location.href = '/';
   };
 
   const handleApprove = async (postId: string, userId: string, postTitle: string) => {
