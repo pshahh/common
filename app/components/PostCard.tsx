@@ -217,10 +217,10 @@ export default function PostCard({
                 alignItems: 'center',
                 gap: '6px',
               }}>
-                {title}
                 {audience === 'friends' && (
-                  <span style={{ fontSize: '14px', lineHeight: 1 }} title="Friends only">👥</span>
-                )}
+  <span style={{ fontSize: '14px', lineHeight: 1 }} title="Friends only">👥</span>
+)}
+{title}
               </h3>
               {status === 'closed' && <ClosedBadge />}
             </div>

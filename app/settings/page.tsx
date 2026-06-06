@@ -170,7 +170,7 @@ const [linkCopied, setLinkCopied] = useState(false);
     if (!user) return;
     setResettingLink(true);
     
-    const newSlug = firstName.toLowerCase() + '-' + Math.random().toString(36).substring(2, 6);
+    const newSlug = firstName.toLowerCase().replace(/\s+/g, '-') + '-' + Math.random().toString(36).substring(2, 6);
     
     const { error } = await supabase
       .from('profiles')

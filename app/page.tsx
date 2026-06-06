@@ -1396,6 +1396,7 @@ const sortedPosts = useMemo(() => {
                       slug={post.slug}
                       isAdmin={isAdmin}
                       onAdminRemove={() => handleAdminRemoveClick(post.id)}
+                      audience={post.audience}
                     />
                   );
                 })}
