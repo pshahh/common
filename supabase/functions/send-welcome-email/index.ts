@@ -1,6 +1,5 @@
 // supabase/functions/send-welcome-email/index.ts
-// Sends a welcome email when a new user profile is created
-
+// Sends a welcome email when a user confirms their email
 // @ts-ignore - Deno types
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -10,17 +9,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const EMAIL_FROM = 'common <hello@common-social.com>';
 const BASE_URL = 'https://www.common-social.com';
 
-interface WebhookPayload {
-  type: 'INSERT';
-  table: string;
-  record: {
-    id: string;
-    first_name: string | null;
-    created_at: string;
-  };
-  old_record: null;
-}
-
 // @ts-ignore - Deno.serve
 Deno.serve(async (req: Request) => {
   try {
@@ -28,16 +16,23 @@ Deno.serve(async (req: Request) => {
       return new Response('Method not allowed', { status: 405 });
     }
 
-    const payload: WebhookPayload = await req.json();
+    const body = await req.json();
 
-    // Only process INSERT events on profiles table
-    if (payload.type !== 'INSERT' || payload.table !== 'profiles') {
+    // Support both the new trigger format and legacy webhook format
+    let userId: string;
+    let firstName: string;
+
+    if (body.user_id) {
+      // New format: called from the database trigger via pg_net
+      userId = body.user_id;
+      firstName = body.first_name || 'there';
+    } else if (body.type === 'INSERT' && body.table === 'profiles') {
+      // Legacy webhook format (can remove once migration is confirmed)
+      userId = body.record.id;
+      firstName = body.record.first_name || 'there';
+    } else {
       return new Response('Ignored', { status: 200 });
     }
-
-    const profile = payload.record;
-    const userId = profile.id;
-    const firstName = profile.first_name || 'there';
 
     // Get user's email from auth
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
@@ -46,6 +41,12 @@ Deno.serve(async (req: Request) => {
     if (userError || !user?.email) {
       console.error('Failed to fetch user email:', userError);
       return new Response('Failed to fetch user email', { status: 500 });
+    }
+
+    // Double-check that the email is actually confirmed
+    if (!user.email_confirmed_at) {
+      console.log('Email not yet confirmed, skipping welcome email');
+      return new Response('Email not confirmed yet', { status: 200 });
     }
 
     const recipientEmail = user.email;
@@ -89,6 +90,8 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
+// generateWelcomeEmail function stays exactly as-is — no changes needed
 
 function generateWelcomeEmail(params: { recipientName: string }): string {
   const { recipientName } = params;

@@ -29,6 +29,7 @@ interface Post {
   expires_at: string | null;
   slug: string | null;
   thread_type: string | null;
+  audience: 'everyone' | 'friends';
 }
 
 interface SinglePostClientProps {
@@ -294,6 +295,7 @@ useEffect(() => {
           status={isClosedOrExpired ? 'closed' : post.status}
           recurrenceRule={post.recurrence_rule}
           slug={post.slug}
+          audience={post.audience}
           isAdmin={isAdmin}
           onAdminRemove={() => setShowAdminRemoveModal(true)}
         />
