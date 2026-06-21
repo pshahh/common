@@ -31,8 +31,8 @@ export default function Header({ onLoginClick, user, onLogout }: HeaderProps) {
   }, [user]);
 
   return (
-    <header style={{
-      height: '56px',
+    <header className="header" style={{
+      minHeight: '56px',
       borderBottom: '1px solid var(--border)',
       display: 'flex',
       alignItems: 'center',

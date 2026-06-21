@@ -13,6 +13,9 @@ export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
+// Don't show install prompt in native app
+if ((window as any).Capacitor?.isNativePlatform()) return;
+    
     // Don't show if already installed (standalone mode)
     if (window.matchMedia('(display-mode: standalone)').matches) return;
 

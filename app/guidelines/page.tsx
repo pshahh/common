@@ -189,79 +189,82 @@ export default function GuidelinesPage() {
     }}>
       Examples
     </h2>
-    <div style={{ 
-      display: 'grid', 
-      gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
-      gap: '12px',
-    }}>
-      {/* Column headers */}
-      <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
-        ✓ Belongs on common
-      </p>
-      <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
-        ✗ Doesn't belong on common
-      </p>
+    {isMobile ? (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+          ✓ Belongs on common
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+            <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Going for a run around Highbury Fields</p>
+            <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Personal activity, open to company</p>
+          </div>
+          <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+            <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Come to this gig with me. Ticket link below.</p>
+            <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>You're going, looking for someone to go with</p>
+          </div>
+          <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+            <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>I run a writers' group at the pub - come write with us</p>
+            <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>You organise it and participate alongside everyone else</p>
+          </div>
+        </div>
 
-      {/* Pair 1 - casual activity */}
-      <div style={{
-        padding: '12px 16px',
-        background: '#F5F0E3',
-        borderRadius: '12px',
-        border: '1px solid #E5DFD8',
-      }}>
-        <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Going for a run around Highbury Fields</p>
-        <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Personal activity, open to company</p>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '8px 0 0 0' }}>
+          ✗ Doesn't belong on common
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+            <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Free yoga classes every Sunday at our studio</p>
+            <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Business promotion disguised as an activity</p>
+          </div>
+          <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+            <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>New music night - buy tickets here</p>
+            <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Promoting an event, not a personal invitation</p>
+          </div>
+          <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+            <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>We host an arts and crafts night. Info and tickets here</p>
+            <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Reads like you're only running the event, not participating as an equal</p>
+          </div>
+        </div>
       </div>
-      <div style={{
-        padding: '12px 16px',
-        background: '#F5F0E3',
-        borderRadius: '12px',
-        border: '1px solid #E5DFD8',
+    ) : (
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        gap: '12px',
       }}>
-        <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Free yoga classes every Sunday at our studio</p>
-        <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Business promotion disguised as an activity</p>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
+          ✓ Belongs on common
+        </p>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
+          ✗ Doesn't belong on common
+        </p>
+        <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+          <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Going for a run around Highbury Fields</p>
+          <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Personal activity, open to company</p>
+        </div>
+        <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+          <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Free yoga classes every Sunday at our studio</p>
+          <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Business promotion disguised as an activity</p>
+        </div>
+        <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+          <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Come to this gig with me. Ticket link below.</p>
+          <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>You're going, looking for someone to go with</p>
+        </div>
+        <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+          <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>New music night - buy tickets here</p>
+          <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Promoting an event, not a personal invitation</p>
+        </div>
+        <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+          <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>I run a writers' group at the pub - come write with us</p>
+          <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>You organise it and participate alongside everyone else</p>
+        </div>
+        <div style={{ padding: '12px 16px', background: '#F5F0E3', borderRadius: '12px', border: '1px solid #E5DFD8' }}>
+          <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>We host an arts and crafts night. Info and tickets here</p>
+          <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Reads like you're only running the event, not participating as an equal</p>
+        </div>
       </div>
-
-      {/* Pair 2 - going to an event */}
-      <div style={{
-        padding: '12px 16px',
-        background: '#F5F0E3',
-        borderRadius: '12px',
-        border: '1px solid #E5DFD8',
-      }}>
-        <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>Come to this gig with me. Ticket link below.</p>
-        <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>You're going, looking for someone to go with</p>
-      </div>
-      <div style={{
-        padding: '12px 16px',
-        background: '#F5F0E3',
-        borderRadius: '12px',
-        border: '1px solid #E5DFD8',
-      }}>
-        <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>New music night - buy tickets here</p>
-        <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Promoting an event, not a personal invitation</p>
-      </div>
-
-      {/* Pair 3 - recurring group activity */}
-      <div style={{
-        padding: '12px 16px',
-        background: '#F5F0E3',
-        borderRadius: '12px',
-        border: '1px solid #E5DFD8',
-      }}>
-        <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>I run a writers' group at the pub - come write with us</p>
-        <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>You organise it and participate alongside everyone else</p>
-      </div>
-      <div style={{
-        padding: '12px 16px',
-        background: '#F5F0E3',
-        borderRadius: '12px',
-        border: '1px solid #E5DFD8',
-      }}>
-        <p style={{ fontSize: '14px', color: '#000', margin: 0, fontWeight: 500 }}>We host an arts and crafts night. Info and tickets here</p>
-        <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>Reads like you're only running the event, not participating as an equal</p>
-      </div>
-    </div>
+    )}
   </section>
 
   {/* What's not allowed */}
@@ -344,7 +347,7 @@ export default function GuidelinesPage() {
     lineHeight: 1.6,
     margin: 0,
   }}>
-    Posts that don't follow these guidelines will be removed. If you have questions, reach out to us at <a href="mailto:hello@common-social.com" style={{ color: '#444' }}>hello@common-social.com</a>
+    Posts that don't follow these guidelines will be removed. If you have questions, reach out to us at <a href="mailto:hello@common-social.com" style={{ color: '#444', whiteSpace: 'nowrap' }}>hello@common-social.com</a>
   </p>
 </div>
           </div>

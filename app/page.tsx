@@ -24,6 +24,9 @@ import MobileMessageList from './components/MobileMessageList';
 import { sortByDistance, formatDistance, getDistanceToPost, calculateDistance } from '@/lib/distance';
 import { subscribeToPush } from '@/lib/pushNotifications';
 import InstallPrompt from './components/InstallPrompt';
+import FloatingActionButton from './components/FloatingActionButton';
+import FilterBottomSheet from './components/FilterBottomSheet';
+
 
 interface Post {
   id: string;
@@ -43,6 +46,7 @@ interface Post {
   slug: string | null;
   thread_type: string | null;
   audience: 'everyone' | 'friends';
+  parent_post_id: string | null;
 }
 
 interface Profile {
@@ -319,6 +323,8 @@ const [friendIds, setFriendIds] = useState<string[]>([]);
   const [userInterestedPostIds, setUserInterestedPostIds] = useState<Set<string>>(new Set());
 
   const { shareUrl, showModal: showShareModal, handleShareClick: handleShareInvite, closeModal: closeShareModal } = useShareInvite({ userId: user?.id });
+  const [showSortSheet, setShowSortSheet] = useState(false);
+  const [showDistanceSheet, setShowDistanceSheet] = useState(false);
 
   // Location state
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
@@ -328,6 +334,13 @@ const [friendIds, setFriendIds] = useState<string[]>([]);
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [searchingLocation, setSearchingLocation] = useState(false);
   const [radiusFilter, setRadiusFilter] = useState<number | null>(null); // null = Any distance, values in miles
+
+  useEffect(() => {
+    const kbd = (window as any).Keyboard;
+    if (kbd && typeof kbd.hideFormAccessoryBar === 'function') {
+      kbd.hideFormAccessoryBar(true);
+    }
+  }, []);
 
   // Load saved location from localStorage on mount
 useEffect(() => {
@@ -761,9 +774,27 @@ const sortedPosts = useMemo(() => {
       return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
     });
   } else {
-    // Default: recently added - sort by created_at descending (newest first)
+    // Default: recently added
+    // New original posts get priority for 1 week or until expiry (whichever is longer)
+    const now = Date.now();
+    const WEEK = 7 * 24 * 60 * 60 * 1000;
+
     return [...postsToSort].sort((a, b) => {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      const aTime = new Date(a.created_at).getTime();
+      const bTime = new Date(b.created_at).getTime();
+
+      const aExpiryEnd = a.expires_at ? new Date(a.expires_at).getTime() : 0;
+      const aIsNew = !a.parent_post_id && now < Math.max(aTime + WEEK, aExpiryEnd);
+
+      const bExpiryEnd = b.expires_at ? new Date(b.expires_at).getTime() : 0;
+      const bIsNew = !b.parent_post_id && now < Math.max(bTime + WEEK, bExpiryEnd);
+
+      // New original posts come first
+      if (aIsNew && !bIsNew) return -1;
+      if (!aIsNew && bIsNew) return 1;
+
+      // Within the same tier, sort by created_at descending
+      return bTime - aTime;
     });
   }
 }, [filteredPosts, posts, user, sortBy, userLocation, radiusFilter, friendsOnly, friendIds]);
@@ -1050,43 +1081,72 @@ const sortedPosts = useMemo(() => {
           <main className="main-content">
             <div className="guest-banner">
               <h1 className="page-title">What's happening nearby?</h1>
-              <p className="page-subtitle">
-                Just browsing.{' '}
-                <button
-                  className="text-link"
-                  onClick={() => setShowAuthModal(true)}
-                >
-                  Log in
-                </button>{' '}
-                to join in.
-              </p>
             </div>
 
           <div className="feed-header">
-  <button className="btn btn-primary" onClick={handleShareClick}>
-    Share what I'm doing
-  </button>
-  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-    <select
-      className="sort-select"
-      value={sortBy}
-      onChange={(e) => setSortBy(e.target.value)}
-    >
-      <option value="nearest">Nearest</option>
-      <option value="soon">Happening soon</option>
-      <option value="recent">Recently added</option>
-    </select>
-    <select
-      className="sort-select"
-      value={radiusFilter === null ? 'any' : radiusFilter.toString()}
-      onChange={(e) => setRadiusFilter(e.target.value === 'any' ? null : Number(e.target.value))}
-    >
-      <option value="any">Distance: any</option>
-      <option value="1">Within 1 mile</option>
-      <option value="3">Within 3 miles</option>
-      <option value="5">Within 5 miles</option>
-      <option value="10">Within 10 miles</option>
-    </select>
+  {!isMobile && (
+    <button className="btn btn-primary" onClick={handleShareClick}>
+      Share what I'm doing
+    </button>
+  )}
+  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+    {isMobile ? (
+      <>
+        <button
+          onClick={() => setShowSortSheet(true)}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '13px',
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
+            padding: '8px 0',
+            fontFamily: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {sortBy === 'recent' ? 'Recently added' : sortBy === 'soon' ? 'Happening soon' : 'Nearest'}
+          <span style={{ fontSize: '10px' }}>▼</span>
+        </button>
+        <button
+          onClick={() => setShowDistanceSheet(true)}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '13px',
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
+            padding: '8px 0',
+            fontFamily: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {radiusFilter === null ? 'Distance: any' : `Within ${radiusFilter} ${radiusFilter === 1 ? 'mile' : 'miles'}`}
+          <span style={{ fontSize: '10px' }}>▼</span>
+        </button>
+      </>
+    ) : (
+      <>
+        <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <option value="recent">Recently added</option>
+          <option value="soon">Happening soon</option>
+          <option value="nearest">Nearest</option>
+        </select>
+        <select className="sort-select" value={radiusFilter === null ? 'any' : radiusFilter.toString()} onChange={(e) => setRadiusFilter(e.target.value === 'any' ? null : Number(e.target.value))}>
+          <option value="any">Distance: any</option>
+          <option value="1">Within 1 mile</option>
+          <option value="3">Within 3 miles</option>
+          <option value="5">Within 5 miles</option>
+          <option value="10">Within 10 miles</option>
+        </select>
+      </>
+    )}
   </div>
 </div>
 
@@ -1182,7 +1242,33 @@ const sortedPosts = useMemo(() => {
           )}
         </main>
         </div>
-        <AuthModal
+        <FilterBottomSheet
+        isOpen={showSortSheet}
+        onClose={() => setShowSortSheet(false)}
+        title="Sort by"
+        options={[
+          { value: 'recent', label: 'Recently added' },
+          { value: 'soon', label: 'Happening soon' },
+          { value: 'nearest', label: 'Nearest' },
+        ]}
+        selectedValue={sortBy}
+        onSelect={(value) => setSortBy(value)}
+      />
+      <FilterBottomSheet
+        isOpen={showDistanceSheet}
+        onClose={() => setShowDistanceSheet(false)}
+        title="Distance"
+        options={[
+          { value: 'any', label: 'Distance: any' },
+          { value: '1', label: 'Within 1 mile' },
+          { value: '3', label: 'Within 3 miles' },
+          { value: '5', label: 'Within 5 miles' },
+          { value: '10', label: 'Within 10 miles' },
+        ]}
+        selectedValue={radiusFilter === null ? 'any' : radiusFilter.toString()}
+        onSelect={(value) => setRadiusFilter(value === 'any' ? null : Number(value))}
+      />
+      <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => setShowAuthModal(false)}
@@ -1247,7 +1333,7 @@ const sortedPosts = useMemo(() => {
             pointerEvents: selectedThreadId && !isMobile ? 'auto' : 'auto',
             transition: 'opacity 0.2s ease',
             cursor: selectedThreadId && !isMobile ? 'pointer' : 'default',
-            paddingBottom: isMobile ? 'calc(64px + env(safe-area-inset-bottom))' : '0',
+            paddingBottom: isMobile ? 'calc(80px + env(safe-area-inset-bottom))' : '0',
           }}
         >
           <div 
@@ -1272,19 +1358,63 @@ const sortedPosts = useMemo(() => {
   onClick={(e) => e.stopPropagation()}
   style={{ pointerEvents: selectedThreadId && !isMobile ? 'none' : 'auto' }}
 >
-  <button className="btn btn-primary" onClick={handleShareClick} style={{ width: '100%', marginBottom: '12px' }}>
-    Share what I'm doing
-  </button>
+  {!isMobile && (
+    <button className="btn btn-primary" onClick={handleShareClick} style={{ width: '100%', marginBottom: '12px' }}>
+      Share what I'm doing
+    </button>
+  )}
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '13px' }}>
+  {isMobile ? (
+    <>
+      <button
+        onClick={() => setShowSortSheet(true)}
+        style={{
+          background: 'none',
+          border: 'none',
+          fontSize: '13px',
+          color: 'var(--text-primary)',
+          cursor: 'pointer',
+          padding: '8px 0',
+          fontFamily: 'inherit',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+        }}
+      >
+        {sortBy === 'recent' ? 'Recently added' : sortBy === 'soon' ? 'Happening soon' : 'Nearest'}
+        <span style={{ fontSize: '10px' }}>▼</span>
+      </button>
+
+      <button
+        onClick={() => setShowDistanceSheet(true)}
+        style={{
+          background: 'none',
+          border: 'none',
+          fontSize: '13px',
+          color: 'var(--text-primary)',
+          cursor: 'pointer',
+          padding: '8px 0',
+          fontFamily: 'inherit',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+        }}
+      >
+        {radiusFilter === null ? 'Distance: any' : `Within ${radiusFilter} ${radiusFilter === 1 ? 'mile' : 'miles'}`}
+        <span style={{ fontSize: '10px' }}>▼</span>
+      </button>
+    </>
+  ) : (
+    <>
       <select
         className="sort-select"
         value={sortBy}
         onChange={(e) => setSortBy(e.target.value)}
       >
-        <option value="nearest">Sort by: nearest</option>
-        <option value="soon">Sort by: happening soon</option>
-        <option value="recent">Sort by: recently added</option>
+        <option value="recent">Recently added</option>
+        <option value="soon">Happening soon</option>
+        <option value="nearest">Nearest</option>
       </select>
       <select
         className="sort-select"
@@ -1297,7 +1427,9 @@ const sortedPosts = useMemo(() => {
         <option value="5">Within 5 miles</option>
         <option value="10">Within 10 miles</option>
       </select>
-    </div>
+    </>
+  )}
+</div>
     {user && (
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{
@@ -1430,16 +1562,20 @@ const sortedPosts = useMemo(() => {
       </div>
 
       {/* Mobile Bottom Nav */}
-      {isMobile && (
-        <BottomNav
-          activeTab={mobileTab}
-          onTabChange={handleMobileTabChange}
-          messageCount={threadCount}
-          onLogout={handleLogout}
-          isAdmin={isAdmin}
-          pendingReportsCount={pendingReportsCount}
-        />
-      )}
+
+{isMobile && user && (
+  <>
+    <FloatingActionButton onClick={() => setShowCreateModal(true)} />
+    <BottomNav
+      activeTab={mobileTab}
+      onTabChange={handleMobileTabChange}
+      onLogout={handleLogout}
+      isAdmin={isAdmin}
+      messageCount={threadCount}
+      pendingReportsCount={pendingReportsCount}
+    />
+  </>
+)}
 
       {/* Mobile Message List */}
       {isMobile && showMobileMessages && (
@@ -1519,6 +1655,37 @@ const sortedPosts = useMemo(() => {
         />
       )}
 
+{isMobile && (
+      <FilterBottomSheet
+        isOpen={showSortSheet}
+        onClose={() => setShowSortSheet(false)}
+        title="Sort by"
+        options={[
+          { value: 'recent', label: 'Recently added' },
+          { value: 'soon', label: 'Happening soon' },
+          { value: 'nearest', label: 'Nearest' },
+        ]}
+        selectedValue={sortBy}
+        onSelect={(value) => setSortBy(value)}
+      />
+      )}
+
+      {isMobile && (
+      <FilterBottomSheet
+        isOpen={showDistanceSheet}
+        onClose={() => setShowDistanceSheet(false)}
+        title="Distance"
+        options={[
+          { value: 'any', label: 'Any distance' },
+          { value: '1', label: 'Within 1 mile' },
+          { value: '3', label: 'Within 3 miles' },
+          { value: '5', label: 'Within 5 miles' },
+          { value: '10', label: 'Within 10 miles' },
+        ]}
+        selectedValue={radiusFilter === null ? 'any' : radiusFilter.toString()}
+        onSelect={(value) => setRadiusFilter(value === 'any' ? null : Number(value))}
+      />
+      )}
 
 
       {showProfileCompletionModal && currentUserProfile && (
