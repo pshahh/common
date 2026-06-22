@@ -23,6 +23,7 @@ import BottomNav from './components/BottomNav';
 import MobileMessageList from './components/MobileMessageList';
 import { sortByDistance, formatDistance, getDistanceToPost, calculateDistance } from '@/lib/distance';
 import { subscribeToPush } from '@/lib/pushNotifications';
+import { registerNativePush } from '@/lib/nativePush';
 import InstallPrompt from './components/InstallPrompt';
 import FloatingActionButton from './components/FloatingActionButton';
 import FilterBottomSheet from './components/FilterBottomSheet';
@@ -471,7 +472,11 @@ useEffect(() => {
         // Subscribe to push notifications (once)
 if (!sessionStorage.getItem('push-subscribed')) {
   sessionStorage.setItem('push-subscribed', 'true');
-  subscribeToPush(user.id).catch(console.error);
+  if ((window as any).Capacitor?.isNativePlatform?.()) {
+    registerNativePush(user.id).catch(console.error);
+  } else {
+    subscribeToPush(user.id).catch(console.error);
+  }
 }
     
 

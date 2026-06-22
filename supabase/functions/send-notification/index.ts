@@ -3,6 +3,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendFcmToUsers } from "../_shared/fcm.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -195,9 +196,14 @@ serve(async (req: Request) => {
     const pushBody = message.content.substring(0, 100) + (message.content.length > 100 ? '...' : '');
     const pushUrl = 'https://www.common-social.com/?thread=' + threadId;
 
-    await sendPushNotifications(supabase, pushRecipientIds, pushTitle, pushBody, pushUrl).catch(err => {
-      console.error('Push notifications failed:', err);
-    });
+    await Promise.all([
+      sendPushNotifications(supabase, pushRecipientIds, pushTitle, pushBody, pushUrl).catch(err => {
+        console.error('Web push notifications failed:', err);
+      }),
+      sendFcmToUsers(supabase, pushRecipientIds, pushTitle, pushBody, pushUrl).catch(err => {
+        console.error('FCM notifications failed:', err);
+      }),
+    ]);
 
     return new Response(
       JSON.stringify({

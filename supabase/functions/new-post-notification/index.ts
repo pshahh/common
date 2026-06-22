@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendFcmToUsers } from "../_shared/fcm.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -258,6 +259,14 @@ serve(async (req: Request) => {
     }
 
     const successCount = results.filter((r) => r.success).length;
+
+    // Send FCM push notifications to all eligible recipients
+    const fcmRecipientIds = recipients.map((r: { id: string }) => r.id);
+    const fcmTitle = post.name + ' just posted "' + post.title + '"';
+    const fcmBody = post.location + ' · ' + post.time;
+    await sendFcmToUsers(supabase, fcmRecipientIds, fcmTitle, fcmBody, postUrl).catch(err => {
+      console.error('FCM notifications failed:', err);
+    });
 
     return new Response(
       JSON.stringify({

@@ -5,8 +5,8 @@ const config: CapacitorConfig = {
   appName: 'common',
   webDir: 'out',
   server: {
-    url: 'http://localhost:3000',
-    cleartext: true,
+    url: 'https://www.common-social.com',
+  cleartext: false,
   },
   ios: {
     contentInset: 'never',
