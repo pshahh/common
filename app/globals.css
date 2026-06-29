@@ -1451,7 +1451,10 @@ a[href] {
 .mobile-message-overlay {
   display: none;
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100dvh;
   background: var(--bg-badge);
   z-index: 55;
   flex-direction: column;

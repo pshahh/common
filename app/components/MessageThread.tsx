@@ -674,6 +674,7 @@ export default function MessageThread({
       {/* Header */}
       <div style={{
         padding: '16px',
+        paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
         borderBottom: '1px solid var(--border)',
         display: 'flex',
         justifyContent: 'space-between',
@@ -927,6 +928,7 @@ export default function MessageThread({
       {/* Input area */}
       <div style={{
         padding: '16px',
+        paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
         borderTop: '1px solid var(--border)',
         flexShrink: 0,
         background: 'var(--bg-badge)',

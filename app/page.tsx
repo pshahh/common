@@ -1568,7 +1568,7 @@ const sortedPosts = useMemo(() => {
 
       {/* Mobile Bottom Nav */}
 
-{isMobile && user && (
+{isMobile && user && !showMobileThread && (
   <>
     <FloatingActionButton onClick={() => setShowCreateModal(true)} />
     <BottomNav

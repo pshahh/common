@@ -110,21 +110,26 @@ serve(async (req: Request) => {
       return new Response("Failed to fetch recipients", { status: 500 });
     }
 
-    // Get emails from auth.users (requires service role)
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-    
-    if (authError) {
-      console.error("Failed to fetch auth users:", authError);
-      return new Response("Failed to fetch auth users", { status: 500 });
-    }
-
-    // Build email map
+    // Get emails from auth.users (paginate — listUsers returns max 50 per page)
     const emailMap = new Map<string, string>();
-    authUsers.users.forEach((user: { id: string; email?: string }) => {
-      if (user.email) {
-        emailMap.set(user.id, user.email);
+    let page = 1;
+    const perPage = 50;
+    while (true) {
+      const { data: authUsers, error: authError } =
+        await supabase.auth.admin.listUsers({ page, perPage });
+
+      if (authError || !authUsers) {
+        console.error("Failed to fetch auth users page " + page + ":", authError);
+        break;
       }
-    });
+
+      authUsers.users.forEach((user: { id: string; email?: string }) => {
+        if (user.email) emailMap.set(user.id, user.email);
+      });
+
+      if (authUsers.users.length < perPage) break;
+      page++;
+    }
 
     // Check if this is the first message in the thread (new interest notification)
     const { count: messageCount } = await supabase

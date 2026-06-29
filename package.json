@@ -9,14 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.0",
-    "@capacitor/cli": "^8.4.0",
-    "@capacitor/core": "^8.4.0",
-    "@capacitor/ios": "^8.4.0",
-    "@capacitor/keyboard": "^8.0.5",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/ios": "^8.4.1",
     "@capacitor/push-notifications": "^8.1.1",
     "@supabase/supabase-js": "^2.89.0",
-    "cordova-plugin-ionic-keyboard": "^2.2.0",
     "next": "^16.2.9",
     "react": "19.2.3",
     "react-dom": "19.2.3",

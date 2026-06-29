@@ -15,11 +15,6 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
   },
-  plugins: {
-    Keyboard: {
-      resizeOnFullScreen: true,
-    },
-  },
 };
 
 export default config;
