@@ -5,11 +5,6 @@ import { supabase } from './supabase';
 export async function registerNativePush(userId: string) {
   if (!Capacitor.isNativePlatform()) return;
 
-  const permResult = await PushNotifications.requestPermissions();
-  if (permResult.receive !== 'granted') return;
-
-  await PushNotifications.register();
-
   PushNotifications.addListener('registration', async (token) => {
     const platform = Capacitor.getPlatform() as 'ios' | 'android';
     await supabase.from('device_tokens').upsert(
@@ -29,4 +24,9 @@ export async function registerNativePush(userId: string) {
       if (path) window.location.href = path;
     }
   });
+
+  const permResult = await PushNotifications.requestPermissions();
+  if (permResult.receive !== 'granted') return;
+
+  await PushNotifications.register();
 }
