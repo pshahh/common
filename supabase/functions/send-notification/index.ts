@@ -1,5 +1,4 @@
 // supabase/functions/send-notification/index.ts
-// Edge Function to send email notifications for new messages
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -9,8 +8,6 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-// For testing, use Resend's test domain (can only send to your own email)
-// Change this to your domain once verified: "Common <notifications@yourdomain.com>"
 const EMAIL_FROM = "common <notifications@common-social.com>";
 
 interface WebhookPayload {
@@ -22,6 +19,7 @@ interface WebhookPayload {
     sender_id: string;
     content: string;
     created_at: string;
+    message_type?: string; // 'user' | 'system'
   };
   old_record: null;
 }
@@ -40,15 +38,12 @@ interface ThreadData {
 
 serve(async (req: Request) => {
   try {
-    // Verify request method
     if (req.method !== "POST") {
       return new Response("Method not allowed", { status: 405 });
     }
 
-    // Parse the webhook payload
     const payload: WebhookPayload = await req.json();
-    
-    // Only process INSERT events on messages table
+
     if (payload.type !== "INSERT" || payload.table !== "messages") {
       return new Response("Ignored", { status: 200 });
     }
@@ -56,8 +51,8 @@ serve(async (req: Request) => {
     const message = payload.record;
     const senderId = message.sender_id;
     const threadId = message.thread_id;
+    const isSystemMessage = message.message_type === "system";
 
-    // Create Supabase client with service role for full access
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
     // Get thread details with post info
@@ -80,7 +75,6 @@ serve(async (req: Request) => {
       return new Response("Post not found", { status: 404 });
     }
 
-    // Determine who should receive the notification
     // All participants except the sender
     const recipientIds = threadData.participant_ids.filter(
       (id: string) => id !== senderId
@@ -90,7 +84,7 @@ serve(async (req: Request) => {
       return new Response("No recipients", { status: 200 });
     }
 
-    // Get sender's name for the email
+    // Get sender's name
     const { data: senderProfile } = await supabase
       .from("profiles")
       .select("first_name")
@@ -110,7 +104,7 @@ serve(async (req: Request) => {
       return new Response("Failed to fetch recipients", { status: 500 });
     }
 
-    // Get emails from auth.users (paginate — listUsers returns max 50 per page)
+    // Get emails from auth.users
     const emailMap = new Map<string, string>();
     let page = 1;
     const perPage = 50;
@@ -142,7 +136,6 @@ serve(async (req: Request) => {
     // Send emails to each recipient
     const emailPromises = recipients
       ?.filter((recipient: { id: string; email_notifications?: boolean }) => {
-        // Check if user has notifications enabled (default to true if not set)
         const notificationsEnabled = recipient.email_notifications !== false;
         const hasEmail = emailMap.has(recipient.id);
         return notificationsEnabled && hasEmail;
@@ -151,10 +144,9 @@ serve(async (req: Request) => {
         const recipientEmail = emailMap.get(recipient.id)!;
         const recipientName = recipient.first_name || "there";
 
-        // Different email content for first message vs subsequent messages
         const subject = isFirstMessage
-  ? senderName + ' wants to join "' + post.title + '"'
-  : 'New message from ' + senderName + ' about "' + post.title + '"';
+          ? senderName + ' wants to join "' + post.title + '"'
+          : 'New message from ' + senderName + ' about "' + post.title + '"';
 
         const emailHtml = generateEmailHtml({
           recipientName,
@@ -162,10 +154,10 @@ serve(async (req: Request) => {
           postTitle: post.title,
           messagePreview: message.content.substring(0, 150).replace(/\n/g, '<br>') + (message.content.length > 150 ? "..." : ""),
           isFirstMessage,
+          isSystemMessage,
           threadUrl: "https://www.common-social.com/?thread=" + threadId,
         });
 
-        // Send via Resend
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -193,12 +185,14 @@ serve(async (req: Request) => {
     const results = await Promise.all(emailPromises);
     const successCount = results.filter((r: { success: boolean }) => r.success).length;
 
-    // Send push notifications to all recipients (regardless of email preference)
+    // Send push notifications
     const pushRecipientIds = recipientIds;
     const pushTitle = isFirstMessage
       ? senderName + ' is interested in "' + post.title + '"'
       : 'New message from ' + senderName;
-    const pushBody = message.content.substring(0, 100) + (message.content.length > 100 ? '...' : '');
+    const pushBody = isSystemMessage
+      ? senderName + ' joined the group'
+      : message.content.substring(0, 100) + (message.content.length > 100 ? '...' : '');
     const pushUrl = 'https://www.common-social.com/?thread=' + threadId;
 
     await Promise.all([
@@ -236,9 +230,10 @@ function generateEmailHtml(params: {
   postTitle: string;
   messagePreview: string;
   isFirstMessage: boolean;
+  isSystemMessage: boolean;
   threadUrl: string;
 }): string {
-  const { recipientName, senderName, postTitle, messagePreview, isFirstMessage, threadUrl } = params;
+  const { recipientName, senderName, postTitle, messagePreview, isFirstMessage, isSystemMessage, threadUrl } = params;
 
   const headline = isFirstMessage
     ? senderName + " wants to join you"
@@ -247,6 +242,24 @@ function generateEmailHtml(params: {
   const subline = isFirstMessage
     ? 'They\'re interested in your post <strong>"' + postTitle + '"</strong>'
     : 'About <strong>"' + postTitle + '"</strong>';
+
+  // For first-message system messages (group joins with no user message),
+  // hide the message preview block entirely
+  const showMessagePreview = !(isFirstMessage && isSystemMessage);
+
+  // CTA: "Say hello" for interest notifications, "Reply to X" for actual messages
+  const ctaText = isFirstMessage ? 'Say hello' : 'Reply to ' + senderName;
+
+  const messageBlock = showMessagePreview
+    ? '<div style="background-color: #f7f5ee; border-radius: 12px; padding: 16px; margin-bottom: 24px;">' +
+      '  <p style="margin: 0 0 8px; font-size: 13px; color: #888888;">' +
+           senderName + ' wrote:' +
+      '  </p>' +
+      '  <p style="margin: 0; font-size: 14px; color: #000000; line-height: 1.5;">' +
+      '    "' + messagePreview + '"' +
+      '  </p>' +
+      '</div>'
+    : '';
 
   return '<!DOCTYPE html>' +
 '<html>' +
@@ -275,19 +288,12 @@ function generateEmailHtml(params: {
 '              <p style="margin: 0 0 24px; font-size: 15px; color: #888888; line-height: 1.6;">' +
                  subline +
 '              </p>' +
-'              <div style="background-color: #f7f5ee; border-radius: 12px; padding: 16px; margin-bottom: 24px;">' +
-'                <p style="margin: 0 0 8px; font-size: 13px; color: #888888;">' +
-                   senderName + ' wrote:' +
-'                </p>' +
-'                <p style="margin: 0; font-size: 14px; color: #000000; line-height: 1.5;">' +
-'                  "' + messagePreview + '"' +
-'                </p>' +
-'              </div>' +
+               messageBlock +
 '              <table cellpadding="0" cellspacing="0" border="0">' +
 '                <tr>' +
 '                  <td style="background-color: #0F4415; border-radius: 24px; padding: 12px 24px;">' +
 '                    <a href="' + threadUrl + '" style="color: #FEFCF8; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block;">' +
-'                      Reply to ' + senderName +
+                       ctaText +
 '                    </a>' +
 '                  </td>' +
 '                </tr>' +
@@ -319,7 +325,7 @@ async function sendPushNotifications(
   url: string
 ) {
   console.log('sendPushNotifications called for recipients:', recipientIds);
-  
+
   const { data: subscriptions, error: subError } = await supabase
     .from('push_subscriptions')
     .select('*')
@@ -332,10 +338,10 @@ async function sendPushNotifications(
   for (const sub of subscriptions) {
     try {
       console.log('Sending push to endpoint:', sub.endpoint.substring(0, 50) + '...');
-      
+
       const pushRes = await fetch('https://www.common-social.com/api/send-push', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + Deno.env.get('PUSH_API_SECRET'),
         },

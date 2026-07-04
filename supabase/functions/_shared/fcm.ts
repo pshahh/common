@@ -2,8 +2,6 @@ const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID")!;
 const FCM_CLIENT_EMAIL = Deno.env.get("FCM_CLIENT_EMAIL")!;
 const FCM_PRIVATE_KEY = Deno.env.get("FCM_PRIVATE_KEY")!;
 
-let cachedToken: { token: string; expiresAt: number } | null = null;
-
 function base64url(data: Uint8Array): string {
   let binary = "";
   for (const byte of data) binary += String.fromCharCode(byte);
@@ -26,6 +24,8 @@ async function importPrivateKey(pem: string): Promise<CryptoKey> {
   );
 }
 
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
 async function getAccessToken(): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   if (cachedToken && now < cachedToken.expiresAt - 60) {
@@ -46,6 +46,8 @@ async function getAccessToken(): Promise<string> {
     )
   );
 
+  console.log("FCM auth - email:", FCM_CLIENT_EMAIL, "project:", FCM_PROJECT_ID);
+
   const key = await importPrivateKey(FCM_PRIVATE_KEY);
   const signature = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
@@ -61,12 +63,14 @@ async function getAccessToken(): Promise<string> {
     body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=" + jwt,
   });
 
+  const tokenResText = await tokenRes.text();
+  console.log("Google OAuth response:", tokenRes.status, tokenResText.substring(0, 300));
+
   if (!tokenRes.ok) {
-    const err = await tokenRes.text();
-    throw new Error("Failed to get FCM access token: " + err);
+    throw new Error("Failed to get FCM access token: " + tokenResText);
   }
 
-  const tokenData = await tokenRes.json();
+  const tokenData = JSON.parse(tokenResText);
   cachedToken = {
     token: tokenData.access_token,
     expiresAt: now + (tokenData.expires_in || 3600),
@@ -74,7 +78,7 @@ async function getAccessToken(): Promise<string> {
   return cachedToken.token;
 }
 
-export async function sendFcmNotification(
+async function sendFcmNotification(
   deviceToken: string,
   title: string,
   body: string,
@@ -105,6 +109,7 @@ export async function sendFcmNotification(
       console.error("FCM send failed for token " + deviceToken.substring(0, 20) + "...:", err);
       return false;
     }
+    console.log("FCM send success for token " + deviceToken.substring(0, 20) + "...");
     return true;
   } catch (err) {
     console.error("FCM send error:", err);
@@ -125,7 +130,7 @@ export async function sendFcmToUsers(
     .in("user_id", recipientIds);
 
   if (error || !tokens || tokens.length === 0) {
-    console.log("No device tokens found for FCM, recipients:", recipientIds.length);
+    console.log("No device tokens found, recipients:", recipientIds.length);
     return;
   }
 
