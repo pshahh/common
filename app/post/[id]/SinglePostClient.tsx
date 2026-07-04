@@ -219,6 +219,41 @@ useEffect(() => {
   }
 
   if (notFound || !post) {
+    // A logged-out visitor gets the exact same empty result whether the post
+    // truly doesn't exist or it's just a friends-only post RLS is hiding from
+    // them. Since we can't tell those apart without an account, nudge them to
+    // sign in rather than flatly saying "not found."
+    if (!user) {
+      return (
+        <div className="app">
+          <Header
+            onLoginClick={() => setShowAuthModal(true)}
+            user={user}
+            onLogout={handleLogout}
+          />
+          <main className="main-content">
+            <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
+              <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px', color: '#000' }}>
+                This one might be just for friends
+              </h1>
+              <p style={{ fontSize: '14px', color: '#888', marginBottom: '24px', lineHeight: 1.5 }}>
+                Some plans on common are shared with friends only. Sign in (or say hello for the first time) and if you two are already connected, it'll be right here waiting for you.
+              </p>
+              <button className="btn btn-primary" onClick={() => setShowAuthModal(true)}>
+                Log in or sign up
+              </button>
+            </div>
+          </main>
+          <AuthModal
+            isOpen={showAuthModal}
+            onClose={() => setShowAuthModal(false)}
+            onSuccess={() => setShowAuthModal(false)}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="app">
         <Header

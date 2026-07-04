@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useUnreadCount } from '@/lib/useUnreadCount';
 import { User } from '@supabase/supabase-js';
@@ -414,8 +414,9 @@ useEffect(() => {
 
   // Read thread ID from URL query params
   const searchParams = useSearchParams();
+  const router = useRouter();
 
-  // Open thread from URL query parameter (e.g., from email link)
+  // Open thread from URL query parameter (e.g., from email link or push notification)
   useEffect(() => {
     const threadId = searchParams.get('thread');
     if (threadId && user) {
@@ -424,10 +425,13 @@ useEffect(() => {
         setShowMobileThread(true);
         window.history.pushState({ mobileThread: true }, '');
       }
-      // Clean up the URL so refresh doesn't reopen the thread
-      window.history.replaceState({}, '', '/');
+      // Clean up the URL via Next's router (not a raw History API call) so
+      // Next's internal search-params tracking actually clears too. Otherwise
+      // a later router.push('/') (e.g. tapping the Home tab) re-evaluates
+      // against the stale ?thread= value and reopens this same thread.
+      router.replace('/', { scroll: false });
     }
-  }, [searchParams, user, isMobile]);
+  }, [searchParams, user, isMobile, router]);
 
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
@@ -726,12 +730,17 @@ useEffect(() => {
     setLocationSuggestions([]);
   }, []);
 
-  // Filter out posts the user has already expressed interest in (and their own posts)
+  // Filter out posts the user has already expressed interest in.
+  // Own posts always stay in the feed (like Reddit etc.) so posting doesn't
+  // feel like it vanished into a void - PostCard hides the interest/report
+  // actions for those via the isOwnPost flag below. Note: userInterestedPostIds
+  // is sourced from thread participation, and posters are participants in
+  // threads on their own posts too, so we explicitly exempt own posts here -
+  // otherwise a user's post would disappear again the moment someone joined it.
   const filteredPosts = useMemo(() => {
     if (!user) return posts;
     return posts.filter(post => {
-      // Don't show user's own posts
-      if (post.user_id === user.id) return false;
+      if (post.user_id === user.id) return true;
       // Don't show posts user has already expressed interest in
       if (userInterestedPostIds.has(post.id)) return false;
       return true;
@@ -1273,6 +1282,7 @@ const sortedPosts = useMemo(() => {
         selectedValue={radiusFilter === null ? 'any' : radiusFilter.toString()}
         onSelect={(value) => setRadiusFilter(value === 'any' ? null : Number(value))}
       />
+      {isMobile && <FloatingActionButton onClick={handleShareClick} />}
       <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
@@ -1526,6 +1536,8 @@ const sortedPosts = useMemo(() => {
                       isLoggedIn={true}
                       onImInterested={() => handleInterestedClick(post)}
                       onReport={() => handleReportClick(post.id)}
+                      hideInterestButton={post.user_id === user.id}
+                      isOwnPost={post.user_id === user.id}
                       distance={getPostDistance(post)}
                       authorAvatarUrl={authorProfile?.avatar_url}
                       authorDateOfBirth={authorProfile?.date_of_birth}

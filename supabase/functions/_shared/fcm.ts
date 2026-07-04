@@ -37,11 +37,10 @@ async function getAccessToken(): Promise<string> {
     new TextEncoder().encode(
       JSON.stringify({
         iss: FCM_CLIENT_EMAIL,
-        sub: FCM_CLIENT_EMAIL,
         aud: "https://oauth2.googleapis.com/token",
         iat: now,
         exp: now + 3600,
-        scope: "https://www.googleapis.com/auth/firebase.cloud-messaging",
+        scope: "https://www.googleapis.com/auth/firebase.messaging",
       })
     )
   );
@@ -64,13 +63,26 @@ async function getAccessToken(): Promise<string> {
   });
 
   const tokenResText = await tokenRes.text();
-  console.log("Google OAuth response:", tokenRes.status, tokenResText.substring(0, 300));
+  console.log("Google OAuth response status:", tokenRes.status, "length:", tokenResText.length);
 
   if (!tokenRes.ok) {
     throw new Error("Failed to get FCM access token: " + tokenResText);
   }
 
   const tokenData = JSON.parse(tokenResText);
+  console.log(
+    "Token response keys:",
+    Object.keys(tokenData),
+    "access_token present:",
+    !!tokenData.access_token,
+    "access_token prefix:",
+    tokenData.access_token ? tokenData.access_token.substring(0, 15) : null,
+    "expires_in:",
+    tokenData.expires_in,
+    "token_type:",
+    tokenData.token_type
+  );
+
   cachedToken = {
     token: tokenData.access_token,
     expiresAt: now + (tokenData.expires_in || 3600),

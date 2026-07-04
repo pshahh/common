@@ -29,6 +29,7 @@ interface PostCardProps {
   isAdmin?: boolean;
   onAdminRemove?: () => void;
   audience?: 'everyone' | 'friends';
+  isOwnPost?: boolean;
 }
 
 
@@ -56,6 +57,7 @@ export default function PostCard({
   isAdmin = false,
   onAdminRemove,
   audience,
+  isOwnPost = false,
 }: PostCardProps) {
   const [showNameTooltip, setShowNameTooltip] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -299,15 +301,17 @@ export default function PostCard({
                   >
                     {copied ? '✓ Copied!' : 'Share'}
                   </button>
-                  <button
-                    className="dropdown-item"
-                    onClick={() => {
-                      setShowMenu(false);
-                      onReport?.();
-                    }}
-                  >
-                    Report post
-                  </button>
+                  {!isOwnPost && (
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onReport?.();
+                      }}
+                    >
+                      Report post
+                    </button>
+                  )}
                   {isAdmin && onAdminRemove && (
                     <button
                       className="dropdown-item"
