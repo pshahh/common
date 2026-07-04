@@ -27,7 +27,7 @@ export async function registerNativePush(userId: string) {
   });
 
   await FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
-    const url = event.notification?.data?.url;
+    const url = (event as any).notification?.data?.url;
     if (url && typeof url === 'string') {
       const path = url.replace('https://www.common-social.com', '');
       if (path) window.location.href = path;
