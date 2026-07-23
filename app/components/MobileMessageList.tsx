@@ -175,7 +175,7 @@ export default function MobileMessageList({
   return (
     <div style={{
       position: 'fixed',
-      top: '56px',
+      top: 0,
       left: 0,
       right: 0,
       bottom: '64px',
@@ -183,9 +183,31 @@ export default function MobileMessageList({
       zIndex: 45,
       display: 'flex',
       flexDirection: 'column',
-      overflowY: 'auto',
-      padding: '16px',
+      overflow: 'hidden',
     }}>
+      {/* Brand bar - this overlay sits above the page's own <Header>, so it
+          needs its own "common" wordmark to stay consistent with the home
+          feed and activity pages. */}
+      <div style={{
+        padding: '12px 16px',
+        paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+        borderBottom: '1px solid var(--border)',
+        flexShrink: 0,
+      }}>
+        <span style={{
+          fontSize: '20px',
+          fontWeight: 700,
+          color: 'var(--accent)',
+          letterSpacing: '-0.5px',
+        }}>
+          common
+        </span>
+      </div>
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '16px',
+      }}>
       {loading ? (
         <div style={{
           textAlign: 'center',
@@ -277,6 +299,7 @@ export default function MobileMessageList({
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -15,6 +15,15 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
   },
+  plugins: {
+    SystemBars: {
+      // common has no dark mode - the background is always pale, so force
+      // dark status bar icons regardless of the device's system theme
+      // (Capacitor's built-in SystemBars plugin otherwise auto-picks based
+      // on system dark/light mode, which is why this kept reverting).
+      style: 'light',
+    },
+  },
 };
 
 export default config;

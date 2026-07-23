@@ -1624,6 +1624,7 @@ const sortedPosts = useMemo(() => {
             }}
             onReport={handleReportClick}
             onLeaveThread={handleLeaveThread}
+            showBrandHeader
           />
         </div>
       )}

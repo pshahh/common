@@ -6,6 +6,30 @@ import { calculateAge, getInitials } from '@/lib/profile';
 import ClosedBadge from './ClosedBadge';
 import { renderTextWithLinks } from '@/lib/textUtils';
 
+// Slim "common" wordmark bar, styled to match Header.tsx, shown only when
+// this thread is the full-screen mobile view (the page's own <Header> is
+// hidden underneath it otherwise).
+function BrandBar({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <div style={{
+      padding: '12px 16px',
+      paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+      borderBottom: '1px solid var(--border)',
+      flexShrink: 0,
+    }}>
+      <span style={{
+        fontSize: '20px',
+        fontWeight: 700,
+        color: 'var(--accent)',
+        letterSpacing: '-0.5px',
+      }}>
+        common
+      </span>
+    </div>
+  );
+}
+
 interface Message {
   id: string;
   thread_id: string;
@@ -55,6 +79,12 @@ interface MessageThreadProps {
   onClose: () => void;
   onReport?: (postId: string, threadId: string) => void;
   onLeaveThread?: () => void;
+  // True when this is rendered as a full-screen mobile overlay, where the
+  // page's own <Header> (with the "common" wordmark) is hidden underneath.
+  // Adds a slim brand bar so the page still feels consistent with the home
+  // feed and activity pages. Not needed for the desktop side-panel usage,
+  // where the page's Header is already visible above it.
+  showBrandHeader?: boolean;
 }
 
 export default function MessageThread({
@@ -63,6 +93,7 @@ export default function MessageThread({
   onClose,
   onReport,
   onLeaveThread,
+  showBrandHeader = false,
 }: MessageThreadProps) {
   const [thread, setThread] = useState<Thread | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -608,8 +639,10 @@ export default function MessageThread({
   if (loading) {
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <BrandBar show={showBrandHeader} />
         <div style={{
           padding: '16px',
+          paddingTop: showBrandHeader ? '16px' : 'calc(16px + env(safe-area-inset-top, 0px))',
           borderBottom: '1px solid var(--border)',
           display: 'flex',
           justifyContent: 'space-between',
@@ -629,8 +662,10 @@ export default function MessageThread({
   if (!thread || !thread.post) {
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <BrandBar show={showBrandHeader} />
         <div style={{
           padding: '16px',
+          paddingTop: showBrandHeader ? '16px' : 'calc(16px + env(safe-area-inset-top, 0px))',
           borderBottom: '1px solid var(--border)',
           display: 'flex',
           justifyContent: 'space-between',
@@ -671,10 +706,11 @@ export default function MessageThread({
       <ExpandedPhotoModal />
       <LeaveConversationModal />
       <BlockUserModal />
+      <BrandBar show={showBrandHeader} />
       {/* Header */}
       <div style={{
         padding: '16px',
-        paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
+        paddingTop: showBrandHeader ? '16px' : 'calc(16px + env(safe-area-inset-top, 0px))',
         borderBottom: '1px solid var(--border)',
         display: 'flex',
         justifyContent: 'space-between',
@@ -949,7 +985,7 @@ export default function MessageThread({
     Conversations close 24 hours after the activity ends. You can still read past messages.
   </div>
 )}
-            <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+            <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
   <textarea
     placeholder={thread?.thread_type === 'group' ? 'Type something...' : 'Type something...'}
     value={newMessage}
@@ -968,11 +1004,11 @@ export default function MessageThread({
     }}
     rows={1}
     style={{
-      flex: 1, 
+      flex: 1,
       border: '1px solid var(--border)',
       borderRadius: '12px',
-      padding: '10px 16px', 
-      fontSize: '14px', 
+      padding: '10px 16px',
+      fontSize: '14px',
       outline: 'none',
       resize: 'none',
       lineHeight: '1.4',
@@ -984,14 +1020,26 @@ export default function MessageThread({
   <button
     type="submit"
     disabled={!newMessage.trim() || sending}
+    aria-label="Send message"
     style={{
-      background: 'none', border: 'none', fontSize: '18px',
-      color: newMessage.trim() && !sending ? 'var(--accent)' : 'var(--accent)',
+      background: newMessage.trim() && !sending ? 'var(--accent)' : 'var(--border)',
+      border: 'none',
+      width: '40px',
+      height: '40px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
       cursor: newMessage.trim() && !sending ? 'pointer' : 'not-allowed',
-      padding: '0 8px',
-      marginBottom: '4px',
+      transition: 'background 0.15s ease',
     }}
-  >→</button>
+  >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-inverse)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  </button>
 </form>
           </>
         )}
