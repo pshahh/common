@@ -13,6 +13,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -47,10 +48,16 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       setError('Please enter your first name');
       return;
     }
-    
+
+    // Validate age confirmation
+    if (!ageConfirmed) {
+      setError('Please confirm you are 18 or older to join common.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
-  
+
     // Create the user
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
@@ -61,13 +68,13 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   : window.location.href,
       },
     });
-    
+
     if (signUpError) {
       setError(signUpError.message);
       setLoading(false);
       return;
     }
-    
+
     // Create their profile
     if (data.user) {
       const { error: profileError } = await supabase
@@ -75,6 +82,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       .insert({
         id: data.user.id,
         first_name: firstName.trim(),
+        age_confirmed_at: new Date().toISOString(),
       });
     
     if (profileError) {
@@ -136,6 +144,7 @@ const handleForgotPassword = async (e: React.FormEvent) => {
     setEmail('');
     setPassword('');
     setFirstName('');
+    setAgeConfirmed(false);
     setError(null);
     setMode('login');
   };
@@ -546,6 +555,39 @@ if (mode === 'reset-sent') {
                   }}
                 />
               </div>
+            )}
+
+            {mode === 'signup' && (
+              <label style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                fontSize: '13px',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.5,
+                cursor: 'pointer',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={ageConfirmed}
+                  onChange={e => setAgeConfirmed(e.target.checked)}
+                  required
+                  style={{
+                    marginTop: '2px',
+                    width: '16px',
+                    height: '16px',
+                    flexShrink: 0,
+                    accentColor: 'var(--accent)',
+                    cursor: 'pointer',
+                  }}
+                />
+                <span>
+                  I confirm I&apos;m 18 or older, and I agree to common&apos;s{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-primary)', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+                    Privacy Policy
+                  </a>.
+                </span>
+              </label>
             )}
 
 {mode === 'login' && (

@@ -284,6 +284,35 @@ export default function BottomNav({
               Guidelines
             </button>
 
+            <button
+              onClick={() => { router.push('/privacy'); handleCloseMenu(); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '16px 0',
+                borderBottom: '1px solid var(--border-light)',
+                fontSize: '16px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                background: 'none',
+                border: 'none',
+                borderBottomWidth: '1px',
+                borderBottomStyle: 'solid',
+                borderBottomColor: 'var(--border-light)',
+                width: '100%',
+                textAlign: 'left',
+                fontFamily: 'inherit',
+              }}
+            >
+              <span style={{ width: '24px', display: 'flex', justifyContent: 'center' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+                </svg>
+              </span>
+              Privacy Policy
+            </button>
+
             {isAdmin && (
               <>
                 <button

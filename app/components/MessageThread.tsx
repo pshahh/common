@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { calculateAge, getInitials } from '@/lib/profile';
 import ClosedBadge from './ClosedBadge';
 import { renderTextWithLinks } from '@/lib/textUtils';
+import { ExternalLink as ShareIcon } from 'lucide-react';
 
 // Slim "common" wordmark bar, styled to match Header.tsx, shown only when
 // this thread is the full-screen mobile view (the page's own <Header> is
@@ -362,11 +363,25 @@ export default function MessageThread({
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (!thread?.post) return;
     const postPath = thread.post.slug || thread.post.id;
     const url = `${window.location.origin}/post/${postPath}`;
-    navigator.clipboard.writeText(url);
+
+    // Prefer the native share sheet where available (most mobile browsers,
+    // and the Capacitor WebView on Android/iOS).
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: thread.post.title, url });
+      } catch {
+        // User cancelled the share sheet, or it failed - nothing to do.
+      }
+      return;
+    }
+
+    // Fallback for browsers without the Web Share API: copy to clipboard
+    // and show an explicit confirmation.
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -738,24 +753,39 @@ export default function MessageThread({
                 boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '176px',
                 zIndex: 20, overflow: 'hidden',
               }}>
-                <div 
-                  onClick={() => { setShowMenu(false); if (post) onReport?.(post.id, threadId); }} 
+                <div
+                  onClick={async () => {
+                    if (typeof navigator.share === 'function') {
+                      setShowMenu(false);
+                      handleShare();
+                    } else {
+                      await handleShare();
+                      setTimeout(() => setShowMenu(false), 1200);
+                    }
+                  }}
+                  style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <ShareIcon size={14} />
+                  {copied ? '✓ Copied!' : 'Share'}
+                </div>
+                <div
+                  onClick={() => { setShowMenu(false); if (post) onReport?.(post.id, threadId); }}
                   style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
                 >
                   Report post
                 </div>
                 <div
                   onClick={() => { setShowMenu(false); setShowLeaveModal(true); }}
-                  style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+                  style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer' }}
                 >
-                  Leave this chat?
+                  Leave chat
                 </div>
-                <div
-                  onClick={() => { setShowMenu(false); setShowBlockModal(true); }}
-                  style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--danger)', cursor: 'pointer' }}
-                >
-                  Block this person
-                </div>
+                {/* Block is intentionally hidden for now - menu felt too
+                    crowded at 4 items and no one had used it. The handler,
+                    state, and modal below are all still fully wired up
+                    (setShowBlockModal / BlockUserModal / handleBlockUser) -
+                    to bring it back, just re-add a menu item that calls
+                    setShowMenu(false); setShowBlockModal(true) same as before. */}
               </div>
             )}
           </div>
@@ -790,18 +820,21 @@ export default function MessageThread({
               <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{post.title}</span>
               {post.status === 'closed' && <ClosedBadge size="small" />}
             </div>
-            <button 
-              onClick={handleShare} 
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                fontSize: '12px', 
+            <button
+              onClick={handleShare}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '12px',
                 color: copied ? '#4a9d6b' : 'var(--accent)',
-                cursor: 'pointer', 
-                padding: 0 
+                cursor: 'pointer',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
               }}
             >
-              {copied ? '✓ Copied!' : 'Share ↗'}
+              {copied ? '✓ Copied!' : <><ShareIcon size={12} /> Share</>}
             </button>
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginTop: '4px' }}>

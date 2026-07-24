@@ -789,19 +789,26 @@ const sortedPosts = useMemo(() => {
     });
   } else {
     // Default: recently added
-    // New original posts get priority for 1 week or until expiry (whichever is longer)
+    // New original posts get priority for 1 week or until expiry (whichever
+    // is longer), capped at MAX_NEW_WINDOW. Recurring/no-fixed-date posts get
+    // an expires_at of 2099 as a "no real end date" sentinel (see
+    // CreatePostModal.tsx) - without this cap, that sentinel would make them
+    // permanently "new" and they'd never stop outranking genuinely fresh posts.
     const now = Date.now();
     const WEEK = 7 * 24 * 60 * 60 * 1000;
+    const MAX_NEW_WINDOW = 30 * 24 * 60 * 60 * 1000; // 30 days
 
     return [...postsToSort].sort((a, b) => {
       const aTime = new Date(a.created_at).getTime();
       const bTime = new Date(b.created_at).getTime();
 
       const aExpiryEnd = a.expires_at ? new Date(a.expires_at).getTime() : 0;
-      const aIsNew = !a.parent_post_id && now < Math.max(aTime + WEEK, aExpiryEnd);
+      const aBoostEnd = Math.min(Math.max(aTime + WEEK, aExpiryEnd), aTime + MAX_NEW_WINDOW);
+      const aIsNew = !a.parent_post_id && now < aBoostEnd;
 
       const bExpiryEnd = b.expires_at ? new Date(b.expires_at).getTime() : 0;
-      const bIsNew = !b.parent_post_id && now < Math.max(bTime + WEEK, bExpiryEnd);
+      const bBoostEnd = Math.min(Math.max(bTime + WEEK, bExpiryEnd), bTime + MAX_NEW_WINDOW);
+      const bIsNew = !b.parent_post_id && now < bBoostEnd;
 
       // New original posts come first
       if (aIsNew && !bIsNew) return -1;

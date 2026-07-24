@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { calculateAge, getInitials } from '@/lib/profile';
 import ClosedBadge from './ClosedBadge';
 import { renderTextWithLinks } from '@/lib/textUtils';
+import { ExternalLink as ShareIcon } from 'lucide-react';
 
 interface PostCardProps {
   id: string;
@@ -129,6 +130,21 @@ export default function PostCard({
   const handleShare = async () => {
     const postPath = slug || id;
     const url = `${window.location.origin}/post/${postPath}`;
+
+    // Prefer the native share sheet where available (most mobile browsers,
+    // and the Capacitor WebView on Android/iOS).
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title, url });
+      } catch {
+        // User cancelled the share sheet, or it failed - nothing to do.
+      }
+      return;
+    }
+
+    // Fallback for browsers without the Web Share API (most desktop browsers):
+    // copy to clipboard and show an explicit confirmation, since there's no
+    // OS-level "copied" toast to rely on there like there is on Android.
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -293,13 +309,26 @@ export default function PostCard({
                 <div className="dropdown-menu">
                   <button
                     className="dropdown-item"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      setShowMenu(false);
-                      handleShare();
+                      if (typeof navigator.share === 'function') {
+                        // Native share sheet takes over the screen anyway,
+                        // safe to close the dropdown immediately.
+                        setShowMenu(false);
+                        handleShare();
+                      } else {
+                        // Clipboard fallback: keep the dropdown open long
+                        // enough to actually see "✓ Copied!" render before
+                        // closing it, since there's no OS-level toast here.
+                        await handleShare();
+                        setTimeout(() => setShowMenu(false), 1200);
+                      }
                     }}
                   >
-                    {copied ? '✓ Copied!' : 'Share'}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <ShareIcon size={14} />
+                      {copied ? '✓ Copied!' : 'Share'}
+                    </span>
                   </button>
                   {!isOwnPost && (
                     <button
