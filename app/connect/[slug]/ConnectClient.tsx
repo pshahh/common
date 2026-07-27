@@ -29,7 +29,7 @@ export default function ConnectClient({ slug }: ConnectClientProps) {
   const [notFound, setNotFound] = useState(false);
   const [alreadyFriends, setAlreadyFriends] = useState(false);
   const [isSelf, setIsSelf] = useState(false);
-  const { shareUrl: inviteShareUrl, showModal: showShareModal, handleShareClick: handleShareInvite, closeModal: closeShareModal } = useShareInvite({ userId: user?.id });
+  const { shareUrl: inviteShareUrl, showModal: showShareModal, justCopied: inviteJustCopied, handleShareClick: handleShareInvite, closeModal: closeShareModal } = useShareInvite({ userId: user?.id });
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [phase, setPhase] = useState<'connect' | 'celebrating' | 'done'>('connect');
@@ -466,7 +466,7 @@ export default function ConnectClient({ slug }: ConnectClientProps) {
               width: '100%', maxWidth: '300px',
             }}
           >
-            Share friendship link
+            {inviteJustCopied ? '✓ Copied!' : 'Share friendship link'}
           </button>
         )}
       </div>

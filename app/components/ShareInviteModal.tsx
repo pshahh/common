@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { canUseNativeShare, copyText } from '@/lib/shareUtils';
 
 interface ShareInviteModalProps {
   isOpen: boolean;
@@ -21,30 +22,11 @@ export default function ShareInviteModal({
 
   if (!isOpen) return null;
 
-  async function copyToClipboard(text: string): Promise<boolean> {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-    // Fallback for mobile / non-HTTPS
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      return true;
-    } catch {
-      document.body.removeChild(textarea);
-      return false;
-    }
-  }
-
   const handleShare = async () => {
-    if (navigator.share) {
+    // Native share sheet on touch devices only (see lib/shareUtils.ts) -
+    // desktop web always falls through to a quiet clipboard copy so we're
+    // not popping the OS share sheet there.
+    if (canUseNativeShare()) {
       try {
         await navigator.share({
           title: 'Be friends on common',
@@ -53,18 +35,22 @@ export default function ShareInviteModal({
       } catch (e) {
         // User cancelled
       }
-    } else {
-      await copyToClipboard(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      localStorage.setItem('common_has_shared_invite', 'true');
+      onClose();
+      return;
     }
-    // Mark as shared so next time we skip the preview
+
+    await copyText(shareUrl);
+    setCopied(true);
     localStorage.setItem('common_has_shared_invite', 'true');
-    onClose();
+    setTimeout(() => {
+      setCopied(false);
+      onClose();
+    }, 1500);
   };
 
   const handleCopyLink = async () => {
-    await copyToClipboard(shareUrl);
+    await copyText(shareUrl);
     setCopied(true);
     localStorage.setItem('common_has_shared_invite', 'true');
     setTimeout(() => {
@@ -235,7 +221,7 @@ export default function ShareInviteModal({
                 cursor: 'pointer',
               }}
             >
-              Share
+              {copied ? '✓ Copied!' : 'Share'}
             </button>
           </div>
         </div>

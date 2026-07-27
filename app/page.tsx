@@ -323,7 +323,7 @@ const [friendIds, setFriendIds] = useState<string[]>([]);
   // Track posts user has expressed interest in
   const [userInterestedPostIds, setUserInterestedPostIds] = useState<Set<string>>(new Set());
 
-  const { shareUrl, showModal: showShareModal, handleShareClick: handleShareInvite, closeModal: closeShareModal } = useShareInvite({ userId: user?.id });
+  const { shareUrl, showModal: showShareModal, justCopied: inviteJustCopied, handleShareClick: handleShareInvite, closeModal: closeShareModal } = useShareInvite({ userId: user?.id });
   const [showSortSheet, setShowSortSheet] = useState(false);
   const [showDistanceSheet, setShowDistanceSheet] = useState(false);
 
@@ -1484,10 +1484,44 @@ const sortedPosts = useMemo(() => {
   </div>
 </div>
 
+{friendsOnly && sortedPosts.length > 0 && (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: isMobile ? 'flex-start' : 'space-between',
+      flexWrap: 'nowrap',
+      gap: '10px',
+      background: isMobile ? 'none' : '#f8f5ef',
+      border: isMobile ? 'none' : '1px solid var(--border)',
+      borderRadius: isMobile ? '0' : '12px',
+      padding: isMobile ? '0' : '10px 16px',
+      marginBottom: '16px',
+    }}
+  >
+    {!isMobile && (
+      <span style={{ fontSize: '13px', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+        Share plans just for your friends
+      </span>
+    )}
+    <button
+      className="btn btn-primary"
+      onClick={handleShareInvite}
+      style={
+        isMobile
+          ? { width: '100%', whiteSpace: 'nowrap', padding: '12px 16px', fontSize: '14px' }
+          : { flexShrink: 0, whiteSpace: 'nowrap', padding: '7px 16px', fontSize: '12px' }
+      }
+    >
+      {inviteJustCopied ? '✓ Copied!' : 'Share friendship link'}
+    </button>
+  </div>
+)}
+
             <div onClick={(e) => e.stopPropagation()} style={{ pointerEvents: selectedThreadId && !isMobile ? 'none' : 'auto' }}>
               <LocationSection
                 sortBy={sortBy}
-                radiusFilter={radiusFilter} 
+                radiusFilter={radiusFilter}
                 locationStatus={locationStatus}
                 userLocation={userLocation}
                 showLocationInput={showLocationInput}
@@ -1509,11 +1543,11 @@ const sortedPosts = useMemo(() => {
                   <div style={{ fontSize: '48px', marginBottom: '16px'}}>👥</div>
                   <p style={{ color: 'var(--text-primary)' }}>Share plans just for your friends. Invite them to get started.</p>
                   <button
-  className="btn btn-primary"
-  onClick={handleShareInvite}
->
-  Share friendship link
-</button>
+                    className="btn btn-primary"
+                    onClick={handleShareInvite}
+                  >
+                    {inviteJustCopied ? '✓ Copied!' : 'Share friendship link'}
+                  </button>
                 </div>
               ) : (
                 <div className="empty-state" onClick={(e) => e.stopPropagation()}>

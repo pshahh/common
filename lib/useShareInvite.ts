@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { shareOrCopyLink } from '@/lib/shareUtils';
 
 interface UseShareInviteOptions {
   userId: string | undefined;
@@ -10,6 +11,7 @@ interface UseShareInviteOptions {
 interface UseShareInviteReturn {
   shareUrl: string | null;
   showModal: boolean;
+  justCopied: boolean;
   handleShareClick: () => Promise<void>;
   closeModal: () => void;
 }
@@ -17,28 +19,7 @@ interface UseShareInviteReturn {
 export function useShareInvite({ userId }: UseShareInviteOptions): UseShareInviteReturn {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
-
-  async function copyToClipboard(text: string): Promise<boolean> {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-    // Fallback for mobile / non-HTTPS
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      return true;
-    } catch {
-      document.body.removeChild(textarea);
-      return false;
-    }
-  }
+  const [justCopied, setJustCopied] = useState(false);
 
   const handleShareClick = useCallback(async () => {
     if (!userId) return;
@@ -58,19 +39,13 @@ export function useShareInvite({ userId }: UseShareInviteOptions): UseShareInvit
     const hasSharedBefore = localStorage.getItem('common_has_shared_invite') === 'true';
 
     if (hasSharedBefore) {
-      // Skip preview — go straight to share/copy
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: 'Be friends on common',
-            url,
-          });
-        } catch (e) {
-          // User cancelled
-        }
-      } else {
-        await copyToClipboard(url);
-        // You could trigger a toast here
+      // Skip preview — go straight to native share (touch devices) or a
+      // quiet clipboard copy with inline "✓ Copied!" feedback (desktop web),
+      // matching the share behaviour on post cards.
+      const didCopy = await shareOrCopyLink(url, 'Be friends on common');
+      if (didCopy) {
+        setJustCopied(true);
+        setTimeout(() => setJustCopied(false), 2000);
       }
     } else {
       // First time — show the preview modal
@@ -82,5 +57,5 @@ export function useShareInvite({ userId }: UseShareInviteOptions): UseShareInvit
     setShowModal(false);
   }, []);
 
-  return { shareUrl, showModal, handleShareClick, closeModal };
+  return { shareUrl, showModal, justCopied, handleShareClick, closeModal };
 }

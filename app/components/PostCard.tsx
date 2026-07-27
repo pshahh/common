@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { calculateAge, getInitials } from '@/lib/profile';
 import ClosedBadge from './ClosedBadge';
 import { renderTextWithLinks } from '@/lib/textUtils';
+import { canUseNativeShare, shareOrCopyLink } from '@/lib/shareUtils';
 import { ExternalLink as ShareIcon } from 'lucide-react';
 
 interface PostCardProps {
@@ -131,23 +132,13 @@ export default function PostCard({
     const postPath = slug || id;
     const url = `${window.location.origin}/post/${postPath}`;
 
-    // Prefer the native share sheet where available (most mobile browsers,
-    // and the Capacitor WebView on Android/iOS).
-    if (typeof navigator.share === 'function') {
-      try {
-        await navigator.share({ title, url });
-      } catch {
-        // User cancelled the share sheet, or it failed - nothing to do.
-      }
-      return;
+    // Native share sheet on touch devices; quiet clipboard copy + inline
+    // "✓ Copied!" everywhere else (see lib/shareUtils.ts).
+    const didCopy = await shareOrCopyLink(url, title);
+    if (didCopy) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
-
-    // Fallback for browsers without the Web Share API (most desktop browsers):
-    // copy to clipboard and show an explicit confirmation, since there's no
-    // OS-level "copied" toast to rely on there like there is on Android.
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleNameClick = () => {
@@ -311,7 +302,7 @@ export default function PostCard({
                     className="dropdown-item"
                     onClick={async (e) => {
                       e.stopPropagation();
-                      if (typeof navigator.share === 'function') {
+                      if (canUseNativeShare()) {
                         // Native share sheet takes over the screen anyway,
                         // safe to close the dropdown immediately.
                         setShowMenu(false);

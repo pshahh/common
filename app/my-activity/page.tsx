@@ -15,6 +15,8 @@ import EditPostModal from '../components/EditPostModal';
 import CreatePostModal from '../components/CreatePostModal';
 import MobileMessageList from '../components/MobileMessageList';
 import MessageThread from '../components/MessageThread';
+import { canUseNativeShare, shareOrCopyLink } from '@/lib/shareUtils';
+import { ExternalLink as ShareIcon } from 'lucide-react';
 
 interface Post {
   id: string;
@@ -123,28 +125,6 @@ export default function MyActivityPage() {
     checkAdmin();
   }, [user]);
 
-  async function copyToClipboard(text: string): Promise<boolean> {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-    // Fallback for mobile / non-HTTPS
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      return true;
-    } catch {
-      document.body.removeChild(textarea);
-      return false;
-    }
-  }
-
   // Fetch user's posts
   useEffect(() => {
     async function fetchMyPosts() {
@@ -220,9 +200,14 @@ export default function MyActivityPage() {
   const handleShare = async (post: Post) => {
     const postPath = post.slug || post.id;
     const url = `${window.location.origin}/post/${postPath}`;
-    await navigator.clipboard.writeText(url);
-    setCopiedPostId(post.id);
-    setTimeout(() => setCopiedPostId(null), 2000);
+    // Native share sheet on touch devices; quiet clipboard copy + inline
+    // "✓ Copied!" everywhere else (see lib/shareUtils.ts) - matches the
+    // share button on post cards in the home feed.
+    const didCopy = await shareOrCopyLink(url, post.title);
+    if (didCopy) {
+      setCopiedPostId(post.id);
+      setTimeout(() => setCopiedPostId(null), 2000);
+    }
   };
 
   const handleClosePost = async () => {
@@ -345,13 +330,19 @@ export default function MyActivityPage() {
     setMobileTab('activity');
   };
 
-  // Close overflow menu when clicking outside
+  // Close overflow menu when clicking outside (matches PostCard's approach:
+  // only close if the click actually landed outside the menu, so clicking
+  // "Share" inside the menu doesn't immediately dismiss it before the user
+  // sees the "✓ Copied!" confirmation).
   useEffect(() => {
-    const handleClickOutside = () => setOverflowMenuId(null);
-    if (overflowMenuId) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
+    if (!overflowMenuId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('.menu-container')) {
+        setOverflowMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [overflowMenuId]);
 
   if (!user) {
@@ -582,111 +573,60 @@ export default function MyActivityPage() {
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button
-                          onClick={() => handleShare(post)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            fontSize: '12px',
-                            color: copiedPostId === post.id ? '#4a9d6b' : '#888',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            transition: 'color 0.15s ease',
-                          }}
-                        >
-                          {copiedPostId === post.id ? '✓ Copied!' : 'Share ↗'}
-                        </button>
-
-                        <div style={{ position: 'relative' }}>
+                        <div className="menu-container">
                           <button
+                            className="menu-button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setOverflowMenuId(overflowMenuId === post.id ? null : post.id);
-                            }}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              fontSize: '18px',
-                              color: '#888',
-                              cursor: 'pointer',
-                              width: '32px',
-                              height: '32px',
-                              borderRadius: '50%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
                             }}
                           >
                             ⋯
                           </button>
 
                           {overflowMenuId === post.id && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              style={{
-                                position: 'absolute',
-                                right: 0,
-                                top: '36px',
-                                background: '#FEFCF8',
-                                border: '1px solid #E5DFD8',
-                                borderRadius: '12px',
-                                boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                                overflow: 'hidden',
-                                zIndex: 10,
-                                minWidth: '140px',
-                              }}
-                            >
+                            <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                className="dropdown-item"
+                                onClick={async () => {
+                                  if (canUseNativeShare()) {
+                                    // Native share sheet takes over the screen anyway,
+                                    // safe to close the dropdown immediately.
+                                    setOverflowMenuId(null);
+                                    handleShare(post);
+                                  } else {
+                                    // Clipboard fallback: keep the dropdown open long
+                                    // enough to actually see "✓ Copied!" render before
+                                    // closing it, since there's no OS-level toast here.
+                                    await handleShare(post);
+                                    setTimeout(() => setOverflowMenuId(null), 1200);
+                                  }
+                                }}
+                              >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <ShareIcon size={14} />
+                                  {copiedPostId === post.id ? '✓ Copied!' : 'Share'}
+                                </span>
+                              </button>
                               {post.status === 'pending' || post.status === 'approved' && (
                                 <button
+                                  className="dropdown-item"
                                   onClick={() => openEditModal(post)}
-                                  style={{
-                                    display: 'block',
-                                    width: '100%',
-                                    padding: '12px 16px',
-                                    fontSize: '14px',
-                                    color: 'var(--text-primary)',
-                                    background: 'none',
-                                    border: 'none',
-                                    textAlign: 'left',
-                                    cursor: 'pointer',
-                                  }}
                                 >
                                   Edit
                                 </button>
                               )}
                               {post.status === 'approved' && (
                                 <button
+                                  className="dropdown-item"
                                   onClick={() => openCloseModal(post.id)}
-                                  style={{
-                                    display: 'block',
-                                    width: '100%',
-                                    padding: '12px 16px',
-                                    fontSize: '14px',
-                                    color: 'var(--text-primary)',
-                                    background: 'none',
-                                    border: 'none',
-                                    textAlign: 'left',
-                                    cursor: 'pointer',
-                                  }}
                                 >
                                   Close post
                                 </button>
                               )}
                               <button
+                                className="dropdown-item danger"
                                 onClick={() => openDeleteModal(post.id)}
-                                style={{
-                                  display: 'block',
-                                  width: '100%',
-                                  padding: '12px 16px',
-                                  fontSize: '14px',
-                                  color: '#dc2626',
-                                  background: 'none',
-                                  border: 'none',
-                                  textAlign: 'left',
-                                  cursor: 'pointer',
-                                }}
                               >
                                 Delete
                               </button>
