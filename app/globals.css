@@ -56,7 +56,8 @@ body {
 
 a[href] {
   max-width: 100%;
-  word-break: break-all;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* App container */

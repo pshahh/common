@@ -316,21 +316,67 @@ export default function GuidelinesPage() {
 
   {/* Staying safe */}
   <section>
-    <h2 style={{ 
-      fontSize: '18px', 
-      fontWeight: 600, 
+    <h2 style={{
+      fontSize: '18px',
+      fontWeight: 600,
       color: '#000',
       marginBottom: '12px',
     }}>
       Staying safe
     </h2>
-    <p style={{ 
-      fontSize: '14px', 
-      color: '#444', 
+    <p style={{
+      fontSize: '14px',
+      color: '#444',
       lineHeight: 1.7,
       margin: 0,
     }}>
       Always meet in public places for the first time. Tell a friend where you're going. Trust your instincts - if something feels off, it's okay to leave. You can report any post or conversation that makes you uncomfortable.
+    </p>
+  </section>
+
+  {/* Child safety standards */}
+  <section id="child-safety">
+    <h2 style={{
+      fontSize: '18px',
+      fontWeight: 600,
+      color: '#000',
+      marginBottom: '12px',
+    }}>
+      Child safety standards
+    </h2>
+    <p style={{
+      fontSize: '14px',
+      color: '#444',
+      lineHeight: 1.7,
+      margin: '0 0 12px 0',
+    }}>
+      common must be used by adults only, and is not directed at or intended for children. We have
+      zero tolerance for child sexual abuse and exploitation (CSAE) of any kind, including child
+      sexual abuse material (CSAM), grooming, or any behaviour that endangers a child. Any account
+      found engaging in or facilitating this kind of activity will be removed immediately and
+      permanently banned.
+    </p>
+    <p style={{
+      fontSize: '14px',
+      color: '#444',
+      lineHeight: 1.7,
+      margin: '0 0 12px 0',
+    }}>
+      If you see anything on common that concerns you, including anything related to child safety,
+      you can report it in the app directly from the post or conversation in question, or email us
+      at <a href="mailto:hello@common-social.com" style={{ color: '#444' }}>hello@common-social.com</a>.
+      Reports are reviewed by our team and, where content or activity involves CSAE or CSAM, we
+      remove it immediately and report it to the relevant authorities, including the Internet Watch
+      Foundation and the National Center for Missing &amp; Exploited Children&apos;s CyberTipline, in
+      accordance with applicable law.
+    </p>
+    <p style={{
+      fontSize: '14px',
+      color: '#444',
+      lineHeight: 1.7,
+      margin: 0,
+    }}>
+      Child safety point of contact: <a href="mailto:hello@common-social.com" style={{ color: '#444' }}>hello@common-social.com</a>.
     </p>
   </section>
 </div>
