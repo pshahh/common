@@ -49,8 +49,31 @@ function generateEmailHtml({
   posterName: string;
   postUrl: string;
 }): string {
-  const notesHtml = postNotes
-    ? '<p style="font-size: 14px; color: #000000; font-style: italic; margin: 12px 0 0 0; line-height: 1.5;">' + postNotes.substring(0, 200).replace(/\n/g, "<br>") + (postNotes.length > 200 ? "..." : "") + '</p>'
+  // Truncate notes for email preview, but if a URL would be cut off,
+  // omit it entirely so email clients don't auto-link a broken address.
+  // This encourages recipients to click through to common instead.
+  let truncatedNotes: string | null = null;
+  if (postNotes) {
+    if (postNotes.length <= 200) {
+      truncatedNotes = postNotes;
+    } else {
+      let t = postNotes.substring(0, 200);
+      // Check if we cut through a URL
+      const partialUrlMatch = t.match(/https?:\/\/\S*$/);
+      if (partialUrlMatch && partialUrlMatch.index !== undefined) {
+        // Get the full URL from the original text to see if it was truncated
+        const fullUrlMatch = postNotes.substring(partialUrlMatch.index).match(/^https?:\/\/\S+/);
+        if (fullUrlMatch && fullUrlMatch[0].length > partialUrlMatch[0].length) {
+          // URL was truncated — remove it entirely
+          t = t.substring(0, partialUrlMatch.index).trimEnd();
+        }
+      }
+      truncatedNotes = t + "...";
+    }
+  }
+
+  const notesHtml = truncatedNotes
+    ? '<p style="font-size: 14px; color: #000000; font-style: italic; margin: 12px 0 0 0; line-height: 1.5;">' + truncatedNotes.replace(/\n/g, "<br>") + '</p>'
     : "";
 
   return '<!DOCTYPE html>' +
