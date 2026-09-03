@@ -42,3 +42,5 @@ next-env.d.ts
 
 ios/
 android/
+# living record lives in the Claude project, not the repo
+progress.md
