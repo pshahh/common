@@ -1,6 +1,6 @@
 # Analytics setup — PostHog
 
-Status: **not started**. This is the highest-priority piece of work on the roadmap.
+Status: **in progress** — PostHog account created (EU region), wizard next. This is the highest-priority piece of work on the roadmap.
 Written 3 September 2026.
 
 ## Why this first
@@ -47,16 +47,32 @@ product.
 ## Setup steps
 
 1. Create a PostHog account, choose **EU (Frankfurt)** at signup. Region cannot be changed later.
-2. `npm install posthog-js`
-3. Add `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` (the EU host) to `.env.local`
-   and to Vercel's environment variables.
-4. Create a client provider component that initialises PostHog once, with the persistence
-   and `person_profiles` settings above. Mount it in `app/layout.tsx`.
-5. Call `posthog.identify(user.id)` on login and `posthog.reset()` on logout. Use the Supabase
+2. Run the setup wizard for the boilerplate: `npx -y @posthog/wizard@latest`
+
+   **Do NOT run it with `self-driving`.** That mode connects your GitHub repo, enables
+   Session Replay and Error Tracking, and sets up AI agents that draft pull requests — far
+   more than we want. Note that the wizard sends source files to an AI for analysis; env
+   vars and secrets stay local.
+
+   Do this on a clean branch so the wizard's changes are a reviewable diff.
+3. **Immediately check what the wizard configured:**
+   - `NEXT_PUBLIC_POSTHOG_HOST` points at the EU host (`eu.i.posthog.com`), not the US default
+   - **`autocapture: false`** — this is the important one. Autocapture records clicks and
+     element text across the DOM, which on our feed means post titles, first names and
+     possibly message content. It breaks the no-PII rule and is badly at odds with the
+     product. Set it explicitly; don't assume the default.
+   - If session replay is on, input masking must be on with it
+4. Add `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` to Vercel's environment
+   variables as well as `.env.local`.
+5. Confirm the provider initialises PostHog once with `persistence: 'localStorage'` and
+   `person_profiles: 'identified_only'`, and is mounted in `app/layout.tsx`.
+6. Remove any generic "starter events" the wizard instrumented — we want exactly the ten
+   events below, no more.
+7. Call `posthog.identify(user.id)` on login and `posthog.reset()` on logout. Use the Supabase
    user ID so PostHog joins cleanly to the database.
-6. Capture UTM parameters and referrer on first touch as person properties, so channel
+8. Capture UTM parameters and referrer on first touch as person properties, so channel
    attribution survives to signup.
-7. Verify in PostHog's live events view before considering it done.
+9. Verify in PostHog's live events view before considering it done.
 
 ## Event taxonomy
 
