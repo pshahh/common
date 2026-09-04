@@ -11,6 +11,7 @@ import BottomNav from '../components/BottomNav';
 import AuthModal from '../components/AuthModal';
 import ClosedBadge from '../components/ClosedBadge';
 import PostCard from '../components/PostCard';
+import { formatNextOccurrence } from '@/lib/dates';
 import EditPostModal from '../components/EditPostModal';
 import CreatePostModal from '../components/CreatePostModal';
 import MobileMessageList from '../components/MobileMessageList';
@@ -36,6 +37,7 @@ interface Post {
   recurrence_rule: string | null;
   slug: string | null;
   thread_type: string | null;
+  next_occurrence_at: string | null;
 }
 
 export default function MyActivityPage() {
@@ -157,7 +159,8 @@ export default function MyActivityPage() {
          posts (
             id, title, location, latitude, longitude, time,
             notes, name, preference, people_interested,
-            user_id, created_at, expires_at, status, recurrence_rule, slug, thread_type
+            user_id, created_at, expires_at, status, recurrence_rule, slug, thread_type,
+            next_occurrence_at
           )
         `)
         .contains('participant_ids', [user.id])
@@ -537,6 +540,11 @@ export default function MyActivityPage() {
       repeats {post.recurrence_rule === 'every two weeks' ? 'every two weeks' : post.recurrence_rule}
     </span>
   )}
+  {formatNextOccurrence(post.next_occurrence_at) && (
+    <span style={{ color: '#000', fontWeight: 500 }}>
+      Next: {formatNextOccurrence(post.next_occurrence_at)}
+    </span>
+  )}
 </p>
 
                         {post.notes && (
@@ -693,6 +701,7 @@ export default function MyActivityPage() {
                           status={isClosed ? 'closed' : post.status}
                           recurrenceRule={post.recurrence_rule}
                           slug={post.slug}
+                          nextOccurrenceAt={post.next_occurrence_at}
                         />
                       );
                     })}

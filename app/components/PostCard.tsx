@@ -7,6 +7,7 @@ import { renderTextWithLinks } from '@/lib/textUtils';
 import { canUseNativeShare, shareOrCopyLink } from '@/lib/shareUtils';
 import { ExternalLink as ShareIcon } from 'lucide-react';
 import FeaturedLabel from './FeaturedLabel';
+import { formatNextOccurrence } from '@/lib/dates';
 
 interface PostCardProps {
   id: string;
@@ -35,6 +36,7 @@ interface PostCardProps {
   isOwnPost?: boolean;
   featuredAt?: string | null;
   onToggleFeatured?: () => void;
+  nextOccurrenceAt?: string | null;
 }
 
 
@@ -65,6 +67,7 @@ export default function PostCard({
   isOwnPost = false,
   featuredAt,
   onToggleFeatured,
+  nextOccurrenceAt,
 }: PostCardProps) {
   const [showNameTooltip, setShowNameTooltip] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -125,6 +128,11 @@ export default function PostCard({
   }, [notes]);
 
   const age = calculateAge(authorDateOfBirth ?? null);
+
+  // Null on standing offers and on every post until the recurring backfill
+  // runs, in which case nothing is rendered - the card looks exactly as it
+  // does today. See docs/recurring-posts-and-boosting.md.
+  const nextOccurrence = formatNextOccurrence(nextOccurrenceAt);
 
   const getMapUrl = () => {
     if (latitude && longitude) {
@@ -263,6 +271,11 @@ export default function PostCard({
               {recurrenceRule && (
                 <span className="preference-badge" style={{ margin: 0 }}>
                   {recurrenceRule === 'weekly' ? 'every week' : recurrenceRule === 'biweekly' ? 'every other week' : recurrenceRule === 'monthly' ? 'every month' : recurrenceRule}
+                </span>
+              )}
+              {nextOccurrence && (
+                <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+                  Next: {nextOccurrence}
                 </span>
               )}
             </div>

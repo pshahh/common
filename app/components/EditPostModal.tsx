@@ -13,6 +13,7 @@ interface Post {
   preference: string | null;
   expires_at: string | null;
   recurrence_rule: string | null;
+  next_occurrence_at: string | null;
 }
 
 interface EditPostModalProps {
@@ -138,6 +139,15 @@ const [recurrenceRule, setRecurrenceRule] = useState<'weekly' | 'every two weeks
       preference,
       recurrence_rule: frequency === 'repeats' ? recurrenceRule : null,
     };
+
+    // A listing that no longer repeats has no next occurrence. Left behind, a
+    // stale next_occurrence_at would keep driving "Happening soon" and keep
+    // "Next: ..." on the card for a date that will never come round again.
+    // Editing a still-recurring listing leaves the date alone - the recurrence
+    // job owns it. See docs/recurring-posts-and-boosting.md.
+    if (frequency !== 'repeats') {
+      updateData.next_occurrence_at = null;
+    }
     
     // Only update coordinates if they exist (location was changed and selected from dropdown)
     if (latitude && longitude) {

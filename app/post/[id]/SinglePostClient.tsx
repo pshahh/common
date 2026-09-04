@@ -32,6 +32,7 @@ interface Post {
   slug: string | null;
   thread_type: string | null;
   audience: 'everyone' | 'friends';
+  next_occurrence_at: string | null;
 }
 
 interface SinglePostClientProps {
@@ -326,6 +327,7 @@ useEffect(() => {
           audience={post.audience}
           isAdmin={isAdmin}
           onAdminRemove={() => setShowAdminRemoveModal(true)}
+          nextOccurrenceAt={post.next_occurrence_at}
         />
         
       </main>

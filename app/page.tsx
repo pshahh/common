@@ -51,6 +51,8 @@ interface Post {
   audience: 'everyone' | 'friends';
   parent_post_id: string | null;
   featured_at: string | null;
+  next_occurrence_at: string | null;
+  resurfaced_at: string | null;
 }
 
 interface Profile {
@@ -800,13 +802,26 @@ const sortedPosts = useMemo(() => {
   if (sortBy === 'nearest' && userLocation) {
     sortedRest = sortByDistance(unfeaturedPosts, userLocation.latitude, userLocation.longitude);
   } else if (sortBy === 'soon') {
-    // Sort by expires_at ascending (soonest first)
-    // Posts without expires_at go to the end
+    // Sort by next occurrence ascending (soonest first).
+    // Posts with no date at all go to the end.
+    //
+    // next_occurrence_at is the real date of the next occurrence. We fall back
+    // to expires_at, which is only ever a proxy for it: the old recurrence job
+    // set each generated child's expiry to the occurrence date plus a day, so
+    // sorting on expiry happened to sort on the occurrence. That proxy breaks
+    // under one permanent listing whose expiry no longer moves, which is what
+    // next_occurrence_at exists to fix. Until the backfill writes it, every
+    // post falls through to expires_at and this is exactly today's ordering.
+    // See docs/recurring-posts-and-boosting.md ("Feed ordering").
+    const nextDate = (p: Post) => p.next_occurrence_at ?? p.expires_at;
+
     sortedRest = [...unfeaturedPosts].sort((a, b) => {
-      if (!a.expires_at && !b.expires_at) return 0;
-      if (!a.expires_at) return 1;
-      if (!b.expires_at) return -1;
-      return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
+      const aDate = nextDate(a);
+      const bDate = nextDate(b);
+      if (!aDate && !bDate) return 0;
+      if (!aDate) return 1;
+      if (!bDate) return -1;
+      return new Date(aDate).getTime() - new Date(bDate).getTime();
     });
   } else {
     // Default: recently added
@@ -819,9 +834,22 @@ const sortedPosts = useMemo(() => {
     const WEEK = 7 * 24 * 60 * 60 * 1000;
     const MAX_NEW_WINDOW = 30 * 24 * 60 * 60 * 1000; // 30 days
 
+    // The twice-monthly evergreen job used to bump standing offers by writing
+    // created_at = NOW(). It now writes resurfaced_at instead, leaving
+    // created_at as the true creation date. Recency here is the later of the
+    // two, and it feeds BOTH the boost window and the tiebreak below - which is
+    // what the created_at bump did, since moving created_at forward also
+    // restarted the new-post window. Keying the window on raw created_at would
+    // quietly drop standing offers out of the boost tier for good.
+    const recencyOf = (p: Post) =>
+      Math.max(
+        new Date(p.created_at).getTime(),
+        p.resurfaced_at ? new Date(p.resurfaced_at).getTime() : 0
+      );
+
     sortedRest = [...unfeaturedPosts].sort((a, b) => {
-      const aTime = new Date(a.created_at).getTime();
-      const bTime = new Date(b.created_at).getTime();
+      const aTime = recencyOf(a);
+      const bTime = recencyOf(b);
 
       const aExpiryEnd = a.expires_at ? new Date(a.expires_at).getTime() : 0;
       const aBoostEnd = Math.min(Math.max(aTime + WEEK, aExpiryEnd), aTime + MAX_NEW_WINDOW);
@@ -835,7 +863,7 @@ const sortedPosts = useMemo(() => {
       if (aIsNew && !bIsNew) return -1;
       if (!aIsNew && bIsNew) return 1;
 
-      // Within the same tier, sort by created_at descending
+      // Within the same tier, sort by recency descending
       return bTime - aTime;
     });
   }
@@ -1339,6 +1367,7 @@ const sortedPosts = useMemo(() => {
                     authorDateOfBirth={authorProfile?.date_of_birth}
                     audience={post.audience}
                     featuredAt={post.featured_at}
+                    nextOccurrenceAt={post.next_occurrence_at}
                   />
                 );
               })}
@@ -1673,6 +1702,7 @@ const sortedPosts = useMemo(() => {
                       audience={post.audience}
                       featuredAt={post.featured_at}
                       onToggleFeatured={() => handleToggleFeatured(post)}
+                      nextOccurrenceAt={post.next_occurrence_at}
                     />
                   );
                 })}
