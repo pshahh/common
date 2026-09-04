@@ -1,6 +1,7 @@
 # Recurring posts, feed ordering and admin boosting
 
-Status: **specified, not started**. Ships *after* analytics — we want a baseline first.
+Status: **specified, ready to build.** Analytics shipped 3 Sep and is collecting in production.
+Build order: Featured first (no risk), then the recurring model.
 Written 3 September 2026. Design decisions in this doc are settled; don't relitigate them
 without a reason.
 
@@ -95,11 +96,19 @@ given "no red dots demanding attention".
 
 ---
 
-## Admin boosting
+## Admin boosting — "Featured"
 
-Admin-selected posts pinned to the top of the feed. No money involved. A manual liquidity
-lever while supply is thin — useful for a new host's first post, a one-off like Open House
-Festival, or seeding a new neighbourhood.
+**Ship this FIRST, before any recurring work.** It has no migration, no risk, and it gives a
+manual liquidity lever that's usable immediately while the recurring change is still in
+progress. It's also a safe way to exercise the branch → preview deploy → merge loop.
+
+Admin-selected posts pinned to the top of the feed. No money involved. Useful for a new host's
+first post, a one-off like Open House Festival, or seeding a new neighbourhood.
+
+**Placement:** the three-dots menu on the post card. `PostCard.tsx` already has an `isAdmin`
+branch in that dropdown (around line 335, next to "Remove post") — the new item goes there.
+Label it "Feature this post" / "Unfeature", and show a small "Featured" marker on the card
+itself when active.
 
 Three rules, all deliberate:
 
@@ -154,7 +163,8 @@ Re-enable cron job 2.
 **6. Delete the dead branches:** the `parent_post_id` guard in `new-post-notification`, and
 the `!a.parent_post_id` boost condition. Last, once nothing depends on them.
 
-**7. Admin boosting** — separate, smaller, can ship any time after step 3.
+**Admin boosting ships before all of this** — see the Featured section above. It's independent
+of the recurring model and touches only the sort's top tier plus the PostCard menu.
 
 ---
 
@@ -195,3 +205,25 @@ decision. Revisit if stale listings start showing up.
 Interest clicks per recurring listing, before and after. Currently 0.06 per recurring post.
 Needs the PostHog `activity_joined` event plus the database counts —
 which is why analytics ships first.
+
+
+---
+
+## Analytics events now live (as shipped, not as originally specced)
+
+Use these exact names — the taxonomy changed slightly during implementation:
+
+`feed_viewed` · `empty_state_shown` · `post_card_opened` · `signup_started` ·
+`signup_completed` · `interested_clicked` · `activity_joined` · `message_sent` ·
+`post_created` · `location_set`
+
+`interested_clicked` fires when the button is pressed; `activity_joined` when a thread is
+actually created. The gap between them measures drop-off inside the interest modal.
+
+**For measuring this change:** `interested_clicked` and `activity_joined`, segmented by
+`post_type` (`standing_offer` / `one_off` / `recurring`). Baseline for recurring is currently
+0.06 interest clicks per post.
+
+**One caution on Featured:** featuring posts perturbs the feed while the recurring baseline is
+being collected. Either hold off on actually featuring anything until the recurring change has
+shipped and settled, or write down the date you start so the two effects can be separated.
