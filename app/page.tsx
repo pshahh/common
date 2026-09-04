@@ -27,6 +27,8 @@ import { registerNativePush } from '@/lib/nativePush';
 import InstallPrompt from './components/InstallPrompt';
 import FloatingActionButton from './components/FloatingActionButton';
 import FilterBottomSheet from './components/FilterBottomSheet';
+import posthog from 'posthog-js';
+import { getPostType } from '@/lib/postType';
 
 
 interface Post {
@@ -297,6 +299,7 @@ function HomeContent() {
   const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTrigger, setAuthModalTrigger] = useState<'interested' | 'post' | 'nav'>('nav');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInterestedModal, setShowInterestedModal] = useState(false);
   const [showMessageSentModal, setShowMessageSentModal] = useState(false);
@@ -571,6 +574,12 @@ if (!sessionStorage.getItem('push-subscribed')) {
         }
       }
 
+      posthog.capture('feed_viewed', {
+        logged_in: !!user,
+        post_count: filteredPosts.length,
+        sort: sortBy,
+        has_location: !!userLocation,
+      });
       setLoading(false);
     }
 
@@ -660,6 +669,7 @@ if (!sessionStorage.getItem('push-subscribed')) {
         });
         setLocationStatus('granted');
         setShowLocationInput(false);
+        posthog.capture('location_set', { method: 'browser' });
       },
       (err) => {
         console.log('Geolocation error:', err.code, err.message);
@@ -726,6 +736,7 @@ useEffect(() => {
     });
     setLocationStatus('granted');
     setShowLocationInput(false);
+    posthog.capture('location_set', { method: 'manual' });
     setLocationQuery('');
     setLocationSuggestions([]);
   }, []);
@@ -820,6 +831,18 @@ const sortedPosts = useMemo(() => {
   }
 }, [filteredPosts, posts, user, sortBy, userLocation, radiusFilter, friendsOnly, friendIds]);
 
+  // Fires whenever a filter combination (radius, location, friends-only)
+  // leaves the feed empty - not just on first load - since that's the
+  // "shown nothing" signal the doc cares about.
+  useEffect(() => {
+    if (!loading && sortedPosts.length === 0) {
+      posthog.capture('empty_state_shown', {
+        radius: radiusFilter,
+        has_location: !!userLocation,
+      });
+    }
+  }, [loading, sortedPosts.length, radiusFilter, userLocation]);
+
   // Get distance string for a post
   const getPostDistance = useCallback((post: Post): string | null => {
     if (sortBy !== 'nearest' || !userLocation) return null;
@@ -838,6 +861,7 @@ const sortedPosts = useMemo(() => {
     if (user) {
       setShowCreateModal(true);
     } else {
+      setAuthModalTrigger('post');
       setShowAuthModal(true);
     }
   };
@@ -850,7 +874,13 @@ const sortedPosts = useMemo(() => {
       }
       setSelectedPost(post);
       setShowInterestedModal(true);
+      posthog.capture('post_card_opened', {
+        post_id: post.id,
+        post_type: getPostType(post.recurrence_rule),
+        position: sortedPosts.findIndex(p => p.id === post.id),
+      });
     } else {
+      setAuthModalTrigger('interested');
       setShowAuthModal(true);
     }
   };
@@ -861,6 +891,7 @@ const sortedPosts = useMemo(() => {
       setReportThreadId(threadId || null);
       setShowReportModal(true);
     } else {
+      setAuthModalTrigger('nav');
       setShowAuthModal(true);
     }
   };
@@ -1091,7 +1122,7 @@ const sortedPosts = useMemo(() => {
         overflow: 'hidden',
       }}>
         <Header
-          onLoginClick={() => setShowAuthModal(true)}
+          onLoginClick={() => { setAuthModalTrigger('nav'); setShowAuthModal(true); }}
           user={user}
           onLogout={handleLogout}
         />
@@ -1294,6 +1325,7 @@ const sortedPosts = useMemo(() => {
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => setShowAuthModal(false)}
+          trigger={authModalTrigger}
         />
       </div>
     );
@@ -1676,6 +1708,7 @@ const sortedPosts = useMemo(() => {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onSuccess={() => setShowAuthModal(false)}
+        trigger={authModalTrigger}
       />
 
 <ShareInviteModal

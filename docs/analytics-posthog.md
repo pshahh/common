@@ -62,7 +62,7 @@ product.
      possibly message content. It breaks the no-PII rule and is badly at odds with the
      product. Set it explicitly; don't assume the default.
    - If session replay is on, input masking must be on with it
-4. Add `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` to Vercel's environment
+4. Add `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` and `NEXT_PUBLIC_POSTHOG_HOST` to Vercel's environment
    variables as well as `.env.local`.
 5. Confirm the provider initialises PostHog once with `persistence: 'localStorage'` and
    `person_profiles: 'identified_only'`, and is mounted in `app/layout.tsx`.
@@ -73,6 +73,31 @@ product.
 8. Capture UTM parameters and referrer on first touch as person properties, so channel
    attribution survives to signup.
 9. Verify in PostHog's live events view before considering it done.
+
+## What the wizard actually produced (3 Sep)
+
+It created `instrumentation-client.ts`, installed `posthog-js`, wrote the env vars (EU host —
+correct), and instrumented ten events of its own choosing across six components.
+
+**Correct and worth keeping:** the identify wiring is genuinely good — it hooks
+`supabase.auth.onAuthStateChange`, avoids re-identifying the same user, and calls `reset()` on
+sign-out. Event payloads are clean categorical metadata, no titles or message content.
+
+**Must fix before production:**
+- `posthog.identify(user.id, { email: user.email })` **sends user email addresses**. Remove the
+  properties argument entirely — user id only.
+- Init is missing `autocapture: false`, `person_profiles: 'identified_only'` and
+  `persistence: 'localStorage'`.
+- It enabled `capture_exceptions: true` (error tracking) unprompted. Decide deliberately.
+- It uses `defaults: "2026-01-30"`, a versioned defaults bundle. Set the three options above
+  explicitly rather than trusting whatever that bundle turns on.
+
+**Its events vs ours:** `post_created` and `message_sent` match. `account_signup_requested` ≈
+`signup_started`; `direct_thread_started` / `group_thread_joined` ≈ `interest_clicked`.
+Missing entirely: **`feed_viewed`**, **`empty_state_shown`**, `signup_completed`,
+`email_confirmed`, `post_card_opened`, `location_set` — including the two most important ones.
+Extra and droppable: `conversation_left`, `user_blocked`, `post_updated`,
+`password_reset_requested`, `report_submitted`.
 
 ## Event taxonomy
 

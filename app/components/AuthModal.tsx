@@ -1,14 +1,16 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import posthog from 'posthog-js';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  trigger?: 'interested' | 'post' | 'nav';
 }
 
-export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, onSuccess, trigger = 'nav' }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'signup' | 'check-email' | 'forgot-password' | 'reset-sent'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -97,6 +99,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       }
     }
     
+    posthog.capture('signup_completed');
     setLoading(false);
     // Show check email screen
     setMode('check-email');
@@ -647,7 +650,11 @@ if (mode === 'reset-sent') {
             <button
               type="button"
               onClick={() => {
-                setMode(mode === 'login' ? 'signup' : 'login');
+                const nextMode = mode === 'login' ? 'signup' : 'login';
+                if (nextMode === 'signup') {
+                  posthog.capture('signup_started', { trigger });
+                }
+                setMode(nextMode);
                 setError(null);
               }}
               style={{

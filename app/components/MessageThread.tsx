@@ -6,6 +6,7 @@ import { calculateAge, getInitials } from '@/lib/profile';
 import ClosedBadge from './ClosedBadge';
 import { renderTextWithLinks } from '@/lib/textUtils';
 import { ExternalLink as ShareIcon } from 'lucide-react';
+import posthog from 'posthog-js';
 
 // Slim "common" wordmark bar, styled to match Header.tsx, shown only when
 // this thread is the full-screen mobile view (the page's own <Header> is
@@ -347,6 +348,7 @@ export default function MessageThread({
       alert('Failed to send message. Please try again.');
     } else {
       setNewMessage('');
+      posthog.capture('message_sent', { thread_type: thread?.thread_type });
       // Mark as read after sending own message
       markThreadAsRead();
     }

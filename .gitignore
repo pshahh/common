@@ -44,3 +44,9 @@ ios/
 android/
 # living record lives in the Claude project, not the repo
 progress.md
+
+# Claude Code personal permission list — names local paths, never commit
+.claude/settings.local.json
+
+# Supabase CLI scratch
+supabase/.temp/

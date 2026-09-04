@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { renderTextWithLinks } from '@/lib/textUtils';
+import posthog from 'posthog-js';
 
 interface Post {
   id: string;
@@ -47,6 +48,7 @@ export default function InterestedModal({
       // Mark as read so joiner doesn't see unread dot for their own join
       await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
 
+      posthog.capture('interest_clicked', { is_group: true });
       onSuccess(threadId, false);
     } catch (error) {
       console.error('Error joining group:', error);
@@ -69,6 +71,7 @@ export default function InterestedModal({
       if (threadCheckError) throw threadCheckError;
 
       let threadId: string;
+      let createdThread = false;
 
       if (existingThreads && existingThreads.length > 0) {
         // Thread exists, use it
@@ -87,6 +90,7 @@ export default function InterestedModal({
 
         if (threadError) throw threadError;
         threadId = newThread.id;
+        createdThread = true;
 
         // Increment people_interested count on the post
         await supabase.rpc('increment_interested', { post_id: post.id });
@@ -108,6 +112,9 @@ export default function InterestedModal({
       // so the sender doesn't see an unread dot for their own message
       await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
 
+      if (createdThread) {
+        posthog.capture('interest_clicked', { is_group: false });
+      }
       onSuccess(threadId, true);
     } catch (error) {
       console.error('Error creating thread:', error);

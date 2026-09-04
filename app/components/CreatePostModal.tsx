@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { generateSlug } from '@/lib/slug';
+import posthog from 'posthog-js';
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -232,6 +233,12 @@ const { error: insertError } = await supabase
       return;
     }
 
+    posthog.capture('post_created', {
+      audience,
+      recurrence: frequency,
+      thread_type: threadType,
+      timing_mode: timingMode,
+    });
     setLoading(false);
     setShowConfirmation(true);
   };
