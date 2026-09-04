@@ -50,6 +50,7 @@ interface Post {
   thread_type: string | null;
   audience: 'everyone' | 'friends';
   parent_post_id: string | null;
+  featured_at: string | null;
 }
 
 interface Profile {
@@ -787,12 +788,21 @@ const sortedPosts = useMemo(() => {
     });
   }
   
+  // Featured overrides sort, not filters: pull featured posts out after the
+  // filters above have run (so a featured post outside the radius/friends
+  // filter is still excluded), sort the rest as normal, then pin featured
+  // to the top.
+  const featuredPosts = postsToSort.filter(post => post.featured_at);
+  const unfeaturedPosts = postsToSort.filter(post => !post.featured_at);
+  featuredPosts.sort((a, b) => new Date(b.featured_at!).getTime() - new Date(a.featured_at!).getTime());
+
+  let sortedRest: Post[];
   if (sortBy === 'nearest' && userLocation) {
-    return sortByDistance(postsToSort, userLocation.latitude, userLocation.longitude);
+    sortedRest = sortByDistance(unfeaturedPosts, userLocation.latitude, userLocation.longitude);
   } else if (sortBy === 'soon') {
     // Sort by expires_at ascending (soonest first)
     // Posts without expires_at go to the end
-    return [...postsToSort].sort((a, b) => {
+    sortedRest = [...unfeaturedPosts].sort((a, b) => {
       if (!a.expires_at && !b.expires_at) return 0;
       if (!a.expires_at) return 1;
       if (!b.expires_at) return -1;
@@ -809,7 +819,7 @@ const sortedPosts = useMemo(() => {
     const WEEK = 7 * 24 * 60 * 60 * 1000;
     const MAX_NEW_WINDOW = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-    return [...postsToSort].sort((a, b) => {
+    sortedRest = [...unfeaturedPosts].sort((a, b) => {
       const aTime = new Date(a.created_at).getTime();
       const bTime = new Date(b.created_at).getTime();
 
@@ -829,6 +839,8 @@ const sortedPosts = useMemo(() => {
       return bTime - aTime;
     });
   }
+
+  return [...featuredPosts, ...sortedRest];
 }, [filteredPosts, posts, user, sortBy, userLocation, radiusFilter, friendsOnly, friendIds]);
 
   // Fires whenever a filter combination (radius, location, friends-only)
@@ -911,6 +923,40 @@ const sortedPosts = useMemo(() => {
   const handleAdminRemoveClick = (postId: string) => {
     setAdminRemovePostId(postId);
     setShowAdminRemoveModal(true);
+  };
+
+  const handleToggleFeatured = async (post: Post) => {
+    const isFeaturing = !post.featured_at;
+
+    if (isFeaturing) {
+      const featuredCount = posts.filter(p => p.featured_at).length;
+      if (featuredCount >= 2) {
+        const proceed = confirm(
+          `${featuredCount} posts are already featured. Feature this one too?`
+        );
+        if (!proceed) return;
+      }
+    }
+
+    const { error } = await supabase
+      .from('posts')
+      .update({ featured_at: isFeaturing ? new Date().toISOString() : null })
+      .eq('id', post.id);
+
+    if (error) {
+      console.error('Error updating featured status:', error);
+      alert('Failed to update featured status. Please try again.');
+      return;
+    }
+
+    if (isFeaturing) {
+      posthog.capture('post_featured', {
+        post_id: post.id,
+        post_type: getPostType(post.recurrence_rule),
+      });
+    }
+
+    refreshPosts();
   };
 
   const handleAdminRemoveConfirm = async () => {
@@ -1292,6 +1338,7 @@ const sortedPosts = useMemo(() => {
                     authorAvatarUrl={authorProfile?.avatar_url}
                     authorDateOfBirth={authorProfile?.date_of_birth}
                     audience={post.audience}
+                    featuredAt={post.featured_at}
                   />
                 );
               })}
@@ -1624,6 +1671,8 @@ const sortedPosts = useMemo(() => {
                       isAdmin={isAdmin}
                       onAdminRemove={() => handleAdminRemoveClick(post.id)}
                       audience={post.audience}
+                      featuredAt={post.featured_at}
+                      onToggleFeatured={() => handleToggleFeatured(post)}
                     />
                   );
                 })}

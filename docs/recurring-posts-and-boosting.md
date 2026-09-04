@@ -105,20 +105,52 @@ progress. It's also a safe way to exercise the branch → preview deploy → mer
 Admin-selected posts pinned to the top of the feed. No money involved. Useful for a new host's
 first post, a one-off like Open House Festival, or seeding a new neighbourhood.
 
-**Placement:** the three-dots menu on the post card. `PostCard.tsx` already has an `isAdmin`
-branch in that dropdown (around line 335, next to "Remove post") — the new item goes there.
-Label it "Feature this post" / "Unfeature", and show a small "Featured" marker on the card
-itself when active.
+**Control placement:** the three-dots menu on the post card. `PostCard.tsx` already has an
+`isAdmin` branch in that dropdown (around line 335, next to "Remove post") — the new item goes
+there. It's a straight toggle: "Feature this post" on an unfeatured post, "Unfeature" on a
+featured one. No duration picker, no options.
+
+**Not shown at all on friends-only posts.** Featuring is for public supply; a friends-only post
+has no business being promoted to strangers. Hiding the control removes the risk at source
+rather than relying on the filter order being correct downstream — cheaper and safer than
+guarding it.
+
+**Column: `featured_at timestamptz`, nullable.** Not a boolean — same simplicity (set it or
+null it) but it records *when*, so "featured 12 days ago" in the admin view, or an expiry
+policy later, needs no migration. A boolean throws that away permanently.
+
+**No expiry for now.** Deliberate, and lower-risk than the evergreen bump job it superficially
+resembles: that one was invisible and automatic, this is manual and visible on every look at
+the feed. Revisit only if featured posts start being forgotten.
+
+**Marker placement: a micro-label ABOVE the card, outside its border.** Not a badge on the
+card. Every existing badge describes the activity (repeats weekly, women-preferred,
+friends-only); "featured" describes a placement decision the admin made. Inside the card it
+files under the wrong category and reads as the poster's claim. Outside, it reads as the feed
+speaking — which is the truth, and it leaves the card's internal hierarchy untouched.
+
+    font-size: 11px; font-weight: 600; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--text-secondary);
+    padding: 0 0 7px 4px;   /* left edge aligned with the card */
+
+Optional 10px star at `currentColor`, `opacity: .75`. No new colours or components. When a post
+isn't featured the element isn't rendered at all — no reserved space.
+
+Build it as a small reusable label component: the standing-offer band later needs exactly the
+same thing.
+
+Mockup of the options considered: https://claude.ai/code/artifact/766d2d7f-3c9c-40f9-b2ce-67800e70170a
 
 Three rules, all deliberate:
 
-1. **Boost overrides sort, not filters.** If someone filtered to "within 1 mile" or toggled
-   Friends, a boosted post outside that must not appear. Override the ordering; respect what
-   the user explicitly excluded. Friends-only posts are never boostable into strangers' feeds.
-2. **`boosted_until timestamptz`, not a boolean.** It must expire on its own. The evergreen
-   bump job is the cautionary tale: a permanent flag nobody remembers setting is how the same
-   posts end up on top for six months. Cap at 1–2 boosted posts at a time.
-3. **Label it "Featured".** The philosophy doc explicitly rejects algorithmic feed ranking; an
+1. **Featured overrides sort, not filters.** If someone filtered to "within 1 mile", a
+   featured post 8 miles away must still not appear. Override the ordering; respect what the
+   user explicitly excluded. (Friends-only is handled earlier — the control isn't offered on
+   those posts at all.)
+2. **Cap at 1–2 featured posts at a time.** Warn in the admin UI beyond that; more than a
+   couple and the feed stops being a feed. (Expiry was considered and deliberately dropped —
+   see above.)
+3. **Label it "Featured" in words.** The philosophy doc explicitly rejects algorithmic feed ranking; an
    unmarked pinned post is editorial curation presented as neutral ordering. A small marker
    makes it honest and costs nothing.
 

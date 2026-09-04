@@ -6,6 +6,7 @@ import ClosedBadge from './ClosedBadge';
 import { renderTextWithLinks } from '@/lib/textUtils';
 import { canUseNativeShare, shareOrCopyLink } from '@/lib/shareUtils';
 import { ExternalLink as ShareIcon } from 'lucide-react';
+import FeaturedLabel from './FeaturedLabel';
 
 interface PostCardProps {
   id: string;
@@ -32,6 +33,8 @@ interface PostCardProps {
   onAdminRemove?: () => void;
   audience?: 'everyone' | 'friends';
   isOwnPost?: boolean;
+  featuredAt?: string | null;
+  onToggleFeatured?: () => void;
 }
 
 
@@ -60,6 +63,8 @@ export default function PostCard({
   onAdminRemove,
   audience,
   isOwnPost = false,
+  featuredAt,
+  onToggleFeatured,
 }: PostCardProps) {
   const [showNameTooltip, setShowNameTooltip] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -213,6 +218,7 @@ export default function PostCard({
         </div>
       )}
 
+      {featuredAt && <FeaturedLabel />}
       <div className="card">
         <div className="card-header">
           <div className="card-content">
@@ -330,6 +336,17 @@ export default function PostCard({
                       }}
                     >
                       Report post
+                    </button>
+                  )}
+                  {isAdmin && onToggleFeatured && audience !== 'friends' && (
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onToggleFeatured();
+                      }}
+                    >
+                      {featuredAt ? 'Unfeature' : 'Feature this post'}
                     </button>
                   )}
                   {isAdmin && onAdminRemove && (
