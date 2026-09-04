@@ -203,3 +203,87 @@ The read-only projection above verifies against the real data instead.
 `posts_status_check` allows only `pending / approved / rejected / hidden / closed / deleted`.
 The soft-delete fails outright without widening it first. The forward migration does this
 as its step 0.
+
+---
+
+## Transactional dry run on production (4 Sep) — executed, rolled back
+
+Run in place of the unavailable Supabase branch. The real migration statements were
+executed against production inside a transaction aborted by `RAISE EXCEPTION`, which
+guarantees rollback rather than relying on a trailing `ROLLBACK` reaching the server.
+
+**No INSERT was issued against `posts` or `messages`.** Confirmed by inspection first:
+the only notification triggers are `new-post-notification` (AFTER INSERT ON posts),
+`send-message-notification` and `trg_update_thread_last_message_at` (both AFTER INSERT ON
+messages). There are no UPDATE triggers on `posts`, `threads` or `messages`. The migration
+is UPDATE-only on both tables, so no trigger fired and `pg_net` was never called — the
+non-transactional side effect the dry run had to avoid.
+
+### Transcript
+
+```
+A1 existing rows violating NEW check ....... 0
+A2 constraint BEFORE ....................... CHECK ((status = ANY (ARRAY['pending','approved','rejected','hidden','closed','deleted'])))
+A3 constraint AFTER ........................ CHECK ((status = ANY (ARRAY['pending','approved','rejected','hidden','closed','deleted','archived'])))
+A4 validated against all existing rows ..... true
+
+B1 dated recurring posts in scope ......... 73
+B2 surviving chains ....................... 7
+B3 chains with a live occurrence .......... 7
+B4 survivors with non-approved root ....... 0   (guard requires 0)
+B5 cron job 2 frozen ...................... yes
+
+C1 posts backed up ........................ 73
+C2 threads backed up ...................... 7
+
+D1 survivors collapsed (UPDATE posts) ..... 7
+D2 threads repointed (UPDATE threads) ..... 5
+D3 children archived (UPDATE posts) ....... 50
+D4 dead chains archived (UPDATE posts) .... 16
+
+E-Q1  orphan threads (doc defn) ........... 10   [before 12]
+E-Q1b orphan threads (true defn) .......... 12   [before 12]
+E-Q3  rows not archived ................... 7    [target 7]
+E-Q4  survivors missing next_occurrence ... 0    [target 0]
+E-Q5  feed-visible dated recurring ........ 7    [before 7]
+E-Q6  interest on survivors ............... 5    [before 5]
+E-Q7  total archived rows ................. 66   [target 66]
+E-Q9  standing offers disturbed ........... 5    [target 0]  <- mislabelled, see below
+
+F  Spanish-English Language Exc   int=1  next=2026-09-04  exp=2026-09-05
+F  Low stakes poker game!         int=2  next=2026-09-05  exp=2026-09-06
+F  East London Badminton Group    int=0  next=2026-09-06  exp=2026-09-07
+F  Casual Badminton               int=1  next=2026-09-06  exp=2026-09-07
+F  Study buddies / Focus groups   int=0  next=2026-09-08  exp=2026-09-09
+F  Jam session in Victoria Park   int=1  next=2026-09-13  exp=2026-09-14
+F  Anyone want to play some mar   int=0  next=2026-10-03  exp=2026-10-04
+
+ERROR: P0001: DRY RUN COMPLETE - ROLLING BACK
+```
+
+**A1–A4 answer the constraint question directly:** zero existing rows violate the widened
+check, the swap applies cleanly, and Postgres reports the new constraint as `convalidated =
+true`, meaning it was verified against all 165 existing rows rather than added NOT VALID.
+
+**E-Q9 is a bad metric, not a failure.** It counts standing offers whose status is not
+`approved`; there are 5 such rows (`closed`/`deleted`) both before and after. Re-checked
+against the untouched database: 13 standing offers, 5 non-approved, unchanged. Zero standing
+offers were modified.
+
+### Rollback confirmation
+
+Re-queried after the abort. Production is identical to its pre-dry-run state:
+
+| Check | Result |
+|---|---|
+| `posts_status_check` reverted (no `archived`) | ✅ true |
+| Rows with `status='archived'` | ✅ 0 |
+| `recurring_backfill_backup_20260906` | ✅ gone |
+| `recurring_backfill_threads_backup_20260906` | ✅ gone |
+| Dated recurring rows | ✅ still 73 |
+| Rows with `next_occurrence_at` set | ✅ still 0 |
+| Threads on original chain posts | ✅ still 7 |
+| Surviving roots with past expiry | ✅ still 7 |
+| Total interest across chains | ✅ still 12 |
+
+**Production is unchanged. Nothing has been applied.**
