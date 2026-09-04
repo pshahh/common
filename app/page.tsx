@@ -880,6 +880,11 @@ const sortedPosts = useMemo(() => {
         position: sortedPosts.findIndex(p => p.id === post.id),
       });
     } else {
+      posthog.capture('interested_clicked', {
+        post_id: post.id,
+        post_type: getPostType(post.recurrence_rule),
+        position: sortedPosts.findIndex(p => p.id === post.id),
+      });
       setAuthModalTrigger('interested');
       setShowAuthModal(true);
     }

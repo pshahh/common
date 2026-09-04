@@ -193,5 +193,5 @@ decision. Revisit if stale listings start showing up.
 ## How we'll know it worked
 
 Interest clicks per recurring listing, before and after. Currently 0.06 per recurring post.
-Needs the PostHog `interest_clicked` event (with `is_recurring`) plus the database counts —
+Needs the PostHog `activity_joined` event plus the database counts —
 which is why analytics ships first.

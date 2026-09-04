@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { isUUID } from '@/lib/slug';
 import { User } from '@supabase/supabase-js';
+import posthog from 'posthog-js';
+import { getPostType } from '@/lib/postType';
 import Header from '../../components/Header';
 import PostCard from '../../components/PostCard';
 import AuthModal from '../../components/AuthModal';
@@ -43,6 +45,7 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTrigger, setAuthModalTrigger] = useState<'interested' | 'post' | 'nav'>('nav');
   const [showInterestedModal, setShowInterestedModal] = useState(false);
   const [showMessageSentModal, setShowMessageSentModal] = useState(false);
   const [hasExpressedInterest, setHasExpressedInterest] = useState(false);
@@ -129,7 +132,18 @@ useEffect(() => {
         return;
       }
       setShowInterestedModal(true);
+      posthog.capture('post_card_opened', {
+        post_id: post.id,
+        post_type: getPostType(post.recurrence_rule),
+        position: null,
+      });
     } else {
+      posthog.capture('interested_clicked', {
+        post_id: post.id,
+        post_type: getPostType(post.recurrence_rule),
+        position: null,
+      });
+      setAuthModalTrigger('interested');
       setShowAuthModal(true);
     }
   };
@@ -256,6 +270,7 @@ useEffect(() => {
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => setShowAuthModal(false)}
+          trigger={authModalTrigger}
         />
       </div>
     );
@@ -319,6 +334,7 @@ useEffect(() => {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onSuccess={() => setShowAuthModal(false)}
+        trigger={authModalTrigger}
       />
       {showInterestedModal && post && user && (
         <InterestedModal

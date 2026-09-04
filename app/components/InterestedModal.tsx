@@ -48,7 +48,7 @@ export default function InterestedModal({
       // Mark as read so joiner doesn't see unread dot for their own join
       await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
 
-      posthog.capture('interest_clicked', { is_group: true });
+      posthog.capture('activity_joined', { is_group: true });
       onSuccess(threadId, false);
     } catch (error) {
       console.error('Error joining group:', error);
@@ -113,7 +113,7 @@ export default function InterestedModal({
       await supabase.rpc('mark_thread_read', { thread_id_param: threadId });
 
       if (createdThread) {
-        posthog.capture('interest_clicked', { is_group: false });
+        posthog.capture('activity_joined', { is_group: false });
       }
       onSuccess(threadId, true);
     } catch (error) {

@@ -93,7 +93,7 @@ sign-out. Event payloads are clean categorical metadata, no titles or message co
   explicitly rather than trusting whatever that bundle turns on.
 
 **Its events vs ours:** `post_created` and `message_sent` match. `account_signup_requested` ≈
-`signup_started`; `direct_thread_started` / `group_thread_joined` ≈ `interest_clicked`.
+`signup_started`; `direct_thread_started` / `group_thread_joined` ≈ `activity_joined`.
 Missing entirely: **`feed_viewed`**, **`empty_state_shown`**, `signup_completed`,
 `email_confirmed`, `post_card_opened`, `location_set` — including the two most important ones.
 Extra and droppable: `conversation_left`, `user_blocked`, `post_updated`,
@@ -111,7 +111,7 @@ set beats a large vague one.
 | `signup_started` | Auth modal opens | `trigger` (interested / post / nav) | What motivates signup |
 | `signup_completed` | Account created | — | **The core conversion, with `feed_viewed`** |
 | `email_confirmed` | Confirmation link followed | `hours_since_signup` | Whether the 16% non-confirmation is deliverability or drop-off |
-| `interest_clicked` | "I'm interested" pressed | `post_id`, `post_type`, `is_recurring` | Whether the recurring change worked |
+| `activity_joined` | "I'm interested" pressed (logged in) | `is_group` | Whether the recurring change worked |
 | `message_sent` | Message sent | `thread_id`, `is_first_in_thread` | Activation |
 | `post_created` | Post published | `post_type`, `audience`, `recurrence`, `thread_type` | Supply, and which formats hosts choose |
 | `location_set` | Location granted or entered | `method` (browser / manual) | How many can use distance filters at all |
@@ -123,7 +123,7 @@ de facto types in the philosophy doc.
 ## What to build in PostHog once events land
 
 - **Funnel:** `feed_viewed` → `signup_started` → `signup_completed` → `email_confirmed`
-- **Funnel:** `feed_viewed` → `post_card_opened` → `interest_clicked` → `message_sent`
+- **Funnel:** `feed_viewed` → `post_card_opened` → `activity_joined` → `message_sent`
 - **Retention:** weekly, on `feed_viewed`, to track month-1 return against the 25% target
 - **Session replay:** watch five sessions that ended without signup. This will teach more in
   twenty minutes than any dashboard — particularly the out-of-area case.
