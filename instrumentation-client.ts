@@ -26,6 +26,23 @@ if (!projectToken) {
     debug: process.env.NODE_ENV === "development",
   });
 
+  // Attribute signups to their acquisition channel (e.g. Reddit). set_once
+  // means this only ever writes once per person, on their first visit -
+  // later visits with no UTM params, or from a different source, won't
+  // overwrite it.
+  const utmParams = new URLSearchParams(window.location.search);
+  const firstTouchProperties: Record<string, string> = {};
+  (["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const).forEach((key) => {
+    const value = utmParams.get(key);
+    if (value) firstTouchProperties[key] = value;
+  });
+  if (document.referrer) {
+    firstTouchProperties.referrer = document.referrer;
+  }
+  if (Object.keys(firstTouchProperties).length > 0) {
+    posthog.setPersonProperties(undefined, firstTouchProperties);
+  }
+
   let identifiedUserId: string | null = null;
 
   // Supabase gives no distinct "email confirmed" auth event - confirming a
