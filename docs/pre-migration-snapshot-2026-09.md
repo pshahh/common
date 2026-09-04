@@ -75,3 +75,21 @@ select count(*) from posts
 where recurrence_rule is not null and expires_at < '2098-01-01'
   and status <> 'archived' and next_occurrence_at is null;
 ```
+
+---
+
+## Dead chains — resolved 4 September
+
+Seven of the fourteen chains have **zero approved posts**: every row in them is already
+`deleted` or `closed`. They aren't dormant, they're finished — the host ended them or they were
+removed. Last occurrence ranges from 3 to 175 days ago.
+
+`e6cc71af` MoreYoga (175d) · `ee5a5016` writing (169d) · `dc61f646` Lazy Sunday Badminton (123d) ·
+`81975604` Moms groups (111d) · `f49297a4` Lazy Sunday Badminton (102d) ·
+`cf4c403e` movie club next month (24d) · `365a2982` movie club tomorrow (3d)
+
+**Backfill rule:** only collapse chains with >= 1 approved post. Archive the seven above
+wholesale — no surviving listing, nothing carried forward. This reduces the migration to
+**7 live chains**, and removes the "should dormant listings persist?" question entirely.
+
+Revised verification target: **7** surviving rows, not 14.
