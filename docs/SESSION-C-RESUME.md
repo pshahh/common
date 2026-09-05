@@ -118,3 +118,56 @@ to the surviving parent listing, so someone clicking a July badminton link lands
 badminton listing rather than a dead end.
 
 Don't leak post content in any of the three pages; the reason is enough.
+
+---
+
+# COMPLETED 5 September 2026 — phases 3 and 4 shipped
+
+## Phase 3 — applied to production
+
+Migration applied inside an explicit `BEGIN…COMMIT` via `execute_sql` (not
+`apply_migration`) so atomicity was guaranteed rather than assumed; recorded in
+`supabase_migrations.schema_migrations` afterwards.
+
+| Check | Result |
+|---|---|
+| Dated recurring rows not archived | **7** (target 7) |
+| Survivors missing `next_occurrence_at` | **0** |
+| Feed-visible dated recurring | **7** (was 6 — the lapsed chain came back) |
+| Interest on survivors | **6** |
+| Total archived | **66** |
+| Orphan threads, true definition | **12**, flat |
+| Rows deleted | **0** — all 73 backed-up posts and 8 threads still present |
+| Orphan row `364b7630` | untouched, still `closed` |
+
+Backup tables `recurring_backfill_backup_20260906` and
+`recurring_backfill_threads_backup_20260906` are on production. Rollback is
+`20260906_collapse_recurring_chains_rollback.sql`, a pure UPDATE.
+
+## Phase 4 — shipped
+
+- **`generate_recurring_posts` is now an UPDATE.** Rolls `next_occurrence_at`
+  and `expires_at` forward on the listing. No INSERT, so the AFTER INSERT email
+  trigger can never fire for a recurrence.
+- **Shared roll-forward.** `next_occurrence_after()` is called by both the
+  backfill and the cron function. Verified: re-running the function against the
+  collapsed data changes **0 rows**, and simulating every listing expiring
+  advances each exactly one interval from what the migration wrote.
+- **Cron job 2 re-enabled** — via `cron.alter_job()`; a direct `UPDATE
+  cron.job` is permission-denied on this project.
+- **Dead code removed**: the `!parent_post_id` boost condition and the
+  `parent_post_id` guard in `new-post-notification`.
+- **Four post states** with the approved copy, resolved server-side.
+
+## Still open
+
+- **The `time` text on all 7 survivors is a stale date.** Each card now reads
+  e.g. *"Sunday 5 July, 9:00am to 11:00am · every week · Next: Sunday 6
+  September"*. The old job rewrote `time` on each generated child; the surviving
+  root still carries whatever the host typed months ago. Not fixed here because
+  the design doc explicitly forbids parsing that free-text field (one live post's
+  `time` reads "Based on pill"). Options: hide `time` on recurring listings when
+  `next_occurrence_at` is set, or prompt hosts to re-enter it. Needs a decision.
+- **The edge function is committed but NOT deployed.** Deploying it alone would
+  put it out of sync with the frontend; it ships with the branch.
+- **12 pre-existing orphan threads** — unchanged, still worth a separate look.
