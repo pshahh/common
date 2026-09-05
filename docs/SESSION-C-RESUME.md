@@ -78,13 +78,43 @@ Phase 4 already edits this file for the archived-child redirect.
 `page.tsx` already uses `SUPABASE_SERVICE_ROLE_KEY` and bypasses RLS. Resolve the reason
 server-side and pass it down as a prop. Four states:
 
-| State | What the viewer should see |
-|---|---|
-| Row exists, status `deleted` / `rejected` / `hidden` | "This post has been removed" + Browse all posts |
-| Row exists, status `archived`, has a parent | 301/302 redirect to the surviving parent listing |
-| Row exists, `audience = 'friends'`, viewer not a friend | Current "This one's just for friends" screen |
-| No row at all | "We couldn't find that post" + Browse all posts |
+### Not part of this bug
 
-Reuse the existing centred layout, lock/emoji treatment and `Browse all posts` button — only
-the icon and copy change per state. Don't leak post content in any of them; the reason is
-enough.
+**Closed and expired posts already behave correctly.** `'closed'` is in the fetch filter, so
+those posts still render with `ClosedBadge` and the interest button hidden. Leave that alone.
+This bug is only about posts that can't be fetched at all.
+
+### The shell to extract
+
+There is no not-found or error page anywhere in the app — no `not-found.tsx`, no `error.tsx`,
+one screen for every failure. But the existing block is a good reusable shell: `Header` + a
+centred column at `padding: 48px 24px`, a 40px emoji, a 20px/600 heading in `#000`, 14px
+`#888` body at `line-height: 1.5`, and a `btn btn-primary` CTA. Extract it as one component
+taking icon / title / body / CTA, then use it for all three states below. No new CSS.
+
+### The four states — copy approved 5 September
+
+**1. Removed** — status `deleted`, `rejected` or `hidden`. Icon: 🚫
+
+> **This post has been removed**
+> It's no longer available. There's plenty else happening nearby.
+> → `Browse all posts`
+
+Do NOT distinguish "the poster took it down" from "an admin removed it". The viewer doesn't
+need to know which, and naming the poster's action invites questions we don't want to field.
+
+**2. Not found** — no row at all (bad slug, mistyped or truncated link). Icon: 🔍
+
+> **We couldn't find that post**
+> The link may be incomplete, or the post may no longer exist.
+> → `Browse all posts`
+
+**3. Friends only** — row exists, `audience = 'friends'`, viewer isn't a friend. Icon: 🔒
+Unchanged, including the CTA split: logged-out sees "Log in or sign up", logged-in sees
+"Browse all posts".
+
+**4. Archived child** — status `archived` with a `parent_post_id`. **Not a page** — redirect
+to the surviving parent listing, so someone clicking a July badminton link lands on the live
+badminton listing rather than a dead end.
+
+Don't leak post content in any of the three pages; the reason is enough.
