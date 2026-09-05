@@ -12,6 +12,7 @@ import AuthModal from '../../components/AuthModal';
 import InterestedModal from '../../components/InterestedModal';
 import MessageSentModal from '../../components/MessageSentModal';
 import ClosedBadge from '../../components/ClosedBadge';
+import PostStateScreen from '../../components/PostStateScreen';
 
 interface Post {
   id: string;
@@ -35,11 +36,22 @@ interface Post {
   next_occurrence_at: string | null;
 }
 
+// Why the post can't be shown, resolved server-side in page.tsx with the
+// service role key. The client cannot work this out for itself: RLS returns an
+// empty result for a friends-only post and for a deleted one alike, which is
+// exactly how every dead link ended up claiming to be friends-only.
+//
+// null means "the post exists and is in principle viewable" - if the client's
+// own RLS-scoped fetch then comes back empty, that genuinely is the
+// friends-only case.
+export type PostUnavailableReason = 'removed' | 'not_found' | null;
+
 interface SinglePostClientProps {
   postId: string;
+  unavailableReason?: PostUnavailableReason;
 }
 
-export default function SinglePostClient({ postId }: SinglePostClientProps) {
+export default function SinglePostClient({ postId, unavailableReason = null }: SinglePostClientProps) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [post, setPost] = useState<Post | null>(null);
@@ -85,6 +97,12 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
   useEffect(() => {
     async function fetchPost() {
       if (!postId) return;
+      // The server already resolved that there is nothing to show. Skip the
+      // round trip - it would return empty and tell us nothing we don't know.
+      if (unavailableReason) {
+        setLoading(false);
+        return;
+      }
       const column = isUUID(postId) ? 'id' : 'slug';
       const { data, error } = await supabase
         .from('posts')
@@ -102,7 +120,7 @@ export default function SinglePostClient({ postId }: SinglePostClientProps) {
       setLoading(false);
     }
     fetchPost();
-  }, [postId]);
+  }, [postId, unavailableReason]);
 
   const searchParams = useSearchParams();
 
@@ -233,13 +251,45 @@ useEffect(() => {
     );
   }
 
-  if (notFound || !post) {
-    // Whether logged in or out, we can't tell "post truly doesn't exist"
-    // apart from "it's a friends-only post RLS is hiding from this viewer" -
-    // so both get the same friendly, friends-only-flavoured message rather
-    // than a flat "not found." Only the CTA differs: a logged-out visitor is
-    // nudged to sign in, a logged-in visitor (already signed in, just not
-    // friends with the poster) is sent back to the feed instead.
+  if (unavailableReason || notFound || !post) {
+    // Three distinct states, not one. The server tells us which via
+    // unavailableReason; when it says nothing, the post exists and is viewable
+    // in principle, so an empty client fetch means RLS hid a friends-only post
+    // from this viewer - the only case the original screen was ever right for.
+    //
+    // Deliberately no post content in any of them: the reason is enough, and
+    // leaking a title would defeat the friends-only case entirely.
+    const screen =
+      unavailableReason === 'removed'
+        ? {
+            // Covers deleted, rejected, hidden and archived posts. Does NOT
+            // distinguish "the poster took it down" from "an admin removed
+            // it" - the viewer doesn't need to know which, and naming the
+            // poster's action invites questions we don't want to field.
+            icon: '🚫',
+            title: 'This post has been removed',
+            body: "It's no longer available. There's plenty else happening nearby.",
+            cta: { label: 'Browse all posts', onClick: handleBackToFeed },
+          }
+        : unavailableReason === 'not_found'
+        ? {
+            icon: '🔍',
+            title: "We couldn't find that post",
+            body: 'The link may be incomplete, or the post may no longer exist.',
+            cta: { label: 'Browse all posts', onClick: handleBackToFeed },
+          }
+        : {
+            // Genuinely friends-only. The CTA still splits: a logged-out
+            // visitor is nudged to sign in, a logged-in one (signed in, just
+            // not friends with the poster) is sent back to the feed.
+            icon: '🔒',
+            title: "This one's just for friends",
+            body: 'Some plans on common are shared with friends only. Sign in to connect with friends and join their activities.',
+            cta: user
+              ? { label: 'Browse all posts', onClick: handleBackToFeed }
+              : { label: 'Log in or sign up', onClick: () => setShowAuthModal(true) },
+          };
+
     return (
       <div className="app">
         <Header
@@ -248,24 +298,12 @@ useEffect(() => {
           onLogout={handleLogout}
         />
         <main className="main-content">
-          <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
-            <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px', color: '#000' }}>
-              This one's just for friends
-            </h1>
-            <p style={{ fontSize: '14px', color: '#888', marginBottom: '24px', lineHeight: 1.5 }}>
-              Some plans on common are shared with friends only. Sign in to connect with friends and join their activities.
-            </p>
-            {user ? (
-              <button className="btn btn-primary" onClick={handleBackToFeed}>
-                Browse all posts
-              </button>
-            ) : (
-              <button className="btn btn-primary" onClick={() => setShowAuthModal(true)}>
-                Log in or sign up
-              </button>
-            )}
-          </div>
+          <PostStateScreen
+            icon={screen.icon}
+            title={screen.title}
+            body={screen.body}
+            cta={screen.cta}
+          />
         </main>
         <AuthModal
           isOpen={showAuthModal}

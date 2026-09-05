@@ -65,6 +65,10 @@ HAVING count(*) FILTER (WHERE status = 'approved') > 0;
 --
 -- Occurrence date is always expiry MINUS ONE DAY: generate_recurring_posts
 -- sets new_expiry := (next_date + INTERVAL '1 day').
+--
+-- The roll-forward itself lives in next_occurrence_after() (see
+-- 20260906_next_occurrence_helper.sql), which the rewritten
+-- generate_recurring_posts also calls. One definition, so they cannot drift.
 CREATE TEMP TABLE _plan ON COMMIT DROP AS
 WITH latest_approved AS (
   SELECT DISTINCT ON (c.root)
@@ -81,12 +85,7 @@ resolved AS (
   SELECT la.root,
          (la.expires_at > now()) AS is_live,
          (la.expires_at::date - 1) AS last_occurrence,
-         CASE la.recurrence_rule
-           WHEN 'weekly'   THEN 7
-           WHEN 'biweekly' THEN 14
-           WHEN 'monthly'  THEN 30
-           ELSE 7
-         END AS interval_days
+         la.recurrence_rule
     FROM latest_approved la
 )
 SELECT res.root,
@@ -94,12 +93,7 @@ SELECT res.root,
        (SELECT sum(c.interest) FROM _chain c WHERE c.root = res.root) AS chain_interest,
        CASE
          WHEN res.is_live THEN res.last_occurrence
-         ELSE res.last_occurrence + (
-                res.interval_days * GREATEST(
-                  ceil((CURRENT_DATE - res.last_occurrence)::numeric / res.interval_days),
-                  1
-                )::int
-              )
+         ELSE next_occurrence_after(res.last_occurrence, res.recurrence_rule, CURRENT_DATE)
        END AS next_occurrence_date
   FROM resolved res;
 
