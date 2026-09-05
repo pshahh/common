@@ -287,3 +287,147 @@ Re-queried after the abort. Production is identical to its pre-dry-run state:
 | Total interest across chains | ✅ still 12 |
 
 **Production is unchanged. Nothing has been applied.**
+
+---
+
+# RE-VERIFICATION — 5 September 2026, 10:37 UTC
+
+Yesterday's evidence superseded. Production still unchanged (0 archived rows,
+0 `next_occurrence_at` set, original `posts_status_check`). Cron job 2 still frozen,
+job 3 still active.
+
+## What moved overnight
+
+| Measure | 4 Sep | 5 Sep |
+|---|---|---|
+| Total interest across chains | 12 | **13** |
+| Threads on chain posts | 7 | **8** |
+| Feed-visible dated recurring | 7 | **6** |
+
+New activity: **Casual Badminton** gained 1 interest click and 1 thread (1→2 each).
+
+### Interest per chain vs the snapshot — no chain is lower
+
+| chain | snapshot | now | |
+|---|---|---|---|
+| Spanish-English Language Exchange | 1 | 1 | ✅ |
+| Casual Badminton | 1 | **2** | ✅ up |
+| East London Badminton Group | 0 | 0 | ✅ |
+| Jam session in Victoria Park | 1 | 1 | ✅ |
+| Study buddies / Focus groups | 0 | 0 | ✅ |
+| Low stakes poker game! | 2 | 2 | ✅ |
+| Anyone want to play some mario kart | 0 | 0 | ✅ |
+| *(7 dead chains)* | 7 | 7 | ✅ unchanged |
+
+## The Spanish-English chain lapsed — and the original migration would have aborted
+
+Its last occurrence expired at **2026-09-05 00:00 UTC**, ten hours before this run. It still
+has 17 approved posts, 1 interest click and 1 thread, so it is emphatically *not* a dead
+chain — but it had no *live* occurrence, so the original `JOIN LATERAL ... WHERE expires_at >
+now()` produced no plan row for it and the `n_surviving <> n_plan` guard would have fired.
+
+The guard did its job. The fix is not to loosen it:
+
+**Migration updated with a lapsed-chain branch.** When a surviving chain has approved posts
+but no live occurrence, the next occurrence is rolled forward from the last one in whole
+recurrence intervals until it lands on or after today — reproducing exactly what cron job 2
+would have written had it not been frozen. Spanish-English is `weekly`, last occurrence
+2026-09-04, so it rolls to **2026-09-11** (expiry 2026-09-12).
+
+The alternative — treating a chain that lapsed by ten hours as dead — would have archived a
+live listing and orphaned its thread. A new guard (`B3c`) now asserts no survivor can end up
+with a next occurrence in the past.
+
+This also makes the migration robust to further delay: it stays correct however long
+approval takes, rather than silently degrading each day job 2 stays off.
+
+## The 1 row outside the chain filter — resolved: LEAVE IT ALONE
+
+`364b7630-cae5-4583-bb10-4b8270c1e405` — *"Would anyone like to come along to my movie club
+next month"*, status `closed`, expiry 2026-06-12, 1 interest, **6 threads**.
+
+It has `parent_post_id = cf4c403e…` but **`recurrence_rule IS NULL`**, which is why the chain
+filter misses it. It is a one-off post that happens to carry a parent pointer.
+
+**It should not be collapsed**, for three reasons:
+
+1. **There is nothing to collapse it onto.** Its parent chain `cf4c403e` is one of the seven
+   dead chains — zero approved posts, archived wholesale, no surviving listing.
+2. **It is not a recurring listing.** No `recurrence_rule`. The migration collapses recurring
+   chains; this is out of scope by definition, not by accident.
+3. **Archiving it would orphan 6 conversations** — the largest single thread cluster in this
+   dataset (14 messages, all closed 2026-06-13, last activity 13 May). Today they resolve to a
+   `closed` post, which renders correctly with `ClosedBadge`. Archiving would break that.
+
+Verified untouched by the dry run (`E-Q10 = 1`). No change needed to the migration — the
+existing filter already excludes it correctly.
+
+## Fresh dry-run transcript (5 Sep, executed and rolled back)
+
+```
+A1 existing rows violating NEW check ....... 0
+A2 constraint BEFORE ....................... CHECK ((status = ANY (ARRAY['pending','approved','rejected','hidden','closed','deleted'])))
+A3 constraint AFTER ........................ CHECK ((status = ANY (ARRAY['pending','approved','rejected','hidden','closed','deleted','archived'])))
+A4 validated against all existing rows ..... true
+
+B1 dated recurring posts in scope ......... 73
+B2 surviving chains ....................... 7
+B3 plan rows .............................. 7
+B3b chains LAPSED, rolled forward ......... 1
+B3c survivors with next date in past ...... 0    [guard requires 0]
+B4 survivors with non-approved root ....... 0    [guard requires 0]
+B5 cron job 2 frozen ...................... yes
+
+C1 posts backed up ........................ 73
+C2 threads backed up ...................... 8
+
+D1 survivors collapsed (UPDATE posts) ..... 7
+D2 threads repointed (UPDATE threads) ..... 6
+D3 children archived (UPDATE posts) ....... 50
+D4 dead chains archived (UPDATE posts) .... 16
+
+E-Q1  orphan threads (doc defn) ........... 10   [before 12]
+E-Q1b orphan threads (true defn) .......... 12   [before 12]
+E-Q3  rows not archived ................... 7    [target 7]
+E-Q4  survivors missing next_occurrence ... 0    [target 0]
+E-Q5  feed-visible dated recurring ........ 7    [before 6]
+E-Q6  interest on survivors ............... 6    [before 6]
+E-Q7  total archived rows ................. 66   [target 66]
+E-Q10 orphan row 364b7630 untouched ....... 1    [1 = untouched]
+
+F  Low stakes poker game!         int=2  next=2026-09-05  exp=2026-09-06
+F  Casual Badminton               int=2  next=2026-09-06  exp=2026-09-07
+F  East London Badminton Group    int=0  next=2026-09-06  exp=2026-09-07
+F  Study buddies / Focus groups   int=0  next=2026-09-08  exp=2026-09-09
+F  Spanish-English Language Exc   int=1  next=2026-09-11  exp=2026-09-12   <- ROLLED FORWARD
+F  Jam session in Victoria Park   int=1  next=2026-09-13  exp=2026-09-14
+F  Anyone want to play some mar   int=0  next=2026-10-03  exp=2026-10-04
+
+ERROR: P0001: DRY RUN COMPLETE - ROLLING BACK
+```
+
+**E-Q5 goes 6 → 7**: the migration *restores* the lapsed Spanish-English listing to the feed.
+**E-Q6 is 6**, up from 5 yesterday, carrying the new Casual Badminton click. Every survivor's
+interest is >= its snapshot value.
+
+### Rollback confirmation (re-queried after the abort)
+
+| Check | Result |
+|---|---|
+| `posts_status_check` reverted | ✅ |
+| Rows with `status='archived'` | ✅ 0 |
+| Both backup tables | ✅ gone |
+| Dated recurring rows | ✅ 73 |
+| Rows with `next_occurrence_at` | ✅ 0 |
+| Threads on chain posts | ✅ 8 |
+| Total interest | ✅ 13 |
+| Orphan row `364b7630` | ✅ still `closed` |
+
+**Production is unchanged. Nothing applied.**
+
+## Note for phase 4 — archived children of dead chains have no surviving parent
+
+The redirect for state 4 must not blindly send an archived child to its `parent_post_id`:
+the 16 posts in the seven dead chains are archived *and* their parents are archived too.
+Redirecting would land on another dead page. The redirect must only fire when the parent is
+actually a live listing; otherwise the child falls through to the "Removed" state.

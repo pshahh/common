@@ -50,27 +50,58 @@ FROM _chain
 GROUP BY root
 HAVING count(*) FILTER (WHERE status = 'approved') > 0;
 
--- What each survivor inherits. The live child is the row the feed shows today,
--- so the survivor takes both its expiry and its occurrence date.
+-- What each survivor inherits.
 --
--- next_occurrence_at = live child's expiry MINUS ONE DAY. Not a guess:
--- generate_recurring_posts sets new_expiry := (next_date + INTERVAL '1 day'),
--- so a child's expiry is always its occurrence date plus one.
+-- Normal case: the chain still has a live occurrence. That is the row the feed
+-- shows today, so the survivor takes its occurrence date and expiry unchanged
+-- and nothing visible moves.
+--
+-- Lapsed case: the chain has approved posts but every occurrence has expired,
+-- because cron job 2 has been frozen since 4 September and nothing regenerated
+-- them. Rolling the date forward by whole recurrence intervals until it lands
+-- on or after today reproduces exactly what job 2 would have written had it
+-- been running. The alternative -- treating a chain that lapsed by hours as
+-- dead -- would archive a live listing and orphan its threads.
+--
+-- Occurrence date is always expiry MINUS ONE DAY: generate_recurring_posts
+-- sets new_expiry := (next_date + INTERVAL '1 day').
 CREATE TEMP TABLE _plan ON COMMIT DROP AS
-SELECT
-  s.root,
-  (SELECT sum(c.interest) FROM _chain c WHERE c.root = s.root) AS chain_interest,
-  lc.expires_at AS live_expiry
-FROM _surviving s
-JOIN LATERAL (
-  SELECT c.expires_at
-  FROM _chain c
-  WHERE c.root = s.root
-    AND c.status = 'approved'
-    AND c.expires_at > now()
-  ORDER BY c.expires_at DESC
-  LIMIT 1
-) lc ON true;
+WITH latest_approved AS (
+  SELECT DISTINCT ON (c.root)
+         c.root,
+         c.expires_at,
+         p.recurrence_rule
+    FROM _chain c
+    JOIN _surviving s ON s.root = c.root
+    JOIN posts p ON p.id = c.id
+   WHERE c.status = 'approved'
+   ORDER BY c.root, c.expires_at DESC
+),
+resolved AS (
+  SELECT la.root,
+         (la.expires_at > now()) AS is_live,
+         (la.expires_at::date - 1) AS last_occurrence,
+         CASE la.recurrence_rule
+           WHEN 'weekly'   THEN 7
+           WHEN 'biweekly' THEN 14
+           WHEN 'monthly'  THEN 30
+           ELSE 7
+         END AS interval_days
+    FROM latest_approved la
+)
+SELECT res.root,
+       res.is_live,
+       (SELECT sum(c.interest) FROM _chain c WHERE c.root = res.root) AS chain_interest,
+       CASE
+         WHEN res.is_live THEN res.last_occurrence
+         ELSE res.last_occurrence + (
+                res.interval_days * GREATEST(
+                  ceil((CURRENT_DATE - res.last_occurrence)::numeric / res.interval_days),
+                  1
+                )::int
+              )
+       END AS next_occurrence_date
+  FROM resolved res;
 
 -- ---------------------------------------------------------------------------
 -- 2. Guards. Fail loudly rather than half-migrating.
@@ -80,6 +111,7 @@ DECLARE
   n_surviving int;
   n_plan int;
   n_bad_root int;
+  n_stale int;
 BEGIN
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobid = 2 AND active) THEN
     RAISE EXCEPTION
@@ -89,13 +121,17 @@ BEGIN
   SELECT count(*) INTO n_surviving FROM _surviving;
   SELECT count(*) INTO n_plan FROM _plan;
 
-  -- A surviving chain with no live occurrence would get no next_occurrence_at
-  -- and would be silently skipped by the inner lateral above. All 7 have one
-  -- as of 4 Sep; if that ever stops being true, stop instead of guessing.
+  -- Every surviving chain must produce exactly one plan row. The lapsed branch
+  -- above means this can no longer silently drop a chain, but assert it anyway.
   IF n_surviving <> n_plan THEN
     RAISE EXCEPTION
-      '% surviving chain(s) have no live occurrence (% planned of %). Resolve manually.',
-      n_surviving - n_plan, n_plan, n_surviving;
+      'Plan covers % of % surviving chains. Resolve manually.', n_plan, n_surviving;
+  END IF;
+
+  -- No survivor may end up with a next occurrence in the past.
+  SELECT count(*) INTO n_stale FROM _plan WHERE next_occurrence_date < CURRENT_DATE;
+  IF n_stale > 0 THEN
+    RAISE EXCEPTION '% survivor(s) would get a next_occurrence_at in the past.', n_stale;
   END IF;
 
   IF n_surviving <> 7 THEN
@@ -150,8 +186,8 @@ WHERE t.post_id IN (SELECT id FROM _chain);
 -- ---------------------------------------------------------------------------
 UPDATE posts p
 SET people_interested  = pl.chain_interest,
-    next_occurrence_at = pl.live_expiry - INTERVAL '1 day',
-    expires_at         = pl.live_expiry
+    next_occurrence_at = pl.next_occurrence_date::timestamptz,
+    expires_at         = (pl.next_occurrence_date + 1)::timestamptz
 FROM _plan pl
 WHERE p.id = pl.root;
 
