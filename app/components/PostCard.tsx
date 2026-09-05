@@ -7,7 +7,7 @@ import { renderTextWithLinks } from '@/lib/textUtils';
 import { canUseNativeShare, shareOrCopyLink } from '@/lib/shareUtils';
 import { ExternalLink as ShareIcon } from 'lucide-react';
 import FeaturedLabel from './FeaturedLabel';
-import { formatNextOccurrence } from '@/lib/dates';
+import { formatListingTime } from '@/lib/dates';
 
 interface PostCardProps {
   id: string;
@@ -129,10 +129,10 @@ export default function PostCard({
 
   const age = calculateAge(authorDateOfBirth ?? null);
 
-  // Null on standing offers and on every post until the recurring backfill
-  // runs, in which case nothing is rendered - the card looks exactly as it
-  // does today. See docs/recurring-posts-and-boosting.md.
-  const nextOccurrence = formatNextOccurrence(nextOccurrenceAt);
+  // The listing's real next date, substituted for the stale free-text one it
+  // was posted with. Standing offers have no next_occurrence_at and render
+  // their `time` exactly as the host wrote it. See lib/dates.ts.
+  const displayTime = formatListingTime(time, nextOccurrenceAt);
 
   const getMapUrl = () => {
     if (latitude && longitude) {
@@ -267,15 +267,10 @@ export default function PostCard({
             </div>
             {/* Time on separate line */}
             <div className="card-time" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              {time}
+              {displayTime}
               {recurrenceRule && (
                 <span className="preference-badge" style={{ margin: 0 }}>
                   {recurrenceRule === 'weekly' ? 'every week' : recurrenceRule === 'biweekly' ? 'every other week' : recurrenceRule === 'monthly' ? 'every month' : recurrenceRule}
-                </span>
-              )}
-              {nextOccurrence && (
-                <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-                  Next: {nextOccurrence}
                 </span>
               )}
             </div>

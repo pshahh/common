@@ -825,7 +825,7 @@ const sortedPosts = useMemo(() => {
     });
   } else {
     // Default: recently added
-    // New original posts get priority for 1 week or until expiry (whichever
+    // New posts get priority for 1 week or until expiry (whichever
     // is longer), capped at MAX_NEW_WINDOW. Recurring/no-fixed-date posts get
     // an expires_at of 2099 as a "no real end date" sentinel (see
     // CreatePostModal.tsx) - without this cap, that sentinel would make them
@@ -851,15 +851,22 @@ const sortedPosts = useMemo(() => {
       const aTime = recencyOf(a);
       const bTime = recencyOf(b);
 
+      // The boost used to be withheld from any post with a parent_post_id,
+      // because the recurrence job manufactured a fresh child per occurrence
+      // and 53 of them would have flooded the tier. The backfill archived those
+      // children and generate_recurring_posts no longer creates any, so the
+      // condition now only serves to permanently exclude the surviving
+      // recurring listings - the opposite of what it was for.
+      // See docs/recurring-posts-and-boosting.md (step 6).
       const aExpiryEnd = a.expires_at ? new Date(a.expires_at).getTime() : 0;
       const aBoostEnd = Math.min(Math.max(aTime + WEEK, aExpiryEnd), aTime + MAX_NEW_WINDOW);
-      const aIsNew = !a.parent_post_id && now < aBoostEnd;
+      const aIsNew = now < aBoostEnd;
 
       const bExpiryEnd = b.expires_at ? new Date(b.expires_at).getTime() : 0;
       const bBoostEnd = Math.min(Math.max(bTime + WEEK, bExpiryEnd), bTime + MAX_NEW_WINDOW);
-      const bIsNew = !b.parent_post_id && now < bBoostEnd;
+      const bIsNew = now < bBoostEnd;
 
-      // New original posts come first
+      // New posts come first
       if (aIsNew && !bIsNew) return -1;
       if (!aIsNew && bIsNew) return 1;
 

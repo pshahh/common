@@ -155,11 +155,12 @@ serve(async (req: Request) => {
       });
     }
 
-    // Skip auto-generated recurring child posts to avoid notification spam
-    if (payload.record.parent_post_id) {
-      return new Response("Skipping recurring child post", { status: 200 });
-    }
-
+    // The guard that skipped posts with a parent_post_id is gone. It existed
+    // because generate_recurring_posts INSERTed a child post per occurrence and
+    // each insert would otherwise have emailed every user. That function is now
+    // an UPDATE that rolls the date forward on the listing, so it inserts
+    // nothing and this trigger never fires for a recurrence.
+    // See docs/recurring-posts-and-boosting.md (step 6).
     const post = payload.record;
     const postUrl = `${BASE_URL}/post/${post.slug || post.id}`;
 
