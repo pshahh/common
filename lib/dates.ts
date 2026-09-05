@@ -15,3 +15,37 @@ export function formatNextOccurrence(value: string | null | undefined): string |
     month: 'long',
   });
 }
+
+// The single date a listing should display.
+//
+// A recurring listing carries a rolling next_occurrence_at, but its free-text
+// `time` column still says whatever the host typed months ago ("Sunday 5 July,
+// 9:00am to 11:00am"). Showing both produced two dates on one card, one of them
+// wrong. This substitutes the real date for the stale one while keeping the
+// host's time of day, in the normal time-field position:
+//
+//   "Friday 15 May, 14:00 -16:00"  +  2026-09-11  ->  "Friday 11 September, 14:00 -16:00"
+//
+// Split on the FIRST comma. The old generate_recurring_posts required two or
+// more commas and took the third chunk, which never matched real data - every
+// live post has exactly one comma - so it silently dropped the time of day.
+//
+// This is a RENDER-time transformation. The stored `time` column is never
+// rewritten: the old recurrence job did that and permanently destroyed the
+// host's original wording.
+//
+// Standing offers have no next_occurrence_at ("Friday evenings", "Weekends")
+// and are returned untouched.
+export function formatListingTime(
+  time: string,
+  nextOccurrenceAt: string | null | undefined
+): string {
+  const nextOccurrence = formatNextOccurrence(nextOccurrenceAt);
+  if (!nextOccurrence) return time;
+
+  const commaIndex = time.indexOf(',');
+  if (commaIndex === -1) return nextOccurrence;
+
+  const timeOfDay = time.slice(commaIndex + 1).trim();
+  return timeOfDay ? `${nextOccurrence}, ${timeOfDay}` : nextOccurrence;
+}

@@ -161,13 +161,19 @@ Backup tables `recurring_backfill_backup_20260906` and
 
 ## Still open
 
-- **The `time` text on all 7 survivors is a stale date.** Each card now reads
-  e.g. *"Sunday 5 July, 9:00am to 11:00am · every week · Next: Sunday 6
-  September"*. The old job rewrote `time` on each generated child; the surviving
-  root still carries whatever the host typed months ago. Not fixed here because
-  the design doc explicitly forbids parsing that free-text field (one live post's
-  `time` reads "Based on pill"). Options: hide `time` on recurring listings when
-  `next_occurrence_at` is set, or prompt hosts to re-enter it. Needs a decision.
+- ~~The `time` text on all 7 survivors is a stale date.~~ **Fixed 5 September.**
+  `formatListingTime()` in `lib/dates.ts` substitutes the real next date for the
+  stale one at render time, keeping the host's time of day: *"Friday 15 May,
+  14:00 -16:00"* renders as *"Friday 11 September, 14:00 -16:00"*. One date, no
+  "Next:" prefix, in the normal time-field position. Used by PostCard,
+  `app/post/[id]` (page and OG description) and both my-activity tabs.
+
+  Splits on the FIRST comma. The old `generate_recurring_posts` required two or
+  more commas and took the third chunk, which matched no real post — every live
+  post has exactly one comma — so it silently dropped the time of day.
+
+  The stored `time` column is never written. The old job rewrote it and
+  permanently destroyed the host's original wording; this is render-only.
 - **The edge function is committed but NOT deployed.** Deploying it alone would
   put it out of sync with the frontend; it ships with the branch.
 - **12 pre-existing orphan threads** — unchanged, still worth a separate look.

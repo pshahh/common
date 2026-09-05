@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import SinglePostClient, { type PostUnavailableReason } from './SinglePostClient';
 import { isUUID } from '@/lib/slug';
-import { formatNextOccurrence } from '@/lib/dates';
+import { formatListingTime } from '@/lib/dates';
 
 // Create a server-side Supabase client for metadata generation
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -57,12 +57,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   // Create a compelling description.
-  // A recurring listing carries a rolling next date, so a shared link should
-  // preview the occurrence someone can actually turn up to rather than the
-  // listing's generic time. Null until the recurring backfill runs, and on
-  // standing offers, in which case the description is unchanged.
-  const nextOccurrence = formatNextOccurrence(post.next_occurrence_at);
-  const when = nextOccurrence ? `${post.time} · Next: ${nextOccurrence}` : post.time;
+  // A recurring listing carries a rolling next date, so a shared link previews
+  // the occurrence someone can actually turn up to rather than the stale date
+  // the listing was posted with. Standing offers have no next date and read
+  // exactly as the host wrote them.
+  const when = formatListingTime(post.time, post.next_occurrence_at);
   const description = post.notes 
     ? `${post.location} · ${when} — ${post.notes}`
     : `${post.location} · ${when}`;

@@ -11,7 +11,7 @@ import BottomNav from '../components/BottomNav';
 import AuthModal from '../components/AuthModal';
 import ClosedBadge from '../components/ClosedBadge';
 import PostCard from '../components/PostCard';
-import { formatNextOccurrence } from '@/lib/dates';
+import { formatListingTime } from '@/lib/dates';
 import EditPostModal from '../components/EditPostModal';
 import CreatePostModal from '../components/CreatePostModal';
 import MobileMessageList from '../components/MobileMessageList';
@@ -527,7 +527,7 @@ export default function MyActivityPage() {
                           </a>
                         </p>
                         <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-  {post.time}
+  {formatListingTime(post.time, post.next_occurrence_at)}
   {post.recurrence_rule && (
     <span style={{
       fontSize: '12px',
@@ -538,11 +538,6 @@ export default function MyActivityPage() {
       borderRadius: '12px',
     }}>
       repeats {post.recurrence_rule === 'every two weeks' ? 'every two weeks' : post.recurrence_rule}
-    </span>
-  )}
-  {formatNextOccurrence(post.next_occurrence_at) && (
-    <span style={{ color: '#000', fontWeight: 500 }}>
-      Next: {formatNextOccurrence(post.next_occurrence_at)}
     </span>
   )}
 </p>
