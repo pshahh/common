@@ -57,3 +57,34 @@ Phase 3 (apply to production, re-verify), then phase 4 (rewrite `generate_recurr
 as an UPDATE, re-enable job 2, remove the `!a.parent_post_id` boost condition, remove the
 `parent_post_id` guard in `new-post-notification`, add the archived-child redirect in
 `app/post/[id]`).
+
+---
+
+## Bug to fix inside phase 4: every dead link claims to be "friends only"
+
+Found 5 September. A user deleted a "swimming group" post; anyone clicking the link in the
+notification email now sees **"This one's just for friends"**.
+
+**Cause:** `SinglePostClient.tsx:236` is `if (notFound || !post)` and renders the friends-only
+screen for every failure. The intent was reasonable — RLS makes a friends-only post come back
+as not-found, and that copy is friendlier than a bare 404 — but it over-applies to deleted
+posts, expired links and mistyped slugs.
+
+**Why it belongs in phase 4:** the migration archives 66 posts, so every old email link to a
+child post will hit this same screen. It takes the bug from ~30 deleted posts to ~96 URLs.
+Phase 4 already edits this file for the archived-child redirect.
+
+**Fix:** the client can't distinguish the cases (RLS returns nothing either way), but
+`page.tsx` already uses `SUPABASE_SERVICE_ROLE_KEY` and bypasses RLS. Resolve the reason
+server-side and pass it down as a prop. Four states:
+
+| State | What the viewer should see |
+|---|---|
+| Row exists, status `deleted` / `rejected` / `hidden` | "This post has been removed" + Browse all posts |
+| Row exists, status `archived`, has a parent | 301/302 redirect to the surviving parent listing |
+| Row exists, `audience = 'friends'`, viewer not a friend | Current "This one's just for friends" screen |
+| No row at all | "We couldn't find that post" + Browse all posts |
+
+Reuse the existing centred layout, lock/emoji treatment and `Browse all posts` button — only
+the icon and copy change per state. Don't leak post content in any of them; the reason is
+enough.
