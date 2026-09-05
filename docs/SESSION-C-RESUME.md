@@ -177,3 +177,29 @@ Backup tables `recurring_backfill_backup_20260906` and
 - **The edge function is committed but NOT deployed.** Deploying it alone would
   put it out of sync with the frontend; it ships with the branch.
 - **12 pre-existing orphan threads** — unchanged, still worth a separate look.
+
+---
+
+## Mario kart date corrected — and a monthly-recurrence bug it exposed
+
+The backfill faithfully carried this listing's date across from its live child,
+but that child's date was **already wrong**. Corrected to **Tuesday 6 October**
+(was Saturday 3 October) per the host.
+
+**Root cause: `monthly` is a flat 30-day step, which drifts off the weekday.**
+The host runs it on the first Tuesday: 4 Aug -> 1 Sep -> 6 Oct. The 30-day rule
+produced 4 Aug (Tue) -> 3 Sep (Thu) -> 3 Oct (Sat). The drift is recorded in the
+chain's own history: one archived child stores `time = 'Tuesday 1 September'`
+against an occurrence of Thursday 3 September, and the next reads
+`'Saturday, 3rd October'`. So this predates the migration by two cycles.
+
+**Weekly and biweekly are unaffected** - 7 and 14 days both preserve the weekday
+exactly. That is why the other six listings are all correct, and their rendered
+weekday matches the weekday in their original text.
+
+**Not fixed, needs a decision.** At the next roll, 6 Oct + 30 = 5 Nov (Thursday),
+not the first Tuesday (3 Nov) - it will drift again. Representing "first Tuesday
+of the month" is beyond what `recurrence_rule` ('weekly'/'biweekly'/'monthly')
+can express; it needs a schema and composer change, not a new constant.
+Switching `monthly` to `+ 1 month` would hold the day-of-month steady but still
+not the weekday, so it is not a fix either.
