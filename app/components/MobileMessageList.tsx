@@ -15,7 +15,6 @@ interface Thread {
   post_id: string;
   participant_ids: string[];
   created_at: string;
-  closed_at: string | null;
   last_message_at: string | null;
   thread_type: string;
   post: ThreadPost | null;
@@ -47,7 +46,6 @@ export default function MobileMessageList({
           post_id,
           participant_ids,
           created_at,
-          closed_at,
           last_message_at,
           thread_type,
           posts (
@@ -134,7 +132,6 @@ export default function MobileMessageList({
           post_id: thread.post_id,
           participant_ids: thread.participant_ids,
           created_at: thread.created_at,
-          closed_at: thread.closed_at,
           last_message_at: thread.last_message_at,
           thread_type: thread.thread_type || '1:1',
           post: post,
@@ -152,25 +149,19 @@ export default function MobileMessageList({
     }
   }, [userId, refreshTrigger]);
 
-  const isThreadClosed = (thread: Thread): boolean => {
-    if (thread.closed_at) return true;
-    if (thread.post?.expires_at) {
-      const expiresAt = new Date(thread.post.expires_at);
-      const closeTime = new Date(expiresAt.getTime() + 24 * 60 * 60 * 1000);
-      if (new Date() > closeTime) return true;
-    }
-    return false;
-  };
-
   const sortedThreads = [...threads].sort((a, b) => {
-    const aIsClosed = isThreadClosed(a);
-    const bIsClosed = isThreadClosed(b);
-    if (aIsClosed && !bIsClosed) return 1;
-    if (!aIsClosed && bIsClosed) return -1;
     const aTime = a.last_message_at || a.created_at;
     const bTime = b.last_message_at || b.created_at;
     return new Date(bTime).getTime() - new Date(aTime).getTime();
   });
+
+  // The thread itself never closes, but once its event has passed it's no
+  // longer live -- grey it out in the list so past and upcoming chats are
+  // easy to tell apart at a glance.
+  const isEventEnded = (thread: Thread): boolean => {
+    if (!thread.post?.expires_at) return false;
+    return new Date(thread.post.expires_at) < new Date();
+  };
 
   return (
     <div style={{
@@ -230,15 +221,15 @@ export default function MobileMessageList({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {sortedThreads.map((thread) => {
-            const closed = isThreadClosed(thread);
-            const unread = thread.hasUnread && !closed;
+            const unread = thread.hasUnread;
+            const ended = isEventEnded(thread);
 
             return (
               <div
                 key={thread.id}
                 onClick={() => {
                   // Optimistically clear unread so dot doesn't flash on close
-                  setThreads(prev => prev.map(t => 
+                  setThreads(prev => prev.map(t =>
                     t.id === thread.id ? { ...t, hasUnread: false } : t
                   ));
                   onSelectThread(thread.id);
@@ -248,7 +239,7 @@ export default function MobileMessageList({
                   background: 'var(--bg-badge)',
                   borderBottom: '1px solid var(--border)',
                   cursor: 'pointer',
-                  opacity: closed ? 0.5 : 1,
+                  opacity: ended ? 0.5 : 1,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
@@ -258,7 +249,7 @@ export default function MobileMessageList({
                   <div style={{
                     fontSize: '15px',
                     fontWeight: unread ? 600 : 500,
-                    color: closed ? 'var(--text-secondary)' : 'var(--text-primary)',
+                    color: ended ? 'var(--text-secondary)' : 'var(--text-primary)',
                     marginBottom: '4px',
                   }}>
                     {thread.post?.title || 'Unknown post'}
@@ -272,25 +263,15 @@ export default function MobileMessageList({
                       {thread.otherParticipantName || thread.post?.location || ''}
                     </div>
                   )}
-                  {closed && (
-                    <div style={{
-                      fontSize: '11px',
-                      color: 'var(--text-secondary)',
-                      marginTop: '8px',
-                      fontStyle: 'italic',
-                    }}>
-                      Conversation closed
-                    </div>
-                  )}
                 </div>
 
-                {/* Unread dot — right side */}
+                {/* Unread dot — right side; grey once the event has ended */}
                 {unread && (
                   <div style={{
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    background: 'var(--accent)',
+                    background: ended ? 'var(--text-secondary)' : 'var(--accent)',
                     flexShrink: 0,
                   }} />
                 )}

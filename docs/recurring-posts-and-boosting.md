@@ -84,8 +84,9 @@ unchanged — this only changes how long a thread lives.
   host, persisting across every occurrence. They cannot see each other.
 - **Group recurring** (4 posts): one shared thread, everyone joins it, persists across
   occurrences.
-- `close_expired_threads` gets *simpler*: no occurrence boundaries, no reopening. A thread
-  closes when the host closes or deletes the listing.
+- Moot as of 2026-09-17: `close_expired_threads` was removed outright rather than
+  simplified. Threads no longer auto-close at all; see
+  `supabase/migrations/20260917_remove_thread_autoclose.sql`.
 - Delete `UPDATE threads SET post_id = new_post_id` from `generate_recurring_posts` — it
   exists only to drag conversations onto each new clone.
 

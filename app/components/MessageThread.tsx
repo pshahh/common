@@ -64,7 +64,6 @@ interface Thread {
   id: string;
   post_id: string;
   participant_ids: string[];
-  closed_at: string | null;
   thread_type: string;
   post: Post | null;
 }
@@ -115,16 +114,11 @@ export default function MessageThread({
   const [actionLoading, setActionLoading] = useState(false);
   const [threadNotesExpanded, setThreadNotesExpanded] = useState(false);
 
-  // Check if thread is closed
+  // A thread is closed only when its host has manually closed the listing.
+  // Threads no longer auto-close after a post expires.
   const isThreadClosed = (): boolean => {
     if (!thread) return false;
-    if (thread.closed_at) return true;
     if (thread.post?.status === 'closed') return true;
-    if (thread.post?.expires_at) {
-      const expiresAt = new Date(thread.post.expires_at);
-      const closeTime = new Date(expiresAt.getTime() + 24 * 60 * 60 * 1000);
-      if (new Date() > closeTime) return true;
-    }
     return false;
   };
 
@@ -174,7 +168,6 @@ export default function MessageThread({
           id,
           post_id,
           participant_ids,
-          closed_at,
           thread_type,
           posts (
             id,
@@ -217,7 +210,6 @@ export default function MessageThread({
         id: threadData.id,
         post_id: threadData.post_id,
         participant_ids: threadData.participant_ids,
-        closed_at: threadData.closed_at,
         thread_type: threadData.thread_type || '1:1',
         post: post,
       });
@@ -420,7 +412,7 @@ export default function MessageThread({
     setActionLoading(true);
     try {
       const { error } = await supabase.rpc('block_user', {
-        blocked_user_id: otherUserId
+        blocked_id: otherUserId
       });
       if (error) {
         console.error('Error blocking user:', JSON.stringify(error, null, 2));
@@ -778,16 +770,16 @@ export default function MessageThread({
                 </div>
                 <div
                   onClick={() => { setShowMenu(false); setShowLeaveModal(true); }}
-                  style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer' }}
+                  style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
                 >
                   Leave chat
                 </div>
-                {/* Block is intentionally hidden for now - menu felt too
-                    crowded at 4 items and no one had used it. The handler,
-                    state, and modal below are all still fully wired up
-                    (setShowBlockModal / BlockUserModal / handleBlockUser) -
-                    to bring it back, just re-add a menu item that calls
-                    setShowMenu(false); setShowBlockModal(true) same as before. */}
+                <div
+                  onClick={() => { setShowMenu(false); setShowBlockModal(true); }}
+                  style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--danger)', cursor: 'pointer' }}
+                >
+                  Block this person
+                </div>
               </div>
             )}
           </div>
@@ -1005,21 +997,16 @@ export default function MessageThread({
         background: 'var(--bg-badge)',
       }}>
         {threadClosed ? (
-          <div style={{ 
+          <div style={{
             fontSize: '13px',
             color: 'var(--text-secondary)',
             textAlign: 'center',
             padding: '8px 0',
           }}>
-            This conversation closed 24 hours after the activity ended.
+            This chat is closed
           </div>
         ) : (
           <>
-            {post.expires_at && new Date(post.expires_at).getFullYear() < 2099 && (
-  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.4 }}>
-    Conversations close 24 hours after the activity ends. You can still read past messages.
-  </div>
-)}
             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
   <textarea
     placeholder={thread?.thread_type === 'group' ? 'Type something...' : 'Type something...'}

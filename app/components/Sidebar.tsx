@@ -16,7 +16,6 @@ interface Thread {
   post_id: string;
   participant_ids: string[];
   created_at: string;
-  closed_at: string | null;
   last_message_at: string | null;
   thread_type: string;
   post: ThreadPost | null;
@@ -79,7 +78,6 @@ export default function Sidebar({
         post_id,
         participant_ids,
         created_at,
-        closed_at,
         last_message_at,
         thread_type,
         posts (
@@ -166,7 +164,6 @@ export default function Sidebar({
         post_id: thread.post_id,
         participant_ids: thread.participant_ids,
         created_at: thread.created_at,
-        closed_at: thread.closed_at,
         last_message_at: thread.last_message_at,
         thread_type: thread.thread_type || '1:1',
         post: post,
@@ -203,7 +200,6 @@ export default function Sidebar({
             participant_ids: string[];
             post_id: string;
             created_at: string;
-            closed_at: string | null;
             last_message_at: string | null;
           };
           if (newThread.participant_ids.includes(userId)) {
@@ -228,7 +224,6 @@ export default function Sidebar({
                 post_id: newThread.post_id,
                 participant_ids: newThread.participant_ids,
                 created_at: newThread.created_at,
-                closed_at: newThread.closed_at,
                 last_message_at: newThread.last_message_at,
                 thread_type: (newThread as any).thread_type || '1:1',
                 post: postData,
@@ -291,14 +286,12 @@ export default function Sidebar({
     onNavigateToMyActivity();
   };
 
-  const isThreadClosed = (thread: Thread): boolean => {
-    if (thread.closed_at) return true;
-    if (thread.post?.expires_at) {
-      const expiresAt = new Date(thread.post.expires_at);
-      const closeTime = new Date(expiresAt.getTime() + 24 * 60 * 60 * 1000);
-      if (new Date() > closeTime) return true;
-    }
-    return false;
+  // The thread itself never closes, but once its event has passed it's no
+  // longer live -- grey it out in the list so past and upcoming chats are
+  // easy to tell apart at a glance.
+  const isEventEnded = (thread: Thread): boolean => {
+    if (!thread.post?.expires_at) return false;
+    return new Date(thread.post.expires_at) < new Date();
   };
 
   const NavItem = ({
@@ -379,18 +372,14 @@ export default function Sidebar({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {[...threads]
                 .sort((a, b) => {
-                  const aIsClosed = isThreadClosed(a);
-                  const bIsClosed = isThreadClosed(b);
-                  if (aIsClosed && !bIsClosed) return 1;
-                  if (!aIsClosed && bIsClosed) return -1;
                   const aTime = a.last_message_at || a.created_at;
                   const bTime = b.last_message_at || b.created_at;
                   return new Date(bTime).getTime() - new Date(aTime).getTime();
                 })
                 .map((thread) => {
-                  const closed = isThreadClosed(thread);
                   const isSelected = selectedThreadId === thread.id;
-                  const unread = thread.hasUnread && !closed && !isSelected;
+                  const unread = thread.hasUnread && !isSelected;
+                  const ended = isEventEnded(thread);
 
                   return (
                     <div
@@ -409,7 +398,7 @@ export default function Sidebar({
                         background: isSelected ? 'var(--bg-card)' : 'transparent',
                         boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                         transition: 'background 0.15s ease',
-                        opacity: closed ? 0.5 : 1,
+                        opacity: ended ? 0.5 : 1,
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
@@ -418,9 +407,7 @@ export default function Sidebar({
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
                           fontSize: '14px',
-                          color: closed
-                            ? 'var(--text-secondary)'
-                            : isSelected ? 'var(--text-primary)' : 'var(--text-primary)',
+                          color: ended ? 'var(--text-secondary)' : 'var(--text-primary)',
                           fontWeight: unread ? 600 : (isSelected ? 500 : 400),
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -443,13 +430,13 @@ export default function Sidebar({
                         )}
                       </div>
 
-                      {/* Unread dot — right side */}
+                      {/* Unread dot — right side; grey once the event has ended */}
                       {unread && (
                         <div style={{
                           width: '6px',
                           height: '6px',
                           borderRadius: '50%',
-                          background: 'var(--accent)',
+                          background: ended ? 'var(--text-secondary)' : 'var(--accent)',
                           flexShrink: 0,
                         }} />
                       )}
