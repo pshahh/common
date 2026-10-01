@@ -20,6 +20,7 @@ Update this doc whenever an event is added, renamed, or its properties change.
 | `signup_completed` | `supabase.auth.signUp()` succeeds and the account row is created (before email confirmation) | — | Auth modal |
 | `email_confirmed` | A user's session is identified with an `email_confirmed_at` timestamp from within the last 10 minutes — the closest available proxy for "just clicked the confirmation link," since Supabase has no distinct confirm event | `hours_since_signup` (number, rounded to 1 decimal) | Client instrumentation, on identify |
 | `location_set` | The user's location is set — either browser geolocation succeeds, or they pick a result from the manual location search | `method` (`browser` \| `manual`) | Home feed |
+| `message_reacted` | A user adds, removes or changes an emoji reaction on someone else's message (reactions send no notification) | `emoji` (`👍` \| `❤️` \| `😂` \| `😮` \| `🙏`), `action` (`added` \| `removed` \| `changed`), `thread_type` (`1:1` \| `group`) | Message thread |
 | `message_sent` | A message is successfully sent in a thread | `thread_type` (`1:1` \| `group`) | Message thread |
 | `post_created` | A new post is successfully inserted | `audience` (`everyone` \| `friends`), `recurrence` (`one-off` \| `repeats`), `thread_type` (`1:1` \| `group`), `timing_mode` (`specific` \| `flexible`) | Create post modal |
 

@@ -7,6 +7,7 @@ import ClosedBadge from './ClosedBadge';
 import { renderTextWithLinks } from '@/lib/textUtils';
 import { ExternalLink as ShareIcon } from 'lucide-react';
 import posthog from 'posthog-js';
+import ReactableBubble, { type Reaction } from './MessageReactions';
 
 // Slim "common" wordmark bar, styled to match Header.tsx, shown only when
 // this thread is the full-screen mobile view (the page's own <Header> is
@@ -107,6 +108,9 @@ export default function MessageThread({
   const [expandedPhoto, setExpandedPhoto] = useState<{ url: string; name: string; age: number | null } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [profileCache, setProfileCache] = useState<Record<string, ProfileData>>({});
+  // Reactions keyed by message id. Ids starting with 'tmp-' are optimistic.
+  const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
+  const reactingRef = useRef<Set<string>>(new Set());
   
   // Modal states for Leave/Block
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -154,6 +158,7 @@ export default function MessageThread({
     async function fetchThreadData() {
       setLoading(true);
       setMessages([]);
+      setReactions({});
 
       const { data: threadData, error: threadError } = await supabase
         .from('threads')
@@ -209,7 +214,7 @@ export default function MessageThread({
 
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
-        .select('id, thread_id, sender_id, content, created_at, message_type')
+        .select('id, thread_id, sender_id, content, created_at, message_type, message_reactions(id, message_id, user_id, emoji)')
         .eq('thread_id', threadId)
         .order('created_at', { ascending: true });
 
@@ -245,6 +250,40 @@ export default function MessageThread({
         }));
 
         setMessages(transformedMessages);
+
+        // Reactions arrive embedded in the messages query (no N+1).
+        const reactionMap: Record<string, Reaction[]> = {};
+        const reactorIds = new Set<string>();
+        messagesData.forEach((msg) => {
+          const list = (msg.message_reactions || []) as Reaction[];
+          if (list.length > 0) reactionMap[msg.id] = list;
+          list.forEach((r) => reactorIds.add(r.user_id));
+        });
+        setReactions(reactionMap);
+
+        // One batched lookup for reactors we haven't already loaded (group
+        // "who reacted" needs first names).
+        const missing = [...reactorIds].filter((id) => !profileMap[id] && id !== currentUserId);
+        if (missing.length > 0) {
+          const { data: reactorProfiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, avatar_url, date_of_birth')
+            .in('id', missing);
+          if (!isMounted) return;
+          if (reactorProfiles) {
+            setProfileCache(prev => {
+              const next = { ...prev };
+              reactorProfiles.forEach((p) => {
+                next[p.id] = {
+                  first_name: p.first_name || 'Unknown',
+                  avatar_url: p.avatar_url || null,
+                  date_of_birth: p.date_of_birth || null,
+                };
+              });
+              return next;
+            });
+          }
+        }
       }
 
       setLoading(false);
@@ -259,6 +298,25 @@ export default function MessageThread({
       isMounted = false;
     };
   }, [threadId]);
+
+  // Insert/update from realtime: one reaction per (message, user), so replace
+  // any existing entry for that pair (this also swaps out our optimistic row).
+  const applyReactionChange = (row: Reaction & { thread_id: string }) => {
+    if (row.thread_id !== threadId) return;
+    if (row.user_id !== currentUserId) getProfileData(row.user_id);
+    setReactions((prev) => {
+      const list = (prev[row.message_id] || []).filter(
+        (r) => r.id !== row.id && r.user_id !== row.user_id
+      );
+      return {
+        ...prev,
+        [row.message_id]: [
+          ...list,
+          { id: row.id, message_id: row.message_id, user_id: row.user_id, emoji: row.emoji },
+        ],
+      };
+    });
+  };
 
   useEffect(() => {
     const channelName = `messages-thread-${threadId}`;
@@ -305,6 +363,36 @@ export default function MessageThread({
           markThreadAsRead();
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'message_reactions', filter: `thread_id=eq.${threadId}` },
+        (payload) => applyReactionChange(payload.new as Reaction & { thread_id: string })
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'message_reactions', filter: `thread_id=eq.${threadId}` },
+        (payload) => applyReactionChange(payload.new as Reaction & { thread_id: string })
+      )
+      // DELETE events can't be filtered by thread and carry only the row id,
+      // so match on id; ids from other threads simply won't be found.
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'message_reactions' },
+        (payload) => {
+          const id = (payload.old as { id?: string }).id;
+          if (!id) return;
+          setReactions((prev) => {
+            let changed = false;
+            const next: Record<string, Reaction[]> = {};
+            for (const [mid, list] of Object.entries(prev)) {
+              const filtered = list.filter((r) => r.id !== id);
+              if (filtered.length !== list.length) changed = true;
+              if (filtered.length > 0) next[mid] = filtered;
+            }
+            return changed ? next : prev;
+          });
+        }
+      )
       .subscribe();
 
     return () => {
@@ -339,6 +427,80 @@ export default function MessageThread({
     }
 
     setSending(false);
+  };
+
+  const nameFor = (userId: string): string => {
+    if (userId === currentUserId) return 'You';
+    return profileCache[userId]?.first_name || 'Someone';
+  };
+
+  const setMyReaction = (messageId: string, mine: Reaction | null) => {
+    setReactions((prev) => {
+      const list = (prev[messageId] || []).filter((r) => r.user_id !== currentUserId);
+      const next = mine ? [...list, mine] : list;
+      const copy = { ...prev };
+      if (next.length > 0) copy[messageId] = next;
+      else delete copy[messageId];
+      return copy;
+    });
+  };
+
+  // Tap same emoji = remove, different = replace, none yet = add. Optimistic,
+  // rolled back if the write fails.
+  const handleReact = async (msg: Message, emoji: string) => {
+    if (msg.sender_id === currentUserId || msg.message_type === 'system') return;
+    if (reactingRef.current.has(msg.id)) return;
+
+    const previous = (reactions[msg.id] || []).find((r) => r.user_id === currentUserId) || null;
+    const action: 'added' | 'removed' | 'changed' =
+      !previous ? 'added' : previous.emoji === emoji ? 'removed' : 'changed';
+
+    reactingRef.current.add(msg.id);
+    if (action === 'removed') {
+      setMyReaction(msg.id, null);
+    } else {
+      setMyReaction(msg.id, {
+        id: previous?.id || `tmp-${msg.id}`,
+        message_id: msg.id,
+        user_id: currentUserId,
+        emoji,
+      });
+    }
+
+    let errorMessage: string | null = null;
+    if (action === 'removed') {
+      const { error } = await supabase
+        .from('message_reactions')
+        .delete()
+        .eq('message_id', msg.id)
+        .eq('user_id', currentUserId);
+      if (error) errorMessage = error.message;
+    } else {
+      const { data, error } = await supabase
+        .from('message_reactions')
+        .upsert(
+          { message_id: msg.id, thread_id: threadId, user_id: currentUserId, emoji },
+          { onConflict: 'message_id,user_id' }
+        )
+        .select('id, message_id, user_id, emoji')
+        .single();
+      if (error) errorMessage = error.message;
+      else if (data) setMyReaction(msg.id, data as Reaction);
+    }
+
+    reactingRef.current.delete(msg.id);
+
+    if (errorMessage) {
+      console.error('Error saving reaction:', errorMessage);
+      setMyReaction(msg.id, previous);
+      return;
+    }
+
+    posthog.capture('message_reacted', {
+      emoji,
+      action,
+      thread_type: thread?.thread_type === 'group' ? 'group' : '1:1',
+    });
   };
 
   const getMapUrl = () => {
@@ -918,12 +1080,23 @@ export default function MessageThread({
                       display: 'flex', justifyContent: 'flex-end',
                       marginBottom: isLastFromSender ? '12px' : '4px',
                     }}>
-                      <div style={{
-                        background: 'var(--accent)', color: 'var(--text-inverse)', padding: '10px 14px',
-                        fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 6px 18px',
-                        wordWrap: 'break-word',
-                        whiteSpace: 'pre-line',
-                      }}>{renderTextWithLinks(msg.content, 'var(--text-inverse)')}</div>
+                      <ReactableBubble
+                        align="right"
+                        text={msg.content}
+                        canReact={false}
+                        reactions={reactions[msg.id] || []}
+                        currentUserId={currentUserId}
+                        isGroup={isGroupThread}
+                        nameFor={nameFor}
+                        onReact={(emoji) => handleReact(msg, emoji)}
+                      >
+                        <div style={{
+                          background: 'var(--accent)', color: 'var(--text-inverse)', padding: '10px 14px',
+                          fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 6px 18px',
+                          wordWrap: 'break-word',
+                          whiteSpace: 'pre-line',
+                        }}>{renderTextWithLinks(msg.content, 'var(--text-inverse)')}</div>
+                      </ReactableBubble>
                     </div>
                   );
                 } else {
@@ -962,13 +1135,24 @@ export default function MessageThread({
                             {msg.sender_name}
                           </div>
                         )}
-                       <div style={{
-                          background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '10px 14px',
-                          fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
-                          border: '1px solid var(--border)',
-                          wordWrap: 'break-word',
-                          whiteSpace: 'pre-line',
-                        }}>{renderTextWithLinks(msg.content)}</div>
+                        <ReactableBubble
+                          align="left"
+                          text={msg.content}
+                          canReact={true}
+                          reactions={reactions[msg.id] || []}
+                          currentUserId={currentUserId}
+                          isGroup={isGroupThread}
+                          nameFor={nameFor}
+                          onReact={(emoji) => handleReact(msg, emoji)}
+                        >
+                          <div style={{
+                            background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '10px 14px',
+                            fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
+                            border: '1px solid var(--border)',
+                            wordWrap: 'break-word',
+                            whiteSpace: 'pre-line',
+                          }}>{renderTextWithLinks(msg.content)}</div>
+                        </ReactableBubble>
                       </div>
                     </div>
                   );
