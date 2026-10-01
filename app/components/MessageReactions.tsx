@@ -244,8 +244,8 @@ export default function ReactableBubble({
             display: 'flex',
             gap: '4px',
             marginTop: '-8px',
-            marginLeft: align === 'left' ? '8px' : 0,
-            marginRight: align === 'right' ? '8px' : 0,
+            marginLeft: align === 'left' ? '4px' : 0,
+            marginRight: align === 'right' ? '4px' : 0,
             position: 'relative',
             zIndex: 1,
           }}
@@ -266,8 +266,12 @@ export default function ReactableBubble({
                   fontSize: '12px',
                   lineHeight: '16px',
                   borderRadius: '10px',
-                  background: 'var(--bg-card)',
-                  border: `1px solid ${mine ? 'var(--accent)' : 'var(--border)'}`,
+                  background: 'var(--pill-fill)',
+                  // Same 1px border everywhere keeps all pills one size; only
+                  // my reactions in group threads swap it for the accent.
+                  border: `1px solid ${isGroup && mine ? 'var(--accent)' : 'var(--pill-fill)'}`,
+                  // Ring in the thread background so pills look cut out of the bubble.
+                  boxShadow: '0 0 0 2px var(--bg-badge)',
                   color: 'var(--text-secondary)',
                   cursor: isGroup ? 'pointer' : 'default',
                 }}
