@@ -9,6 +9,7 @@ interface ThreadPost {
   title: string;
   location: string;
   expires_at: string | null;
+  status: string | null;
 }
 
 interface Thread {
@@ -84,7 +85,8 @@ export default function Sidebar({
           id,
           title,
           location,
-          expires_at
+          expires_at,
+          status
         )
       `)
       .contains('participant_ids', [userId])
@@ -205,7 +207,7 @@ export default function Sidebar({
           if (newThread.participant_ids.includes(userId)) {
             const { data: postData } = await supabase
               .from('posts')
-              .select('id, title, location, expires_at')
+              .select('id, title, location, expires_at, status')
               .eq('id', newThread.post_id)
               .single();
             if (postData) {
@@ -286,10 +288,12 @@ export default function Sidebar({
     onNavigateToMyActivity();
   };
 
-  // The thread itself never closes, but once its event has passed it's no
-  // longer live -- grey it out in the list so past and upcoming chats are
-  // easy to tell apart at a glance.
+  // The thread itself never closes, but once the post is closed or its event
+  // has passed it's no longer live -- grey it out in the list so past and
+  // upcoming chats are easy to tell apart at a glance. Presentation only:
+  // greyed threads still open and send normally.
   const isEventEnded = (thread: Thread): boolean => {
+    if (thread.post?.status === 'closed') return true;
     if (!thread.post?.expires_at) return false;
     return new Date(thread.post.expires_at) < new Date();
   };

@@ -114,13 +114,6 @@ export default function MessageThread({
   const [actionLoading, setActionLoading] = useState(false);
   const [threadNotesExpanded, setThreadNotesExpanded] = useState(false);
 
-  // A thread is closed only when its host has manually closed the listing.
-  // Threads no longer auto-close after a post expires.
-  const isThreadClosed = (): boolean => {
-    if (!thread) return false;
-    if (thread.post?.status === 'closed') return true;
-    return false;
-  };
 
   // Get the other participant(s) for blocking
   const getOtherParticipantId = (): string | null => {
@@ -325,7 +318,7 @@ export default function MessageThread({
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || sending || isThreadClosed()) return;
+    if (!newMessage.trim() || sending) return;
 
     setSending(true);
 
@@ -708,7 +701,6 @@ export default function MessageThread({
   }
 
   const post = thread.post;
-  const threadClosed = isThreadClosed();
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -893,7 +885,7 @@ export default function MessageThread({
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '14px', color: 'var(--text-secondary)', textAlign: 'center', minHeight: '100px',
             }}>
-              {threadClosed ? 'This chat is closed' : 'Start the conversation when you\'re ready.'}
+              Start the conversation when you&apos;re ready.
             </div>
           ) : (
             <>
@@ -996,18 +988,7 @@ export default function MessageThread({
         flexShrink: 0,
         background: 'var(--bg-badge)',
       }}>
-        {threadClosed ? (
-          <div style={{
-            fontSize: '13px',
-            color: 'var(--text-secondary)',
-            textAlign: 'center',
-            padding: '8px 0',
-          }}>
-            This chat is closed
-          </div>
-        ) : (
-          <>
-            <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
   <textarea
     placeholder={thread?.thread_type === 'group' ? 'Type something...' : 'Type something...'}
     value={newMessage}
@@ -1063,8 +1044,6 @@ export default function MessageThread({
     </svg>
   </button>
 </form>
-          </>
-        )}
       </div>
     </div>
   );
