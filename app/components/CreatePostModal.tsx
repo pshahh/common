@@ -608,17 +608,11 @@ const { error: insertError } = await supabase
 )}
                   <input
                     type="date"
+                    className="date-input"
                     value={date}
                     onChange={e => setDate(e.target.value)}
                     required
-                    style={{
-                      padding: '12px 16px',
-                      border: '1px solid var(--border)',
-                      borderRadius: '12px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      width: 'fit-content',
-                    }}
+                    style={{ width: 'fit-content' }}
                   />
                   <input
                     type="text"
@@ -660,15 +654,9 @@ const { error: insertError } = await supabase
       <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Stays up until</span>
       <input
         type="date"
+        className="date-input"
         value={expiresAt}
         onChange={e => setExpiresAt(e.target.value)}
-        style={{
-          padding: '12px 16px',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-          fontSize: '14px',
-          outline: 'none',
-        }}
       />
     </div>
     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>

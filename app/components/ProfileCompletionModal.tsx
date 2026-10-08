@@ -301,18 +301,11 @@ export default function ProfileCompletionModal({
             </label>
             <input
               type="date"
+              className="date-input"
               value={dateOfBirth}
               onChange={(e) => setDateOfBirth(e.target.value)}
               max={new Date().toISOString().split('T')[0]} // Can't be in the future
-              style={{
-                padding: '12px 16px',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                fontSize: '14px',
-                outline: 'none',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
+              style={{ width: '100%' }}
             />
             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
               Your age will be shown on your profile, not your birth date

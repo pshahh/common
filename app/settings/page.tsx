@@ -504,21 +504,14 @@ window.location.href = '/';
                 </label>
                 <input
                   type="date"
+                  className="date-input"
                   value={dateOfBirth}
                   onChange={(e) => {
                     setDateOfBirth(e.target.value);
                     setSaveSuccess(false);
                   }}
                   max={new Date().toISOString().split('T')[0]}
-                  style={{
-                    padding: '12px 16px',
-                    border: '1px solid #E5DFD8',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    outline: 'none',
-                    width: '100%',
-                    maxWidth: '200px',
-                  }}
+                  style={{ width: '100%', maxWidth: '200px' }}
                 />
                 {dateOfBirth && (
                   <p style={{ fontSize: '13px', color: '#666', marginTop: '6px' }}>
