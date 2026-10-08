@@ -1335,6 +1335,17 @@ a[href] {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* iOS only (Capacitor shell, Safari, PWA): the ~34px home-indicator inset eats
+   into the 80px bar and leaves the items hugging the top border. Give back
+   part of the inset so the items sit lower; height stays 80px. Android and
+   desktop never get .platform-ios. Portrait only: landscape keeps its 48px bar. */
+@media (orientation: portrait) {
+  .platform-ios .bottom-nav {
+    --ios-nav-lift: 16px;
+    padding-bottom: max(0px, calc(env(safe-area-inset-bottom) - var(--ios-nav-lift)));
+  }
+}
+
 .bottom-nav-inner {
   display: flex;
   justify-content: space-around;

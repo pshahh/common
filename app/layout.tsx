@@ -50,8 +50,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Platform class for iOS-only CSS: Capacitor iOS shell, iOS Safari and the iOS PWA */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var c=window.Capacitor,n=navigator,ios=(c&&c.getPlatform&&c.getPlatform()==='ios')||/iPad|iPhone|iPod/.test(n.userAgent)||(n.platform==='MacIntel'&&n.maxTouchPoints>1);if(ios)document.documentElement.classList.add('platform-ios')}catch(e){}})()`,
+          }}
+        />
         {/* PWA meta tags */}
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
