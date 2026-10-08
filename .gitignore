@@ -40,8 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-ios/
-android/
 # living record lives in the Claude project, not the repo
 progress.md
 
@@ -51,3 +49,11 @@ progress.md
 # Supabase CLI scratch
 supabase/.temp/
 Claude outputs/
+
+# Native signing material — never commit
+*.jks
+*.keystore
+keystore.properties
+*.p12
+*.p8
+*.mobileprovision

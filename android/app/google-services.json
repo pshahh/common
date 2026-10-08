@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "481491020313",
+    "project_id": "common-78907",
+    "storage_bucket": "common-78907.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:481491020313:android:0103f1f7890e20a6115888",
+        "android_client_info": {
+          "package_name": "com.common.social"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAf8C-IMTbkm1O_RnL-OVW67uN5zn-Phxc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
