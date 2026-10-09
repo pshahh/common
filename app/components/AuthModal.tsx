@@ -216,11 +216,17 @@ if (mode === 'forgot-password') {
               Enter your email and we'll send you a reset link.
             </p>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
+              <label htmlFor="reset-email" style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
                 Email
               </label>
               <input
   type="text"
+  id="reset-email"
+  name="email"
+  autoComplete="email"
+  inputMode="email"
+  autoCapitalize="none"
+  autoCorrect="off"
   value={email}
   onChange={e => setEmail(e.target.value)}
   style={{
@@ -492,14 +498,19 @@ if (mode === 'reset-sent') {
         </div>
 
         {/* Form */}
-        <form onSubmit={mode === 'login' ? handleLogin : handleSignup}>
+        <form key={mode} onSubmit={mode === 'login' ? handleLogin : handleSignup}>
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
+              <label htmlFor="auth-email" style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
                 Email
               </label>
               <input
                 type="email"
+                id="auth-email"
+                name="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
@@ -516,11 +527,14 @@ if (mode === 'reset-sent') {
             </div>
             
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
+              <label htmlFor="auth-password" style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
                 Password
               </label>
               <input
                 type="password"
+                id="auth-password"
+                name="password"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
@@ -539,11 +553,14 @@ if (mode === 'reset-sent') {
             
             {mode === 'signup' && (
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
+                <label htmlFor="auth-first-name" style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
                   First name
                 </label>
                 <input
                   type="text"
+                  id="auth-first-name"
+                  name="firstName"
+                  autoComplete="given-name"
                   value={firstName}
                   onChange={e => setFirstName(e.target.value)}
                   required

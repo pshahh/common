@@ -70,11 +70,14 @@ export default function ResetPasswordPage() {
               Enter your new password below.
             </p>
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
+              <label htmlFor="new-password" style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
                 New password
               </label>
               <input
                 type="password"
+                id="new-password"
+                name="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
