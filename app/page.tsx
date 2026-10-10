@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useUnreadCount } from '@/lib/useUnreadCount';
@@ -30,6 +30,9 @@ import FilterBottomSheet from './components/FilterBottomSheet';
 import posthog from 'posthog-js';
 import { getPostType } from '@/lib/postType';
 
+
+// If geolocation calls back with neither success nor error in this time, give up
+const LOCATION_FALLBACK_MS = 12000;
 
 interface Post {
   id: string;
@@ -337,6 +340,7 @@ const [friendIds, setFriendIds] = useState<string[]>([]);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable'>('idle');
   const [showLocationInput, setShowLocationInput] = useState(false);
+  const locationFallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [searchingLocation, setSearchingLocation] = useState(false);
@@ -663,8 +667,28 @@ if (!sessionStorage.getItem('push-subscribed')) {
 
     setLocationStatus('requesting');
 
+    // Safety net: some webviews (e.g. WKWebView without a usage description)
+    // never call either callback, and the getCurrentPosition timeout only
+    // starts once permission is granted. If nothing has happened, stop
+    // spinning and offer manual entry. A late success callback is still
+    // honoured, so a slow permission prompt isn't broken by this.
+    if (locationFallbackTimer.current) clearTimeout(locationFallbackTimer.current);
+    locationFallbackTimer.current = setTimeout(() => {
+      locationFallbackTimer.current = null;
+      setLocationStatus((status) => (status === 'requesting' ? 'unavailable' : status));
+      setShowLocationInput(true);
+    }, LOCATION_FALLBACK_MS);
+
+    const clearFallback = () => {
+      if (locationFallbackTimer.current) {
+        clearTimeout(locationFallbackTimer.current);
+        locationFallbackTimer.current = null;
+      }
+    };
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        clearFallback();
         setUserLocation({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -675,6 +699,7 @@ if (!sessionStorage.getItem('push-subscribed')) {
         posthog.capture('location_set', { method: 'browser' });
       },
       (err) => {
+        clearFallback();
         console.log('Geolocation error:', err.code, err.message);
         if (err.code === err.PERMISSION_DENIED) {
           setLocationStatus('denied');
@@ -689,6 +714,13 @@ if (!sessionStorage.getItem('push-subscribed')) {
         maximumAge: 30 * 60 * 1000,
       }
     );
+  }, []);
+
+  // Don't leave the fallback timer running after unmount
+  useEffect(() => {
+    return () => {
+      if (locationFallbackTimer.current) clearTimeout(locationFallbackTimer.current);
+    };
   }, []);
 
   // Request location when sorting by nearest
