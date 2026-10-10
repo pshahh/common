@@ -2,15 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { supabase } from './supabase';
 
-export async function registerNativePush(userId: string) {
-  if (!Capacitor.isNativePlatform()) return;
-
-  const { receive } = await FirebaseMessaging.requestPermissions();
-  if (receive !== 'granted') return;
-
-  const { token } = await FirebaseMessaging.getToken();
-  console.log('FCM token:', token.substring(0, 20) + '...');
-
+async function saveToken(userId: string, token: string) {
   const platform = Capacitor.getPlatform() as 'ios' | 'android';
   const { error } = await supabase.from('device_tokens').upsert(
     { user_id: userId, token, platform, updated_at: new Date().toISOString() },
@@ -21,6 +13,22 @@ export async function registerNativePush(userId: string) {
   } else {
     console.log('Device token saved successfully');
   }
+}
+
+let listenersAttached = false;
+
+async function attachListeners() {
+  if (listenersAttached) return;
+  listenersAttached = true;
+
+  // FCM rotates tokens (reinstall, restore, data clear). Read the user from
+  // the live session rather than a captured id so a refresh after sign-out
+  // or an account switch never writes under the wrong user.
+  await FirebaseMessaging.addListener('tokenReceived', async ({ token }) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    await saveToken(session.user.id, token);
+  });
 
   await FirebaseMessaging.addListener('notificationReceived', (event) => {
     console.log('Push notification received:', event);
@@ -33,6 +41,20 @@ export async function registerNativePush(userId: string) {
       if (path) window.location.href = path;
     }
   });
+}
+
+export async function registerNativePush(userId: string) {
+  if (!Capacitor.isNativePlatform()) return;
+
+  const { receive } = await FirebaseMessaging.requestPermissions();
+  if (receive !== 'granted') return;
+
+  await attachListeners();
+
+  const { token } = await FirebaseMessaging.getToken();
+  console.log('FCM token:', token.substring(0, 20) + '...');
+
+  await saveToken(userId, token);
 }
 
 // Remove this device's token row so a signed-out phone stops getting
