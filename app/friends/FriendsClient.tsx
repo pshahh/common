@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { signOut } from '@/lib/signOut';
 import { useUnreadCount } from '@/lib/useUnreadCount';
 import { useShareInvite } from '@/lib/useShareInvite';
 import { User } from '@supabase/supabase-js';
@@ -192,7 +193,7 @@ export default function FriendsClient() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     window.location.href = '/';
   };
 

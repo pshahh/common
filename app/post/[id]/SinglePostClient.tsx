@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { signOut } from '@/lib/signOut';
 import { isUUID } from '@/lib/slug';
 import { User } from '@supabase/supabase-js';
 import posthog from 'posthog-js';
@@ -135,7 +136,7 @@ useEffect(() => {
 }, [user, post, searchParams, postId]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
   };
 
   const handleInterestedClick = () => {

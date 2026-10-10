@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { signOut } from '@/lib/signOut';
 import { useUnreadCount } from '@/lib/useUnreadCount';
 import { User } from '@supabase/supabase-js';
 import Header from './components/Header';
@@ -930,7 +931,7 @@ const sortedPosts = useMemo(() => {
   }, [sortBy, userLocation]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     setSelectedThreadId(null);
     setShowMobileThread(false);
     setShowMobileMessages(false);

@@ -34,3 +34,20 @@ export async function registerNativePush(userId: string) {
     }
   });
 }
+
+// Remove this device's token row so a signed-out phone stops getting
+// notifications. Matches on token (not platform) so signing out on one
+// phone never removes the row of another phone on the same platform.
+// Must run while the session is still valid: RLS scopes the delete to the
+// signed-in user's own rows. Never throws; sign-out must not be blocked.
+export async function unregisterNativePush() {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    const { token } = await FirebaseMessaging.getToken();
+    const { error } = await supabase.from('device_tokens').delete().eq('token', token);
+    if (error) console.error('Failed to delete device token:', JSON.stringify(error));
+  } catch (err) {
+    console.error('Failed to unregister native push:', err);
+  }
+}

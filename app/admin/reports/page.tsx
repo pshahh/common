@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { signOut } from '@/lib/signOut';
 import { useUnreadCount } from '@/lib/useUnreadCount';
 import { User } from '@supabase/supabase-js';
 import Header from '../../components/Header';
@@ -136,7 +137,7 @@ export default function AdminReportsPage() {
   }, [user, filter]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     window.location.href = '/';
   };
 

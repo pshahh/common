@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
     await Promise.all([
       supabaseAdmin.from('thread_reads').delete().eq('user_id', userId),
       supabaseAdmin.from('messages').delete().eq('sender_id', userId),
+      supabaseAdmin.from('device_tokens').delete().eq('user_id', userId),
       supabaseAdmin.from('reports').delete().eq('reported_by', userId),
       supabaseAdmin.from('blocked_users').delete().or(`user_id.eq.${userId},blocked_user_id.eq.${userId}`),
       supabaseAdmin.from('posts').delete().eq('user_id', userId),

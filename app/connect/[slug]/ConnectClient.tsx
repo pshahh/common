@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { signOut } from '@/lib/signOut';
 import { User } from '@supabase/supabase-js';
 import Header from '@/app/components/Header';
 import AuthModal from '@/app/components/AuthModal';
@@ -179,7 +180,7 @@ export default function ConnectClient({ slug }: ConnectClientProps) {
   }, [user, inviter, isSelf, alreadyFriends, connecting, phase, loading, createFriendship]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
   };
 
   const avatarUrl = inviter?.avatar_url
