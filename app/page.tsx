@@ -24,7 +24,7 @@ import BottomNav from './components/BottomNav';
 import MobileMessageList from './components/MobileMessageList';
 import { sortByDistance, formatDistance, getDistanceToPost, calculateDistance } from '@/lib/distance';
 import { subscribeToPush } from '@/lib/pushNotifications';
-import { registerNativePush } from '@/lib/nativePush';
+import { registerNativePush, PUSH_SUBSCRIBED_KEY } from '@/lib/nativePush';
 import InstallPrompt from './components/InstallPrompt';
 import FloatingActionButton from './components/FloatingActionButton';
 import FilterBottomSheet from './components/FilterBottomSheet';
@@ -342,6 +342,7 @@ const [friendIds, setFriendIds] = useState<string[]>([]);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable'>('idle');
   const [showLocationInput, setShowLocationInput] = useState(false);
   const locationFallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pushRegistering = useRef(false);
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [searchingLocation, setSearchingLocation] = useState(false);
@@ -484,14 +485,18 @@ useEffect(() => {
     async function checkAdminAndCounts() {
       if (!user) return;
      
-        // Subscribe to push notifications (once)
-if (!sessionStorage.getItem('push-subscribed')) {
-  sessionStorage.setItem('push-subscribed', 'true');
-  if ((window as any).Capacitor?.isNativePlatform?.()) {
-    registerNativePush(user.id).catch(console.error);
-  } else {
-    subscribeToPush(user.id).catch(console.error);
-  }
+        // Subscribe to push notifications (once per session). The flag is only
+        // set after registration succeeds so a failure is retried next launch;
+        // the ref stops this effect starting a second registration meanwhile.
+if (!sessionStorage.getItem(PUSH_SUBSCRIBED_KEY) && !pushRegistering.current) {
+  pushRegistering.current = true;
+  const register = (window as any).Capacitor?.isNativePlatform?.()
+    ? registerNativePush(user.id)
+    : subscribeToPush(user.id);
+  register
+    .then(() => sessionStorage.setItem(PUSH_SUBSCRIBED_KEY, 'true'))
+    .catch(console.error)
+    .finally(() => { pushRegistering.current = false; });
 }
     
 

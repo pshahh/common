@@ -2,6 +2,9 @@ import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { supabase } from './supabase';
 
+// sessionStorage flag: this session has already completed push registration.
+export const PUSH_SUBSCRIBED_KEY = 'push-subscribed';
+
 async function saveToken(userId: string, token: string) {
   const platform = Capacitor.getPlatform() as 'ios' | 'android';
   const { error } = await supabase.from('device_tokens').upsert(
@@ -9,10 +12,10 @@ async function saveToken(userId: string, token: string) {
     { onConflict: 'user_id,platform' }
   );
   if (error) {
-    console.error('Failed to save device token:', JSON.stringify(error));
-  } else {
-    console.log('Device token saved successfully');
+    // Throw so callers can tell registration failed and retry later.
+    throw new Error('Failed to save device token: ' + JSON.stringify(error));
   }
+  console.log('Device token saved successfully');
 }
 
 let listenersAttached = false;
@@ -27,7 +30,11 @@ async function attachListeners() {
   await FirebaseMessaging.addListener('tokenReceived', async ({ token }) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    await saveToken(session.user.id, token);
+    try {
+      await saveToken(session.user.id, token);
+    } catch (err) {
+      console.error(err);
+    }
   });
 
   await FirebaseMessaging.addListener('notificationReceived', (event) => {
