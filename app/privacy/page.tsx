@@ -102,7 +102,7 @@ export default function PrivacyPage() {
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
-      fontFamily: "'Satoshi', 'Inter', system-ui, sans-serif",
+      fontFamily: 'var(--font-family)',
     }}>
       <Header onLoginClick={() => {}} user={user} onLogout={handleLogout} />
 

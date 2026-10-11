@@ -193,7 +193,7 @@ export default function ConnectClient({ slug }: ConnectClientProps) {
       <div style={{
         minHeight: '100dvh',
         background: 'var(--bg-subtle)',
-        fontFamily: "'Satoshi', 'Inter', system-ui, sans-serif",
+        fontFamily: 'var(--font-family)',
       }}>
         <Header onLoginClick={() => {}} user={user} onLogout={handleLogout} />
         <div style={{
@@ -212,7 +212,7 @@ export default function ConnectClient({ slug }: ConnectClientProps) {
       <div style={{
         minHeight: '100dvh',
         background: 'var(--bg-subtle)',
-        fontFamily: "'Satoshi', 'Inter', system-ui, sans-serif",
+        fontFamily: 'var(--font-family)',
       }}>
         <Header onLoginClick={() => {}} user={user} onLogout={handleLogout} />
         <div style={{
@@ -247,7 +247,7 @@ export default function ConnectClient({ slug }: ConnectClientProps) {
       <div style={{
         minHeight: '100dvh',
         background: 'var(--bg-subtle)',
-        fontFamily: "'Satoshi', 'Inter', system-ui, sans-serif",
+        fontFamily: 'var(--font-family)',
         position: 'relative',
         overflow: 'hidden',
       }}>
@@ -338,7 +338,7 @@ export default function ConnectClient({ slug }: ConnectClientProps) {
     <div style={{
       minHeight: '100dvh',
       background: 'var(--bg-subtle)',
-      fontFamily: "'Satoshi', 'Inter', system-ui, sans-serif",
+      fontFamily: 'var(--font-family)',
       display: 'flex',
       flexDirection: 'column',
     }}>

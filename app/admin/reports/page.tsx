@@ -269,7 +269,7 @@ export default function AdminReportsPage() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        fontFamily: "'Satoshi', 'Inter', system-ui, sans-serif",
+        fontFamily: 'var(--font-family)',
         color: '#888',
         fontSize: '14px',
       }}>
@@ -284,7 +284,7 @@ export default function AdminReportsPage() {
       display: 'flex', 
       flexDirection: 'column',
       overflow: 'hidden',
-      fontFamily: "'Satoshi', 'Inter', system-ui, sans-serif",
+      fontFamily: 'var(--font-family)',
     }}>
       <Header
         onLoginClick={() => {}}
