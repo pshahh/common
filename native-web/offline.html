@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>common</title>
+  <!--
+    Shown by Capacitor (server.errorPath) when the live site can't load,
+    e.g. no connection. Bundled in the app, so it must not load anything remote.
+  -->
+  <style>
+    :root {
+      --bg: #FEFCF8;
+      --text-primary: #000000;
+      --text-secondary: #888888;
+      --text-inverse: #FEFCF8;
+      --accent: #0F4415;
+      --accent-hover: #0B3310;
+      --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      font-family: var(--font-family);
+      color: var(--text-primary);
+      -webkit-text-size-adjust: 100%;
+    }
+    main {
+      min-height: 100%;
+      box-sizing: border-box;
+      padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .brand {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+      margin-bottom: 32px;
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 8px;
+    }
+    p {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      margin: 0 0 24px;
+      max-width: 280px;
+    }
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 24px;
+      background: var(--accent);
+      color: var(--text-inverse);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:active { background: var(--accent-hover); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand">common</div>
+    <h1>You're offline</h1>
+    <p>common needs a connection. Check your signal or wifi, then try again.</p>
+    <button type="button" onclick="window.location.href = 'https://www.common-social.com/'">Try again</button>
+  </main>
+</body>
+</html>

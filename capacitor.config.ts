@@ -5,9 +5,12 @@ import { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.common.social',
   appName: 'common',
-  webDir: 'out',
+  // Only holds offline.html - the app itself loads the live site from server.url
+  webDir: 'native-web',
   server: {
     url: 'https://www.common-social.com',
+    // Shown when the live site can't load (e.g. no connection)
+    errorPath: 'offline.html',
   cleartext: false,
   },
   ios: {
