@@ -10,7 +10,7 @@ import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
 
-const LAST_UPDATED = '23 July 2026';
+const LAST_UPDATED = '11 October 2026';
 
 export default function PrivacyPage() {
   const router = useRouter();
@@ -163,7 +163,8 @@ export default function PrivacyPage() {
               page explains what information we collect when you use common, why we collect it,
               who we share it with, and the choices you have. If anything here is unclear, email
               us at <a href="mailto:hello@common-social.com" style={{ color: '#444' }}>hello@common-social.com</a>{' '}
-              and we&apos;ll explain it in plain English.
+              and we&apos;ll explain it in plain English. This policy sits alongside our{' '}
+              <a href="/terms" style={{ color: '#444' }}>Terms of Use</a>.
             </p>
 
             <h2 style={sectionH2}>Information we collect</h2>
@@ -179,22 +180,33 @@ export default function PrivacyPage() {
             </p>
             <p style={bodyP}>
               <strong>Location.</strong> If you post an activity with a specific place, that
-              location is visible to other users as part of the post. If you use &quot;nearest to
-              me&quot; sorting or distance filtering, we ask your device for your approximate
-              location - this is used locally to sort and filter the feed and is not stored on our
-              servers beyond your current session. If you search for a place by name, that search
-              text is sent to OpenStreetMap&apos;s Nominatim service to look up matching locations.
+              location is visible to other users as part of the post. If you choose a distance or
+              sort by nearest, we ask your device for your approximate location. That location stays
+              on your phone or browser, where it&apos;s used to sort and filter the feed. It is never
+              sent to our servers. If you search for a place by name, the text you type is sent to
+              OpenStreetMap&apos;s Nominatim service to find matching places. Separately, our
+              analytics provider estimates a rough location (such as city and country) from your IP
+              address, as described under usage analytics below.
             </p>
             <p style={bodyP}>
               <strong>Device and push notification data.</strong> If you allow notifications, we
-              store a device token (via Apple/Google&apos;s push services) or a browser push
-              subscription so we can send you alerts about new messages and activity. We don&apos;t
+              store a device token (delivered through Firebase Cloud Messaging and Apple&apos;s push
+              service) or a browser push subscription (delivered through your browser&apos;s push
+              service) so we can send you alerts about new messages and activity. We don&apos;t
               use this token for anything other than sending you notifications.
             </p>
             <p style={bodyP}>
               <strong>Usage information.</strong> We keep basic records needed to run the service,
               such as when a thread was last read, when a post was created, and moderation history
               (reports, blocks) so we can keep the community safe.
+            </p>
+            <p style={bodyP}>
+              <strong>Usage analytics.</strong> We use PostHog to understand how common is used, for
+              example when someone signs up, creates a post, or sends a message. These events are
+              linked to your account ID, along with the website or campaign that brought you to
+              common if there was one. PostHog estimates a rough location (such as city and
+              country) from your IP address. It doesn&apos;t use cookies, it stores an anonymous ID
+              on your device, and we don&apos;t use it to track you across other apps or websites.
             </p>
 
             <h2 style={sectionH2}>How we use your information</h2>
@@ -204,7 +216,8 @@ export default function PrivacyPage() {
               <li>To deliver messages between you and people you&apos;re coordinating with</li>
               <li>To send you email and push notifications about activity relevant to you (new messages, interest in your posts) - you can turn email notifications off in Settings</li>
               <li>To sort and filter activities by distance, using your device&apos;s location if you choose to share it</li>
-              <li>To review reports, enforce our guidelines, and keep the community safe</li>
+              <li>To understand how common is used and make it better</li>
+              <li>To review reports, enforce our guidelines and terms, and keep the community safe</li>
               <li>To respond to your support requests</li>
             </ul>
             <p style={bodyP}>
@@ -219,11 +232,16 @@ export default function PrivacyPage() {
               use it for their own purposes:
             </p>
             <ul style={ul}>
-              <li><strong>Supabase</strong> - hosts our database, authentication, and backend functions</li>
-              <li><strong>Google Firebase Cloud Messaging</strong> - delivers push notifications to Android and iOS devices</li>
-              <li><strong>Resend</strong> - sends transactional emails (e.g. new message notifications)</li>
-              <li><strong>OpenStreetMap (Nominatim)</strong> - looks up locations when you search for a place by name</li>
+              <li><strong>Supabase</strong> stores our database, handles sign in, and stores profile photos</li>
+              <li><strong>Vercel</strong> hosts the common website and app, so it processes every request you make, including your IP address</li>
+              <li><strong>PostHog</strong> provides usage analytics, on servers in the EU. It doesn&apos;t use cookies and isn&apos;t used to track you across other apps or websites</li>
+              <li><strong>Google Firebase Cloud Messaging</strong> delivers push notifications to iPhone and Android devices</li>
+              <li><strong>Resend</strong> sends our emails, such as new message notifications</li>
+              <li><strong>OpenStreetMap (Nominatim)</strong> finds places when you search for one by name</li>
             </ul>
+            <p style={bodyP}>
+              If you tap a place on a post to open it in a map, the place is sent to Google Maps.
+            </p>
             <p style={bodyP}>
               Other users of common can see the content of your posts, your first name, your
               profile photo and age (if provided), and messages you send them directly. Friends-only
@@ -234,7 +252,8 @@ export default function PrivacyPage() {
             <h2 style={sectionH2}>How long we keep your information</h2>
             <p style={bodyP}>
               We keep your account and content for as long as your account is active. If you delete
-              your account, we remove your profile and posts, though some information may be
+              your account in Settings, we remove your profile, posts, messages and photo straight
+              away, though some information may be
               retained for a limited period where needed for safety, legal, or fraud-prevention
               purposes (for example, records related to a report you filed or were the subject of).
             </p>
@@ -244,7 +263,8 @@ export default function PrivacyPage() {
               <li>You can edit or delete your posts at any time</li>
               <li>You can turn off email notifications in Settings, and revoke push notification permission in your device settings at any time</li>
               <li>You can block another user, which removes you from shared conversations with them</li>
-              <li>You can request a copy of your data, or ask us to delete your account and associated data, by emailing us</li>
+              <li>You can delete your account and its data at any time in Settings → Delete account</li>
+              <li>You can ask for a copy of your data by emailing us</li>
             </ul>
             <p style={bodyP}>
               If you&apos;re in the UK or EU, you have rights under data protection law (including
@@ -256,8 +276,7 @@ export default function PrivacyPage() {
             <h2 style={sectionH2}>Children</h2>
             <p style={bodyP}>
               common involves coordinating in-person meetups with other people and isn&apos;t
-              intended for children. You must meet the minimum age required to use common in your
-              country to create an account.
+              intended for children. You must be 18 or older to create an account.
             </p>
 
             <h2 style={sectionH2}>Security</h2>
