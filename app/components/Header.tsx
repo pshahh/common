@@ -37,7 +37,10 @@ export default function Header({ onLoginClick, user, onLogout }: HeaderProps) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 24px',
+      // Horizontal padding (24px desktop, 16px <=768px) and the safe-area top
+      // padding come from .header in globals.css. Bottom stays 0 here, as it
+      // was under the old '0 24px' shorthand, so the header height is unchanged.
+      paddingBottom: 0,
       position: 'sticky',
       top: 0,
       zIndex: 40,
