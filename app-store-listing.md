@@ -110,6 +110,9 @@ App Store Connect asks these on the Age Rating page. Answers for common:
 - Unrestricted web access: **No** (the app only loads common-social.com;
   other links open outside the app)
 - User-generated content: **Yes**
+- Social media: **Yes** (the feed shows posts to many users)
+- Social media disabled for users under 13: **No** (common is 18+ and doesn't
+  use the Declared Age Range API)
 - Messaging and chat: **Yes**
 - Age assurance or parental controls: **No**
 - Advertising: **No**
