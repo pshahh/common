@@ -26,11 +26,10 @@ const config: CapacitorConfig = {
       style: 'light',
     },
     FirebaseMessaging: {
-      // Show notifications while the app is open. No 'badge': common has no
-      // badge counts. iOS only - the plugin ignores this on Android, where
-      // foreground messages are delivered to JS (notificationReceived) and
-      // not shown by the system.
-      presentationOptions: ['alert', 'sound'],
+      // Show nothing while the app is open, matching Android, where foreground
+      // messages are delivered to JS (notificationReceived) and not shown by
+      // the system. iOS only - the plugin ignores this option on Android.
+      presentationOptions: [],
     },
   },
 };
