@@ -9,25 +9,6 @@ export async function POST(req: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    
-    // Decode the JWT to get the user ID (the signature was already verified by Supabase when issued)
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-    
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-    const userId = payload.sub;
-    const role = payload.role;
-    const exp = payload.exp;
-    
-    console.log('User ID from token:', userId);
-    console.log('Role:', role);
-    console.log('Expired:', exp * 1000 < Date.now());
-    
-    if (!userId || role !== 'authenticated' || exp * 1000 < Date.now()) {
-      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
-    }
 
     // Use admin client for all operations
     const supabaseAdmin = createClient(
@@ -35,13 +16,12 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Verify user actually exists
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
-    console.log('getUserById result - user:', !!user, 'error:', userError?.message);
-    
+    // Verify the token with Supabase Auth (checks signature, expiry and that the user exists)
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
+    const userId = user.id;
 
     // 1. Fetch all thread info in parallel
     const [{ data: createdThreads }, { data: participatingThreads }, { data: profile }] = await Promise.all([
