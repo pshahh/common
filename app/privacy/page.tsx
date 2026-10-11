@@ -273,6 +273,27 @@ export default function PrivacyPage() {
               state privacy laws. We&apos;ll respond to any request within a reasonable time.
             </p>
 
+            <h2 id="delete-account" style={sectionH2}>Deleting your account</h2>
+            <p style={bodyP}>
+              You can delete your common account at any time. Sign in, either in the app or at{' '}
+              <a href="https://www.common-social.com" style={{ color: '#444' }}>common-social.com</a>, then go to
+              Settings → Delete account and type DELETE to confirm. Your account is deleted straight
+              away and can&apos;t be recovered.
+            </p>
+            <p style={bodyP}>This deletes:</p>
+            <ul style={ul}>
+              <li>your profile, including your name, photo and date of birth</li>
+              <li>your posts</li>
+              <li>messages you&apos;ve sent, and conversations you started along with everything in them</li>
+              <li>your friend connections, blocks and the reports you&apos;ve filed</li>
+              <li>your push notification tokens and your sign in details</li>
+            </ul>
+            <p style={bodyP}>
+              If you can&apos;t sign in, email us at{' '}
+              <a href="mailto:hello@common-social.com" style={{ color: '#444' }}>hello@common-social.com</a>{' '}
+              from the address on your account and we&apos;ll delete it for you.
+            </p>
+
             <h2 style={sectionH2}>Children</h2>
             <p style={bodyP}>
               common involves coordinating in-person meetups with other people and isn&apos;t

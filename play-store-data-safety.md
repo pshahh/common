@@ -19,8 +19,10 @@ an SDK or data flow changes.
 
 **Yes.** Settings > Delete account deletes the account and its data
 immediately, in the app and on the website. Play also asks for a web URL where
-people can request deletion: use `https://www.common-social.com/privacy`, which
-describes the Settings path and the contact email.
+people can request deletion: use
+`https://www.common-social.com/privacy#delete-account`, which describes the
+Settings path, what gets deleted, and the contact email for people who can't
+sign in.
 
 ## Data types to declare
 
