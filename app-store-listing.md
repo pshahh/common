@@ -98,7 +98,7 @@ Account deletion
 Menu > Settings > Delete account, then type DELETE to confirm. The account and its data are deleted immediately. Please don't delete the demo account, or tell us if you do so we can recreate it.
 
 Demo account
-The demo account has a profile, a post of its own and an existing conversation with a second test account. Please use that conversation and the test account's posts to try reporting and blocking, rather than posts by real members.
+The demo account already has conversations with Priya, who runs common. To try reporting and blocking, please use Priya's posts and conversations rather than posts by other members.
 ```
 
 ## Age rating questionnaire
