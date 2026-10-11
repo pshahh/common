@@ -603,6 +603,10 @@ if (mode === 'reset-sent') {
                 />
                 <span>
                   I confirm I&apos;m 18 or older, and I agree to common&apos;s{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-primary)', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+                    Terms of Use
+                  </a>
+                  {' '}and{' '}
                   <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-primary)', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
                     Privacy Policy
                   </a>.

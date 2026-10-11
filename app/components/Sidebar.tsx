@@ -516,6 +516,13 @@ export default function Sidebar({
         >
           Privacy Policy
         </NavItem>
+
+        <NavItem
+          onClick={() => router.push('/terms')}
+          isActive={false}
+        >
+          Terms of Use
+        </NavItem>
       </div>
 
       {/* Logout at bottom */}

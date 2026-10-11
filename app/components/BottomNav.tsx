@@ -313,6 +313,35 @@ export default function BottomNav({
               Privacy Policy
             </button>
 
+            <button
+              onClick={() => { router.push('/terms'); handleCloseMenu(); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '16px 0',
+                borderBottom: '1px solid var(--border-light)',
+                fontSize: '16px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                background: 'none',
+                border: 'none',
+                borderBottomWidth: '1px',
+                borderBottomStyle: 'solid',
+                borderBottomColor: 'var(--border-light)',
+                width: '100%',
+                textAlign: 'left',
+                fontFamily: 'inherit',
+              }}
+            >
+              <span style={{ width: '24px', display: 'flex', justifyContent: 'center' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><polyline points="9 15 11 17 15 13" />
+                </svg>
+              </span>
+              Terms of Use
+            </button>
+
             {isAdmin && (
               <>
                 <button

@@ -15,6 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: baseUrl, changeFrequency: 'hourly', priority: 1 },
     { url: `${baseUrl}/guidelines`, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/privacy`, changeFrequency: 'yearly', priority: 0.1 },
+    { url: `${baseUrl}/terms`, changeFrequency: 'yearly', priority: 0.1 },
   ];
 
   // Only public ("everyone" audience), currently-live posts — mirrors the
