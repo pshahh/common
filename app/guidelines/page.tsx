@@ -380,6 +380,38 @@ export default function GuidelinesPage() {
       Child safety point of contact: <a href="mailto:hello@common-social.com" style={{ color: '#444' }}>hello@common-social.com</a>.
     </p>
   </section>
+
+  {/* Need help? (App Store support URL points here) */}
+  <section id="help">
+    <h2 style={{
+      fontSize: '18px',
+      fontWeight: 600,
+      color: '#000',
+      marginBottom: '12px',
+    }}>
+      Need help?
+    </h2>
+    <p style={{
+      fontSize: '14px',
+      color: '#444',
+      lineHeight: 1.7,
+      margin: '0 0 12px 0',
+    }}>
+      Email us at <a href="mailto:hello@common-social.com" style={{ color: '#444' }}>hello@common-social.com</a>{' '}
+      and we&apos;ll get back to you. You can also read our <a href="/terms" style={{ color: '#444' }}>Terms of Use</a> and{' '}
+      <a href="/privacy" style={{ color: '#444' }}>Privacy Policy</a>.
+    </p>
+    <p style={{
+      fontSize: '14px',
+      color: '#444',
+      lineHeight: 1.7,
+      margin: 0,
+    }}>
+      To delete your account, go to Settings → Delete account. There&apos;s more on{' '}
+      <a href="/privacy#delete-account" style={{ color: '#444' }}>deleting your account</a>, including what to do
+      if you can&apos;t sign in.
+    </p>
+  </section>
 </div>
 
 {/* Footer */}
