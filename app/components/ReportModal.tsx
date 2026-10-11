@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface ReportModalProps {
@@ -8,7 +8,7 @@ interface ReportModalProps {
   threadId?: string;
   reportedBy: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (blocked: boolean) => void;
 }
 
 export default function ReportModal({
@@ -22,6 +22,23 @@ export default function ReportModal({
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The post's author, offered as "Also block [first name]" unless it's your own post
+  const [author, setAuthor] = useState<{ id: string; firstName: string } | null>(null);
+  const [alsoBlock, setAlsoBlock] = useState(true);
+
+  useEffect(() => {
+    if (!postId) return;
+    supabase
+      .from('posts')
+      .select('user_id, name')
+      .eq('id', postId)
+      .single()
+      .then(({ data }) => {
+        if (data && data.user_id !== reportedBy) {
+          setAuthor({ id: data.user_id, firstName: (data.name || '').split(' ')[0] || 'this person' });
+        }
+      });
+  }, [postId, reportedBy]);
 
   const predefinedReasons = [
     'Spam or misleading',
@@ -60,8 +77,20 @@ export default function ReportModal({
       return;
     }
 
+    let blocked = false;
+    if (author && alsoBlock) {
+      const { error: blockError } = await supabase.rpc('block_user', {
+        blocked_id: author.id
+      });
+      if (blockError) {
+        console.error('Error blocking user:', JSON.stringify(blockError, null, 2));
+      } else {
+        blocked = true;
+      }
+    }
+
     setSubmitting(false);
-    onSuccess();
+    onSuccess(blocked);
   };
 
   return (
@@ -183,6 +212,34 @@ export default function ReportModal({
                 }}
               />
             </div>
+          )}
+
+          {author && (
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                color: 'var(--text-primary)',
+                marginBottom: '20px',
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={alsoBlock}
+                onChange={(e) => setAlsoBlock(e.target.checked)}
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  flexShrink: 0,
+                  accentColor: 'var(--accent)',
+                  cursor: 'pointer',
+                }}
+              />
+              Also block {author.firstName}
+            </label>
           )}
 
           {error && (

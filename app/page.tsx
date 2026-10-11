@@ -986,11 +986,20 @@ const sortedPosts = useMemo(() => {
     }
   };
 
-  const handleReportSuccess = () => {
+  const handleReportSuccess = (blocked: boolean) => {
+    const reportedFromThread = reportThreadId !== null;
     setShowReportModal(false);
     setReportPostId(null);
     setReportThreadId(null);
     setShowReportConfirmation(true);
+    if (blocked) {
+      // Same as blocking from a conversation: close it and refresh what's visible
+      if (reportedFromThread) {
+        handleLeaveThread();
+      } else {
+        refreshPosts();
+      }
+    }
   };
 
   const handleAdminRemoveClick = (postId: string) => {
