@@ -1,6 +1,8 @@
 'use client';
 
 interface BlockUserModalProps {
+  // Defaults to "Block this person?". Group conversations name the person picked.
+  title?: string;
   loading: boolean;
   error?: string | null;
   onCancel: () => void;
@@ -9,7 +11,7 @@ interface BlockUserModalProps {
 
 // Confirmation for blocking someone, shared by the post ⋯ menu and the
 // conversation menu so both read the same.
-export default function BlockUserModal({ loading, error, onCancel, onConfirm }: BlockUserModalProps) {
+export default function BlockUserModal({ title = 'Block this person?', loading, error, onCancel, onConfirm }: BlockUserModalProps) {
   return (
     <div
       onClick={() => !loading && onCancel()}
@@ -23,7 +25,7 @@ export default function BlockUserModal({ loading, error, onCancel, onConfirm }: 
         maxWidth: '340px', width: '100%', margin: '0 16px',
       }}>
         <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
-          Block this person?
+          {title}
         </div>
         <div style={{ fontSize: '14px', color: 'var(--text-primary)', marginBottom: '20px', lineHeight: 1.5 }}>
           You won&apos;t see their posts and will be removed from any shared conversations. They won&apos;t be notified that you&apos;ve blocked them.

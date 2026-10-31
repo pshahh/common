@@ -9,6 +9,7 @@ import { ExternalLink as ShareIcon } from 'lucide-react';
 import posthog from 'posthog-js';
 import ReactableBubble, { type Reaction } from './MessageReactions';
 import BlockUserModal from './BlockUserModal';
+import BlockMemberPicker, { type BlockCandidate } from './BlockMemberPicker';
 
 // Slim "common" wordmark bar, styled to match Header.tsx, shown only when
 // this thread is the full-screen mobile view (the page's own <Header> is
@@ -82,10 +83,10 @@ interface MessageThreadProps {
   onClose: () => void;
   onReport?: (postId: string, threadId: string) => void;
   onLeaveThread?: () => void;
-  // Called with the other person's id right after blocking them from this thread
+  // Called with the blocked person's id right after blocking them from this thread
   onUserBlocked?: (userId: string) => void;
-  // People blocked elsewhere (e.g. from a post menu). If the other person is
-  // one of them, the thread closes itself.
+  // People blocked elsewhere (e.g. from a post menu). If anyone else in the
+  // thread is one of them, the thread closes itself.
   blockedUserIds?: Set<string>;
   // True when this is rendered as a full-screen mobile overlay, where the
   // page's own <Header> (with the "common" wordmark) is hidden underneath.
@@ -122,7 +123,11 @@ export default function MessageThread({
   
   // Modal states for Leave/Block
   const [showLeaveModal, setShowLeaveModal] = useState(false);
-  const [showBlockModal, setShowBlockModal] = useState(false);
+  // Who the block confirmation is for. In a group with several other members
+  // the picker chooses; otherwise it's the one other person.
+  const [blockTarget, setBlockTarget] = useState<BlockCandidate | null>(null);
+  const [blockCandidates, setBlockCandidates] = useState<BlockCandidate[] | null>(null);
+  const [showBlockPicker, setShowBlockPicker] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [blockError, setBlockError] = useState<string | null>(null);
   // Set once the thread has been left or closed after a block, so it only happens once
@@ -130,11 +135,10 @@ export default function MessageThread({
   const [threadNotesExpanded, setThreadNotesExpanded] = useState(false);
 
 
-  // Get the other participant(s) for blocking
-  const getOtherParticipantId = (): string | null => {
-    if (!thread) return null;
-    const others = thread.participant_ids.filter(id => id !== currentUserId);
-    return others[0] || null;
+  // Everyone in the thread except the current user
+  const getOtherParticipantIds = (): string[] => {
+    if (!thread) return [];
+    return thread.participant_ids.filter(id => id !== currentUserId);
   };
 
   const leaveAfterBlock = () => {
@@ -147,10 +151,10 @@ export default function MessageThread({
     }
   };
 
-  // The other person was blocked from somewhere else while this thread is open
+  // Someone in the thread was blocked from somewhere else while it is open.
+  // block_user removes the blocker from every thread the blocked person is in.
   useEffect(() => {
-    const otherUserId = getOtherParticipantId();
-    if (otherUserId && blockedUserIds?.has(otherUserId)) {
+    if (getOtherParticipantIds().some(id => blockedUserIds?.has(id))) {
       leaveAfterBlock();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -591,9 +595,29 @@ export default function MessageThread({
     }
   };
 
+  // In a group with several other members, ask who to block first. Never
+  // guess: picking the first participant once blocked the wrong person.
+  const handleBlockMenuClick = async () => {
+    const otherIds = getOtherParticipantIds();
+    if (otherIds.length === 0) return;
+    setBlockError(null);
+    if (otherIds.length === 1) {
+      const profile = await getProfileData(otherIds[0]);
+      setBlockTarget({ id: otherIds[0], firstName: profile.first_name });
+      return;
+    }
+    setBlockCandidates(null);
+    setShowBlockPicker(true);
+    const people = await Promise.all(otherIds.map(async (id) => {
+      const profile = await getProfileData(id);
+      return { id, firstName: profile.first_name };
+    }));
+    setBlockCandidates(people);
+  };
+
   const handleBlockUser = async () => {
-    const otherUserId = getOtherParticipantId();
-    if (!otherUserId) return;
+    if (!blockTarget) return;
+    const otherUserId = blockTarget.id;
     setActionLoading(true);
     setBlockError(null);
     try {
@@ -606,7 +630,7 @@ export default function MessageThread({
         setActionLoading(false);
         return;
       }
-      setShowBlockModal(false);
+      setBlockTarget(null);
       setActionLoading(false);
       onUserBlocked?.(otherUserId);
       leaveAfterBlock();
@@ -846,11 +870,19 @@ export default function MessageThread({
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <ExpandedPhotoModal />
       <LeaveConversationModal />
-      {showBlockModal && (
+      {showBlockPicker && (
+        <BlockMemberPicker
+          people={blockCandidates}
+          onCancel={() => setShowBlockPicker(false)}
+          onSelect={(person) => { setShowBlockPicker(false); setBlockTarget(person); }}
+        />
+      )}
+      {blockTarget && (
         <BlockUserModal
+          title={getOtherParticipantIds().length > 1 ? `Block ${blockTarget.firstName}?` : undefined}
           loading={actionLoading}
           error={blockError}
-          onCancel={() => { setShowBlockModal(false); setBlockError(null); }}
+          onCancel={() => { setBlockTarget(null); setBlockError(null); }}
           onConfirm={handleBlockUser}
         />
       )}
@@ -914,10 +946,10 @@ export default function MessageThread({
                   Leave chat
                 </div>
                 <div
-                  onClick={() => { setShowMenu(false); setShowBlockModal(true); }}
+                  onClick={() => { setShowMenu(false); handleBlockMenuClick(); }}
                   style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--danger)', cursor: 'pointer' }}
                 >
-                  Block this person
+                  {getOtherParticipantIds().length > 1 ? 'Block someone' : 'Block this person'}
                 </div>
               </div>
             )}

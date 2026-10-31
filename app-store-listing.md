@@ -91,7 +91,7 @@ Native features
 Safety and user-generated content
 • Everyone agrees to our Terms of Use at signup, which have a zero tolerance clause for objectionable content and abusive users: https://www.common-social.com/terms. The login screen also says that logging in means agreeing to the Terms of Use and Privacy Policy.
 • Any post can be reported from its ⋯ menu (Report post).
-• Anyone can be blocked from three places: every post's ⋯ menu ("Block [name]"), every conversation's menu ("Block this person"), and the "Also block [name]" option on the report form, ticked by default.
+• Anyone can be blocked from three places: every post's ⋯ menu ("Block [name]"), every conversation's menu ("Block this person", or "Block someone" in a group chat, which asks who to block), and the "Also block [name]" option on the report form, ticked by default.
 • Blocking immediately hides that person's posts and conversations, and emails us so we can review their account.
 • Reports are emailed to us immediately and reviewed within 24 hours. We remove content that breaks the terms and suspend or ban the account responsible.
 
@@ -110,7 +110,7 @@ Record on an iPhone, in this order, and attach it in App Store Connect:
 2. Log out and log back in, showing the "By logging in, you agree to…" line under the button.
 3. Report one of Priya's posts from its ⋯ menu.
 4. Block Priya from a post's ⋯ menu ("Block Priya") and show her posts vanish from the feed.
-5. Block someone from a conversation's menu ("Block this person") and show the conversation close and leave the inbox.
+5. Block someone else from a conversation's menu ("Block this person", or "Block someone" then pick a name in a group chat) and show the conversation close and leave the inbox.
 
 ## Age rating questionnaire
 
