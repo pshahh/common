@@ -656,6 +656,19 @@ if (mode === 'reset-sent') {
             >
               {loading ? 'Please wait...' : (mode === 'login' ? 'Log in' : 'Join common')}
             </button>
+
+            {mode === 'login' && (
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
+                By logging in, you agree to common&apos;s{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-primary)', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+                  Terms of Use
+                </a>
+                {' '}and{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-primary)', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+                  Privacy Policy
+                </a>.
+              </p>
+            )}
           </div>
         </form>
 
