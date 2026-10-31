@@ -8,6 +8,7 @@ import { renderTextWithLinks } from '@/lib/textUtils';
 import { ExternalLink as ShareIcon } from 'lucide-react';
 import posthog from 'posthog-js';
 import ReactableBubble, { type Reaction } from './MessageReactions';
+import BlockUserModal from './BlockUserModal';
 
 // Slim "common" wordmark bar, styled to match Header.tsx, shown only when
 // this thread is the full-screen mobile view (the page's own <Header> is
@@ -81,6 +82,11 @@ interface MessageThreadProps {
   onClose: () => void;
   onReport?: (postId: string, threadId: string) => void;
   onLeaveThread?: () => void;
+  // Called with the other person's id right after blocking them from this thread
+  onUserBlocked?: (userId: string) => void;
+  // People blocked elsewhere (e.g. from a post menu). If the other person is
+  // one of them, the thread closes itself.
+  blockedUserIds?: Set<string>;
   // True when this is rendered as a full-screen mobile overlay, where the
   // page's own <Header> (with the "common" wordmark) is hidden underneath.
   // Adds a slim brand bar so the page still feels consistent with the home
@@ -95,6 +101,8 @@ export default function MessageThread({
   onClose,
   onReport,
   onLeaveThread,
+  onUserBlocked,
+  blockedUserIds,
   showBrandHeader = false,
 }: MessageThreadProps) {
   const [thread, setThread] = useState<Thread | null>(null);
@@ -116,6 +124,9 @@ export default function MessageThread({
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
+  // Set once the thread has been left or closed after a block, so it only happens once
+  const leftAfterBlockRef = useRef(false);
   const [threadNotesExpanded, setThreadNotesExpanded] = useState(false);
 
 
@@ -125,6 +136,25 @@ export default function MessageThread({
     const others = thread.participant_ids.filter(id => id !== currentUserId);
     return others[0] || null;
   };
+
+  const leaveAfterBlock = () => {
+    if (leftAfterBlockRef.current) return;
+    leftAfterBlockRef.current = true;
+    if (onLeaveThread) {
+      onLeaveThread();
+    } else {
+      onClose();
+    }
+  };
+
+  // The other person was blocked from somewhere else while this thread is open
+  useEffect(() => {
+    const otherUserId = getOtherParticipantId();
+    if (otherUserId && blockedUserIds?.has(otherUserId)) {
+      leaveAfterBlock();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blockedUserIds, thread]);
 
   const getProfileData = async (userId: string): Promise<ProfileData> => {
     if (profileCache[userId]) {
@@ -565,26 +595,24 @@ export default function MessageThread({
     const otherUserId = getOtherParticipantId();
     if (!otherUserId) return;
     setActionLoading(true);
+    setBlockError(null);
     try {
       const { error } = await supabase.rpc('block_user', {
         blocked_id: otherUserId
       });
       if (error) {
         console.error('Error blocking user:', JSON.stringify(error, null, 2));
-        alert('Failed to block user. Please try again.');
+        setBlockError('Failed to block this person. Please try again.');
         setActionLoading(false);
         return;
       }
       setShowBlockModal(false);
       setActionLoading(false);
-      if (onLeaveThread) {
-        onLeaveThread();
-      } else {
-        onClose();
-      }
+      onUserBlocked?.(otherUserId);
+      leaveAfterBlock();
     } catch (err) {
       console.error('Error blocking user:', err);
-      alert('Failed to block user. Please try again.');
+      setBlockError('Failed to block this person. Please try again.');
       setActionLoading(false);
     }
   };
@@ -750,56 +778,6 @@ export default function MessageThread({
     );
   };
 
-  const BlockUserModal = () => {
-    if (!showBlockModal) return null;
-    return (
-      <div 
-        onClick={() => !actionLoading && setShowBlockModal(false)}
-        style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-        }}
-      >
-        <div onClick={(e) => e.stopPropagation()} style={{
-          background: 'var(--bg-card)', borderRadius: '16px', padding: '24px',
-          maxWidth: '340px', width: '100%', margin: '0 16px',
-        }}>
-          <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
-            Block this person?
-          </div>
-          <div style={{ fontSize: '14px', color: 'var(--text-primary)', marginBottom: '20px', lineHeight: 1.5 }}>
-            You won&apos;t see their posts and will be removed from any shared conversations. They won&apos;t be notified that you&apos;ve blocked them.
-          </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-            <button
-              onClick={() => setShowBlockModal(false)}
-              disabled={actionLoading}
-              style={{
-                padding: '10px 20px', borderRadius: '20px', fontSize: '14px',
-                fontWeight: 500, border: '1px solid var(--border)', background: 'var(--bg-card)',
-                cursor: actionLoading ? 'not-allowed' : 'pointer', color: 'var(--text-primary)',
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleBlockUser}
-              disabled={actionLoading}
-              style={{
-                padding: '10px 20px', borderRadius: '20px', fontSize: '14px',
-                fontWeight: 500, border: 'none', background: 'var(--accent)',
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-                color: 'var(--text-inverse)', opacity: actionLoading ? 0.6 : 1,
-              }}
-            >
-              {actionLoading ? 'Blocking...' : 'Block'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   if (loading) {
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -868,7 +846,14 @@ export default function MessageThread({
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <ExpandedPhotoModal />
       <LeaveConversationModal />
-      <BlockUserModal />
+      {showBlockModal && (
+        <BlockUserModal
+          loading={actionLoading}
+          error={blockError}
+          onCancel={() => { setShowBlockModal(false); setBlockError(null); }}
+          onConfirm={handleBlockUser}
+        />
+      )}
       <BrandBar show={showBrandHeader} />
       {/* Header */}
       <div style={{

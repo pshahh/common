@@ -15,6 +15,7 @@ import MessageSentModal from './components/MessageSentModal';
 import ProfileCompletionModal from './components/ProfileCompletionModal';
 import { getAvatarUrl } from '@/lib/profile';
 import ReportModal from './components/ReportModal';
+import BlockUserModal from './components/BlockUserModal';
 import ReportConfirmationModal from './components/ReportConfirmationModal';
 import { useShareInvite } from '@/lib/useShareInvite';
 import ShareInviteModal from './components/ShareInviteModal';
@@ -325,6 +326,14 @@ const [friendIds, setFriendIds] = useState<string[]>([]);
   const [reportPostId, setReportPostId] = useState<string | null>(null);
   const [reportThreadId, setReportThreadId] = useState<string | null>(null);
 
+  // Block from a post's ⋯ menu
+  const [blockTargetId, setBlockTargetId] = useState<string | null>(null);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
+  // Everyone blocked this session. Their posts and threads are filtered out at
+  // render, so a background refetch can't briefly bring them back.
+  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
+
   // Admin remove state
   const [showAdminRemoveModal, setShowAdminRemoveModal] = useState(false);
   const [adminRemovePostId, setAdminRemovePostId] = useState<string | null>(null);
@@ -526,6 +535,10 @@ if (!sessionStorage.getItem(PUSH_SUBSCRIBED_KEY) && !pushRegistering.current) {
 
     checkAdminAndCounts();
   }, [user]);
+
+  useEffect(() => {
+    setBlockedUserIds(new Set());
+  }, [user?.id]);
 
   // Fetch posts and profiles
   useEffect(() => {
@@ -804,6 +817,10 @@ useEffect(() => {
 const sortedPosts = useMemo(() => {
   let postsToSort = user ? filteredPosts : posts;
 
+  if (blockedUserIds.size > 0) {
+    postsToSort = postsToSort.filter(post => !blockedUserIds.has(post.user_id));
+  }
+
    // Friends filter
    if (friendsOnly) {
     postsToSort = postsToSort.filter(post => friendIds.includes(post.user_id));
@@ -914,7 +931,7 @@ const sortedPosts = useMemo(() => {
   }
 
   return [...featuredPosts, ...sortedRest];
-}, [filteredPosts, posts, user, sortBy, userLocation, radiusFilter, friendsOnly, friendIds]);
+}, [filteredPosts, posts, user, sortBy, userLocation, radiusFilter, friendsOnly, friendIds, blockedUserIds]);
 
   // Fires whenever a filter combination (radius, location, friends-only)
   // leaves the feed empty - not just on first load - since that's the
@@ -986,20 +1003,59 @@ const sortedPosts = useMemo(() => {
     }
   };
 
-  const handleReportSuccess = (blocked: boolean) => {
+  const handleReportSuccess = (blockedUserId: string | null) => {
     const reportedFromThread = reportThreadId !== null;
     setShowReportModal(false);
     setReportPostId(null);
     setReportThreadId(null);
     setShowReportConfirmation(true);
-    if (blocked) {
+    if (blockedUserId) {
+      applyBlock(blockedUserId);
       // Same as blocking from a conversation: close it and refresh what's visible
       if (reportedFromThread) {
         handleLeaveThread();
       } else {
-        refreshPosts();
+        refreshAfterBlock();
       }
     }
+  };
+
+  // Hide a blocked person's posts and conversations straight away. Callers
+  // follow up with a background refresh so the server state wins.
+  const applyBlock = (blockedId: string) => {
+    setBlockedUserIds(prev => new Set(prev).add(blockedId));
+    setPosts(prev => prev.filter(post => post.user_id !== blockedId));
+  };
+
+  const refreshAfterBlock = () => {
+    setSidebarRefreshTrigger(prev => prev + 1);
+    refreshPosts();
+  };
+
+  const handleBlockClick = (authorId: string) => {
+    if (user) {
+      setBlockError(null);
+      setBlockTargetId(authorId);
+    } else {
+      setAuthModalTrigger('nav');
+      setShowAuthModal(true);
+    }
+  };
+
+  const handleBlockConfirm = async () => {
+    if (!blockTargetId) return;
+    setBlockLoading(true);
+    setBlockError(null);
+    const { error } = await supabase.rpc('block_user', { blocked_id: blockTargetId });
+    setBlockLoading(false);
+    if (error) {
+      console.error('Error blocking user:', JSON.stringify(error, null, 2));
+      setBlockError('Failed to block this person. Please try again.');
+      return;
+    }
+    applyBlock(blockTargetId);
+    setBlockTargetId(null);
+    refreshAfterBlock();
   };
 
   const handleAdminRemoveClick = (postId: string) => {
@@ -1414,6 +1470,7 @@ const sortedPosts = useMemo(() => {
                     isLoggedIn={false}
                     onImInterested={() => handleInterestedClick(post)}
                     onReport={() => handleReportClick(post.id)}
+                    onBlock={() => handleBlockClick(post.user_id)}
                     distance={getPostDistance(post)}
                     recurrenceRule={post.recurrence_rule}
                     slug={post.slug}
@@ -1505,6 +1562,7 @@ const sortedPosts = useMemo(() => {
             onNavigateToMyActivity={handleNavigateToMyActivity}
             onLogout={handleLogout}
             refreshTrigger={sidebarRefreshTrigger}
+            hiddenUserIds={blockedUserIds}
           />
         </div>
 
@@ -1744,6 +1802,7 @@ const sortedPosts = useMemo(() => {
                       isLoggedIn={true}
                       onImInterested={() => handleInterestedClick(post)}
                       onReport={() => handleReportClick(post.id)}
+                      onBlock={() => handleBlockClick(post.user_id)}
                       hideInterestButton={post.user_id === user.id}
                       isOwnPost={post.user_id === user.id}
                       distance={getPostDistance(post)}
@@ -1784,6 +1843,8 @@ const sortedPosts = useMemo(() => {
               onClose={handleCloseThread}
               onReport={handleReportClick}
               onLeaveThread={handleLeaveThread}
+              onUserBlocked={applyBlock}
+              blockedUserIds={blockedUserIds}
             />
           </div>
         )}
@@ -1815,6 +1876,7 @@ const sortedPosts = useMemo(() => {
             setMobileTab('home');
           }}
           refreshTrigger={sidebarRefreshTrigger}
+          hiddenUserIds={blockedUserIds}
         />
       )}
 
@@ -1835,6 +1897,8 @@ const sortedPosts = useMemo(() => {
             }}
             onReport={handleReportClick}
             onLeaveThread={handleLeaveThread}
+            onUserBlocked={applyBlock}
+            blockedUserIds={blockedUserIds}
             showBrandHeader
           />
         </div>
@@ -1940,6 +2004,15 @@ const sortedPosts = useMemo(() => {
             setReportThreadId(null);
           }}
           onSuccess={handleReportSuccess}
+        />
+      )}
+
+      {blockTargetId && (
+        <BlockUserModal
+          loading={blockLoading}
+          error={blockError}
+          onCancel={() => setBlockTargetId(null)}
+          onConfirm={handleBlockConfirm}
         />
       )}
 

@@ -23,6 +23,7 @@ interface PostCardProps {
   isLoggedIn: boolean;
   onImInterested: () => void;
   onReport?: () => void;
+  onBlock?: () => void;
   distance?: string | null;
   authorAvatarUrl?: string | null;
   authorDateOfBirth?: string | null;
@@ -54,6 +55,7 @@ export default function PostCard({
   isLoggedIn,
   onImInterested,
   onReport,
+  onBlock,
   distance,
   authorAvatarUrl,
   authorDateOfBirth,
@@ -344,6 +346,17 @@ export default function PostCard({
                       }}
                     >
                       Report post
+                    </button>
+                  )}
+                  {!isOwnPost && onBlock && (
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onBlock();
+                      }}
+                    >
+                      Block {name.split(' ')[0]}
                     </button>
                   )}
                   {isAdmin && onToggleFeatured && audience !== 'friends' && (

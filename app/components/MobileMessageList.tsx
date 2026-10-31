@@ -28,12 +28,15 @@ interface MobileMessageListProps {
   onSelectThread: (threadId: string) => void;
   onClose: () => void;
   refreshTrigger?: number;
+  // People the user has just blocked. Their threads disappear before the refetch lands.
+  hiddenUserIds?: Set<string>;
 }
 
 export default function MobileMessageList({
   userId,
   onSelectThread,
   refreshTrigger = 0,
+  hiddenUserIds,
 }: MobileMessageListProps) {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
@@ -151,7 +154,11 @@ export default function MobileMessageList({
     }
   }, [userId, refreshTrigger]);
 
-  const sortedThreads = [...threads].sort((a, b) => {
+  const visibleThreads = hiddenUserIds && hiddenUserIds.size > 0
+    ? threads.filter(t => !t.participant_ids.some(id => id !== userId && hiddenUserIds.has(id)))
+    : threads;
+
+  const sortedThreads = [...visibleThreads].sort((a, b) => {
     const aTime = a.last_message_at || a.created_at;
     const bTime = b.last_message_at || b.created_at;
     return new Date(bTime).getTime() - new Date(aTime).getTime();

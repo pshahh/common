@@ -8,7 +8,8 @@ interface ReportModalProps {
   threadId?: string;
   reportedBy: string;
   onClose: () => void;
-  onSuccess: (blocked: boolean) => void;
+  // Called with the blocked author's id when "Also block" went through, otherwise null
+  onSuccess: (blockedUserId: string | null) => void;
 }
 
 export default function ReportModal({
@@ -77,7 +78,7 @@ export default function ReportModal({
       return;
     }
 
-    let blocked = false;
+    let blockedUserId: string | null = null;
     if (author && alsoBlock) {
       const { error: blockError } = await supabase.rpc('block_user', {
         blocked_id: author.id
@@ -85,12 +86,12 @@ export default function ReportModal({
       if (blockError) {
         console.error('Error blocking user:', JSON.stringify(blockError, null, 2));
       } else {
-        blocked = true;
+        blockedUserId = author.id;
       }
     }
 
     setSubmitting(false);
-    onSuccess(blocked);
+    onSuccess(blockedUserId);
   };
 
   return (

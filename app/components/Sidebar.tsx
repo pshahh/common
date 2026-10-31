@@ -32,6 +32,8 @@ interface SidebarProps {
   onLogout: () => void;
   activeItem?: 'messages' | 'my-activity' | 'settings' | 'admin-reports' | 'admin-posts' |  'friends' | null;
   refreshTrigger?: number;
+  // People the user has just blocked. Their threads disappear before the refetch lands.
+  hiddenUserIds?: Set<string>;
 }
 
 export default function Sidebar({
@@ -42,6 +44,7 @@ export default function Sidebar({
   onLogout,
   activeItem = null,
   refreshTrigger = 0,
+  hiddenUserIds,
 }: SidebarProps) {
   const router = useRouter();
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -183,6 +186,10 @@ export default function Sidebar({
       fetchThreads();
     }
   }, [userId, fetchThreads, refreshTrigger]);
+
+  const visibleThreads = hiddenUserIds && hiddenUserIds.size > 0
+    ? threads.filter(t => !t.participant_ids.some(id => id !== userId && hiddenUserIds.has(id)))
+    : threads;
 
   // Subscribe to new threads for this user
   useEffect(() => {
@@ -368,13 +375,13 @@ export default function Sidebar({
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', padding: '8px 12px' }}>
               Loading...
             </div>
-          ) : threads.length === 0 ? (
+          ) : visibleThreads.length === 0 ? (
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', padding: '8px 12px', lineHeight: 1.5 }}>
               Chats appear here when it&apos;s time to coordinate.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {[...threads]
+              {[...visibleThreads]
                 .sort((a, b) => {
                   const aTime = a.last_message_at || a.created_at;
                   const bTime = b.last_message_at || b.created_at;

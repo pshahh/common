@@ -67,6 +67,8 @@ export default function MyActivityPage() {
   const [showMobileMessages, setShowMobileMessages] = useState(false);
   const [mobileSelectedThreadId, setMobileSelectedThreadId] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // People blocked from a thread here, hidden from the inbox before it refetches
+  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
 
   // Unread thread count for mobile nav badge (shared hook)
   const { unreadCount: threadCount } = useUnreadCount(user?.id, refreshTrigger);
@@ -716,6 +718,7 @@ export default function MyActivityPage() {
           onSelectThread={handleSelectThread}
           onClose={handleCloseMessageList}
           refreshTrigger={refreshTrigger}
+          hiddenUserIds={blockedUserIds}
         />
       )}
 
@@ -734,6 +737,7 @@ export default function MyActivityPage() {
             threadId={mobileSelectedThreadId}
             currentUserId={user.id}
             onClose={handleCloseThread}
+            onUserBlocked={(blockedId) => setBlockedUserIds(prev => new Set(prev).add(blockedId))}
             onLeaveThread={() => {
               setRefreshTrigger(prev => prev + 1);
               handleCloseThread();

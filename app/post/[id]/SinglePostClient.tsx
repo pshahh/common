@@ -14,6 +14,7 @@ import InterestedModal from '../../components/InterestedModal';
 import MessageSentModal from '../../components/MessageSentModal';
 import ClosedBadge from '../../components/ClosedBadge';
 import PostStateScreen from '../../components/PostStateScreen';
+import BlockUserModal from '../../components/BlockUserModal';
 
 interface Post {
   id: string;
@@ -66,6 +67,9 @@ export default function SinglePostClient({ postId, unavailableReason = null }: S
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminRemoveModal, setShowAdminRemoveModal] = useState(false);
   const [adminRemoveLoading, setAdminRemoveLoading] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
 
   // Check auth state
   useEffect(() => {
@@ -237,6 +241,31 @@ useEffect(() => {
     router.push('/');
   };
 
+  const handleBlockClick = () => {
+    if (user) {
+      setBlockError(null);
+      setShowBlockModal(true);
+    } else {
+      setAuthModalTrigger('nav');
+      setShowAuthModal(true);
+    }
+  };
+
+  const handleBlockConfirm = async () => {
+    if (!post) return;
+    setBlockLoading(true);
+    setBlockError(null);
+    const { error } = await supabase.rpc('block_user', { blocked_id: post.user_id });
+    if (error) {
+      console.error('Error blocking user:', JSON.stringify(error, null, 2));
+      setBlockError('Failed to block this person. Please try again.');
+      setBlockLoading(false);
+      return;
+    }
+    // The feed fetches with the block in place, so their posts won't be there
+    router.push('/');
+  };
+
   if (loading) {
     return (
       <div className="app">
@@ -359,6 +388,8 @@ useEffect(() => {
           preference={post.preference || undefined}
           isLoggedIn={!!user}
           onImInterested={handleInterestedClick}
+          onBlock={handleBlockClick}
+          isOwnPost={user?.id === post.user_id}
           hideInterestButton={hasExpressedInterest}
           status={isClosedOrExpired ? 'closed' : post.status}
           recurrenceRule={post.recurrence_rule}
@@ -383,6 +414,14 @@ useEffect(() => {
           currentUserId={user.id}
           onClose={() => setShowInterestedModal(false)}
           onSuccess={handleInterestedSuccess}
+        />
+      )}
+      {showBlockModal && (
+        <BlockUserModal
+          loading={blockLoading}
+          error={blockError}
+          onCancel={() => setShowBlockModal(false)}
+          onConfirm={handleBlockConfirm}
         />
       )}
       {showMessageSentModal && (
