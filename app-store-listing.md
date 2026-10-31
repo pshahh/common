@@ -89,9 +89,10 @@ Native features
 • A bundled offline screen if the device has no connection.
 
 Safety and user-generated content
-• Everyone agrees to our Terms of Use at signup, which have a zero tolerance clause for objectionable content and abusive users: https://www.common-social.com/terms
-• Any post can be reported from its menu (Report post). The report form includes "Also block [name]", ticked by default, so people can block the poster from any post.
-• Any conversation can be reported or blocked from its menu.
+• Everyone agrees to our Terms of Use at signup, which have a zero tolerance clause for objectionable content and abusive users: https://www.common-social.com/terms. The login screen also says that logging in means agreeing to the Terms of Use and Privacy Policy.
+• Any post can be reported from its ⋯ menu (Report post).
+• Anyone can be blocked from three places: every post's ⋯ menu ("Block [name]"), every conversation's menu ("Block this person"), and the "Also block [name]" option on the report form, ticked by default.
+• Blocking immediately hides that person's posts and conversations, and emails us so we can review their account.
 • Reports are emailed to us immediately and reviewed within 24 hours. We remove content that breaks the terms and suspend or ban the account responsible.
 
 Account deletion
@@ -100,6 +101,16 @@ Menu > Settings > Delete account, then type DELETE to confirm. The account and i
 Demo account
 The demo account already has conversations with Priya, who runs common. To try reporting and blocking, please use Priya's posts and conversations rather than posts by other members.
 ```
+
+### Screen recording for App Review
+
+Record on an iPhone, in this order, and attach it in App Store Connect:
+
+1. Sign up, showing the "18 or older and agree to the Terms of Use and Privacy Policy" checkbox.
+2. Log out and log back in, showing the "By logging in, you agree to…" line under the button.
+3. Report one of Priya's posts from its ⋯ menu.
+4. Block Priya from a post's ⋯ menu ("Block Priya") and show her posts vanish from the feed.
+5. Block someone from a conversation's menu ("Block this person") and show the conversation close and leave the inbox.
 
 ## Age rating questionnaire
 
