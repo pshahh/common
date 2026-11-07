@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { calculateAge, getInitials } from '@/lib/profile';
 import ClosedBadge from './ClosedBadge';
@@ -10,6 +10,10 @@ import posthog from 'posthog-js';
 import ReactableBubble, { type Reaction } from './MessageReactions';
 import BlockUserModal from './BlockUserModal';
 import BlockMemberPicker, { type BlockCandidate } from './BlockMemberPicker';
+import { dayKey, formatClockTime, formatDayLabel, formatFullTime } from '@/lib/messageTime';
+
+// A new cluster starts after a gap longer than this.
+const CLUSTER_GAP_MS = 10 * 60 * 1000;
 
 // Slim "common" wordmark bar, styled to match Header.tsx, shown only when
 // this thread is the full-screen mobile view (the page's own <Header> is
@@ -436,6 +440,32 @@ export default function MessageThread({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Per-message layout: day separators and cluster edges. A cluster is a run
+  // of messages from one sender, broken by a system message, a new day, or a
+  // gap over CLUSTER_GAP_MS. Worked out once per messages change.
+  const messageLayout = useMemo(() => {
+    const now = new Date();
+    const breaksBetween = (a: Message | undefined, b: Message | undefined): boolean => {
+      if (!a || !b) return true;
+      if (a.message_type === 'system' || b.message_type === 'system') return true;
+      if (a.sender_id !== b.sender_id) return true;
+      if (dayKey(a.created_at) !== dayKey(b.created_at)) return true;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() > CLUSTER_GAP_MS;
+    };
+    return messages.map((msg, idx) => {
+      const prev = messages[idx - 1];
+      const next = messages[idx + 1];
+      const newDay = !prev || dayKey(prev.created_at) !== dayKey(msg.created_at);
+      return {
+        dayLabel: newDay ? formatDayLabel(msg.created_at, now) : null,
+        isFirstInCluster: breaksBetween(prev, msg),
+        isLastInCluster: breaksBetween(msg, next),
+        clockTime: formatClockTime(msg.created_at),
+        fullTime: formatFullTime(msg.created_at, now),
+      };
+    });
   }, [messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -1069,111 +1099,151 @@ export default function MessageThread({
           ) : (
             <>
               {messages.map((msg, idx) => {
-                // System messages render as centered, muted text
-                if (msg.message_type === 'system') {
-                  return (
-                    <div key={msg.id} style={{
-                      textAlign: 'center',
+                const layout = messageLayout[idx];
+                const daySeparator = layout.dayLabel && (
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 12px' }}>
+                    <span style={{
                       fontSize: '12px',
                       color: 'var(--text-secondary)',
-                      padding: '8px 0',
-                      fontStyle: 'italic',
+                      background: 'var(--pill-fill)',
+                      padding: '3px 10px',
+                      borderRadius: '12px',
                     }}>
-                      {msg.content}
-                    </div>
+                      {layout.dayLabel}
+                    </span>
+                  </div>
+                );
+
+                // System messages render as centered, muted text, with no time label
+                if (msg.message_type === 'system') {
+                  return (
+                    <Fragment key={msg.id}>
+                      {daySeparator}
+                      <div style={{
+                        textAlign: 'center',
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)',
+                        padding: '8px 0',
+                        fontStyle: 'italic',
+                      }}>
+                        {msg.content}
+                      </div>
+                    </Fragment>
                   );
                 }
 
-                const prevMsg = messages[idx - 1];
-                const nextMsg = messages[idx + 1];
-                const isFirstFromSender = !prevMsg || prevMsg.sender_id !== msg.sender_id || prevMsg.message_type === 'system';
-                const isLastFromSender = !nextMsg || nextMsg.sender_id !== msg.sender_id || nextMsg.message_type === 'system';
+                const isFirstFromSender = layout.isFirstInCluster;
+                const isLastFromSender = layout.isLastInCluster;
                 const isSelf = msg.sender_id === currentUserId;
                 const isGroupThread = thread?.thread_type === 'group';
+                const hasReactions = (reactions[msg.id] || []).length > 0;
+
+                // Under the last bubble of a cluster only. Sits outside the
+                // avatar row so the avatar still lines up with the bubble.
+                // With reaction pills it sits 12px (4px + an extra 8px) below
+                // them; ReactableBubble already pads 4px under its pills.
+                const timeLabel = isLastFromSender && (
+                  <div style={{
+                    fontSize: '11px',
+                    color: 'var(--text-secondary)',
+                    marginTop: hasReactions ? '8px' : '4px',
+                    textAlign: isSelf ? 'right' : 'left',
+                    // Received bubbles start after the 28px avatar and 8px gap.
+                    padding: isSelf ? '0 4px 0 0' : '0 0 0 40px',
+                  }}>
+                    {layout.clockTime}
+                  </div>
+                );
 
                 if (isSelf) {
                   return (
-                    <div key={msg.id} style={{
-                      display: 'flex', justifyContent: 'flex-end',
-                      marginBottom: isLastFromSender ? '12px' : '4px',
-                    }}>
-                      <ReactableBubble
-                        align="right"
-                        text={msg.content}
-                        canReact={false}
-                        reactions={reactions[msg.id] || []}
-                        currentUserId={currentUserId}
-                        isGroup={isGroupThread}
-                        nameFor={nameFor}
-                        onReact={(emoji) => handleReact(msg, emoji)}
-                      >
-                        <div style={{
-                          background: 'var(--accent)', color: 'var(--text-inverse)', padding: '10px 14px',
-                          fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 6px 18px',
-                          wordWrap: 'break-word',
-                          whiteSpace: 'pre-line',
-                        }}>{renderTextWithLinks(msg.content, 'var(--text-inverse)')}</div>
-                      </ReactableBubble>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div key={msg.id} style={{
-                      display: 'flex', justifyContent: 'flex-start', gap: '8px',
-                      marginBottom: isLastFromSender ? '12px' : '4px',
-                    }}>
-                      {/* Avatar column — shown on last message in a group */}
-                      <div style={{ 
-                        width: '28px', 
-                        flexShrink: 0, 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        justifyContent: 'flex-end' 
-                      }}>
-                        {isLastFromSender && (
-                          <MessageAvatar
-                            senderId={msg.sender_id}
-                            senderName={msg.sender_name || 'Unknown'}
-                            avatarUrl={msg.sender_avatar_url}
-                            dateOfBirth={msg.sender_date_of_birth}
-                            showAvatar={true}
-                          />
-                        )}
+                    <Fragment key={msg.id}>
+                      {daySeparator}
+                      <div style={{ marginBottom: isLastFromSender ? '12px' : '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <ReactableBubble
+                            align="right"
+                            text={msg.content}
+                            canReact={false}
+                            reactions={reactions[msg.id] || []}
+                            currentUserId={currentUserId}
+                            isGroup={isGroupThread}
+                            nameFor={nameFor}
+                            onReact={(emoji) => handleReact(msg, emoji)}
+                          >
+                            <div title={layout.fullTime} style={{
+                              background: 'var(--accent)', color: 'var(--text-inverse)', padding: '10px 14px',
+                              fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 6px 18px',
+                              wordWrap: 'break-word',
+                              whiteSpace: 'pre-line',
+                            }}>{renderTextWithLinks(msg.content, 'var(--text-inverse)')}</div>
+                          </ReactableBubble>
+                        </div>
+                        {timeLabel}
                       </div>
-                      <div>
-                        {/* Show sender name in group threads, first message in a group from this sender */}
-                        {isGroupThread && isFirstFromSender && (
-                          <div style={{
-                            fontSize: '11px',
-                            color: 'var(--text-secondary)',
-                            marginBottom: '2px',
-                            paddingLeft: '2px',
-                          }}>
-                            {msg.sender_name}
-                          </div>
-                        )}
-                        <ReactableBubble
-                          align="left"
-                          text={msg.content}
-                          canReact={true}
-                          reactions={reactions[msg.id] || []}
-                          currentUserId={currentUserId}
-                          isGroup={isGroupThread}
-                          nameFor={nameFor}
-                          onReact={(emoji) => handleReact(msg, emoji)}
-                        >
-                          <div style={{
-                            background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '10px 14px',
-                            fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
-                            border: '1px solid var(--border)',
-                            wordWrap: 'break-word',
-                            whiteSpace: 'pre-line',
-                          }}>{renderTextWithLinks(msg.content)}</div>
-                        </ReactableBubble>
-                      </div>
-                    </div>
+                    </Fragment>
                   );
                 }
+
+                return (
+                  <Fragment key={msg.id}>
+                    {daySeparator}
+                    <div style={{ marginBottom: isLastFromSender ? '12px' : '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '8px' }}>
+                        {/* Avatar column, shown on the last message of a cluster */}
+                        <div style={{
+                          width: '28px',
+                          flexShrink: 0,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'flex-end'
+                        }}>
+                          {isLastFromSender && (
+                            <MessageAvatar
+                              senderId={msg.sender_id}
+                              senderName={msg.sender_name || 'Unknown'}
+                              avatarUrl={msg.sender_avatar_url}
+                              dateOfBirth={msg.sender_date_of_birth}
+                              showAvatar={true}
+                            />
+                          )}
+                        </div>
+                        <div>
+                          {/* Sender name in group threads, on the first message of a cluster */}
+                          {isGroupThread && isFirstFromSender && (
+                            <div style={{
+                              fontSize: '11px',
+                              color: 'var(--text-secondary)',
+                              marginBottom: '2px',
+                              paddingLeft: '2px',
+                            }}>
+                              {msg.sender_name}
+                            </div>
+                          )}
+                          <ReactableBubble
+                            align="left"
+                            text={msg.content}
+                            canReact={true}
+                            reactions={reactions[msg.id] || []}
+                            currentUserId={currentUserId}
+                            isGroup={isGroupThread}
+                            nameFor={nameFor}
+                            onReact={(emoji) => handleReact(msg, emoji)}
+                          >
+                            <div title={layout.fullTime} style={{
+                              background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '10px 14px',
+                              fontSize: '14px', maxWidth: '260px', borderRadius: '18px 18px 18px 6px',
+                              border: '1px solid var(--border)',
+                              wordWrap: 'break-word',
+                              whiteSpace: 'pre-line',
+                            }}>{renderTextWithLinks(msg.content)}</div>
+                          </ReactableBubble>
+                        </div>
+                      </div>
+                      {timeLabel}
+                    </div>
+                  </Fragment>
+                );
               })}
               <div ref={messagesEndRef} />
             </>
