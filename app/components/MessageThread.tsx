@@ -12,6 +12,14 @@ import BlockUserModal from './BlockUserModal';
 import BlockMemberPicker, { type BlockCandidate } from './BlockMemberPicker';
 import { dayKey, formatClockTime, formatDayLabel, formatFullTime } from '@/lib/messageTime';
 
+// "Ana", "Ana and Sam", "Ana, Sam and Kai", "Ana, Sam, Kai and 2 others".
+function formatNameList(names: string[]): string {
+  if (names.length <= 1) return names[0] || '';
+  if (names.length <= 3) return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  const rest = names.length - 3;
+  return `${names.slice(0, 3).join(', ')} and ${rest} ${rest === 1 ? 'other' : 'others'}`;
+}
+
 // A new cluster starts after a gap longer than this.
 const CLUSTER_GAP_MS = 10 * 60 * 1000;
 
@@ -137,6 +145,8 @@ export default function MessageThread({
   // Set once the thread has been left or closed after a block, so it only happens once
   const leftAfterBlockRef = useRef(false);
   const [threadNotesExpanded, setThreadNotesExpanded] = useState(false);
+  // Participants the current user has blocked (from blocked_users), left out of the header names.
+  const [blockedParticipantIds, setBlockedParticipantIds] = useState<Set<string>>(new Set());
 
 
   // Everyone in the thread except the current user
@@ -250,13 +260,30 @@ export default function MessageThread({
         post: post,
       });
 
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('messages')
-        .select('id, thread_id, sender_id, content, created_at, message_type, message_reactions(id, message_id, user_id, emoji)')
-        .eq('thread_id', threadId)
-        .order('created_at', { ascending: true });
+      const otherIds = threadData.participant_ids.filter((id: string) => id !== currentUserId);
+
+      // Messages, participant blocks, and every profile the header and
+      // bubbles need, in parallel. One batched profiles query replaces the
+      // old per-sender lookups.
+      const [messagesResult, blocksResult] = await Promise.all([
+        supabase
+          .from('messages')
+          .select('id, thread_id, sender_id, content, created_at, message_type, message_reactions(id, message_id, user_id, emoji)')
+          .eq('thread_id', threadId)
+          .order('created_at', { ascending: true }),
+        otherIds.length > 0
+          ? supabase
+              .from('blocked_users')
+              .select('blocked_user_id')
+              .eq('user_id', currentUserId)
+              .in('blocked_user_id', otherIds)
+          : Promise.resolve({ data: [] as { blocked_user_id: string }[] }),
+      ]);
+      const { data: messagesData, error: messagesError } = messagesResult;
 
       if (!isMounted) return;
+
+      setBlockedParticipantIds(new Set((blocksResult.data || []).map((b) => b.blocked_user_id)));
 
       if (messagesError) {
         console.error('Error fetching messages:', messagesError.message);
@@ -264,17 +291,29 @@ export default function MessageThread({
         return;
       }
 
-      if (messagesData && messagesData.length > 0) {
-        const senderIds = [...new Set(messagesData.map(m => m.sender_id))];
-        const profilePromises = senderIds.map(async (senderId) => {
-          const profile = await getProfileData(senderId);
-          return { senderId, profile };
+      const profileIds = new Set<string>(threadData.participant_ids);
+      (messagesData || []).forEach((m) => {
+        profileIds.add(m.sender_id);
+        (m.message_reactions || []).forEach((r: { user_id: string }) => profileIds.add(r.user_id));
+      });
+      const profileMap: Record<string, ProfileData> = {};
+      if (profileIds.size > 0) {
+        const { data: profileRows } = await supabase
+          .from('profiles')
+          .select('id, first_name, avatar_url, date_of_birth')
+          .in('id', [...profileIds]);
+        if (!isMounted) return;
+        (profileRows || []).forEach((p) => {
+          profileMap[p.id] = {
+            first_name: p.first_name || 'Unknown',
+            avatar_url: p.avatar_url || null,
+            date_of_birth: p.date_of_birth || null,
+          };
         });
+        setProfileCache(prev => ({ ...prev, ...profileMap }));
+      }
 
-        const profiles = await Promise.all(profilePromises);
-        const profileMap: Record<string, ProfileData> = {};
-        profiles.forEach(p => { profileMap[p.senderId] = p.profile; });
-
+      if (messagesData && messagesData.length > 0) {
         const transformedMessages: Message[] = messagesData.map((msg) => ({
           id: msg.id,
           thread_id: msg.thread_id,
@@ -289,39 +328,14 @@ export default function MessageThread({
 
         setMessages(transformedMessages);
 
-        // Reactions arrive embedded in the messages query (no N+1).
+        // Reactions arrive embedded in the messages query (no N+1). Reactor
+        // names came with the batched profiles query above.
         const reactionMap: Record<string, Reaction[]> = {};
-        const reactorIds = new Set<string>();
         messagesData.forEach((msg) => {
           const list = (msg.message_reactions || []) as Reaction[];
           if (list.length > 0) reactionMap[msg.id] = list;
-          list.forEach((r) => reactorIds.add(r.user_id));
         });
         setReactions(reactionMap);
-
-        // One batched lookup for reactors we haven't already loaded (group
-        // "who reacted" needs first names).
-        const missing = [...reactorIds].filter((id) => !profileMap[id] && id !== currentUserId);
-        if (missing.length > 0) {
-          const { data: reactorProfiles } = await supabase
-            .from('profiles')
-            .select('id, first_name, avatar_url, date_of_birth')
-            .in('id', missing);
-          if (!isMounted) return;
-          if (reactorProfiles) {
-            setProfileCache(prev => {
-              const next = { ...prev };
-              reactorProfiles.forEach((p) => {
-                next[p.id] = {
-                  first_name: p.first_name || 'Unknown',
-                  avatar_url: p.avatar_url || null,
-                  date_of_birth: p.date_of_birth || null,
-                };
-              });
-              return next;
-            });
-          }
-        }
       }
 
       setLoading(false);
@@ -896,6 +910,19 @@ export default function MessageThread({
 
   const post = thread.post;
 
+  // Header people. 1:1: the other participant. Group: everyone else's first
+  // name, minus anyone the user has blocked.
+  const isGroupHeader = thread.thread_type === 'group';
+  const otherIds = getOtherParticipantIds();
+  const otherProfile: ProfileData | undefined = otherIds[0] ? profileCache[otherIds[0]] : undefined;
+  const otherFirstName = otherProfile?.first_name || 'Someone';
+  const groupNames = formatNameList(
+    otherIds
+      .filter(id => !blockedUserIds?.has(id) && !blockedParticipantIds.has(id))
+      .map(id => profileCache[id]?.first_name)
+      .filter((name): name is string => !!name && name !== 'Unknown')
+  );
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <ExpandedPhotoModal />
@@ -927,11 +954,90 @@ export default function MessageThread({
         alignItems: 'center',
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>{post.title}</span>
-          {post.status === 'closed' && <ClosedBadge size="small" />}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {isGroupHeader ? (
+          <div style={{ flex: 1, minWidth: 0, marginRight: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>{post.title}</span>
+              {post.status === 'closed' && <ClosedBadge size="small" />}
+            </div>
+            {groupNames && (
+              <div style={{
+                fontSize: '12px',
+                color: 'var(--text-secondary)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                marginTop: '2px',
+              }}>
+                {groupNames}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (otherProfile?.avatar_url) {
+                  setExpandedPhoto({
+                    url: otherProfile.avatar_url,
+                    name: otherProfile.first_name,
+                    age: otherProfile.date_of_birth ? calculateAge(otherProfile.date_of_birth) : null,
+                  });
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                minWidth: 0,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: otherProfile?.avatar_url ? 'pointer' : 'default',
+                fontFamily: 'inherit',
+                textAlign: 'left',
+              }}
+            >
+              {otherProfile?.avatar_url ? (
+                <img
+                  src={otherProfile.avatar_url}
+                  alt=""
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                />
+              ) : (
+                <span style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'var(--pill-fill)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  flexShrink: 0,
+                }}>
+                  {otherFirstName.charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                minWidth: 0,
+              }}>
+                {otherFirstName}
+              </span>
+            </button>
+            {post.status === 'closed' && <ClosedBadge size="small" />}
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowMenu(!showMenu)}
