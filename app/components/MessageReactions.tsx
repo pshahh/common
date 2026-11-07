@@ -313,6 +313,8 @@ export default function ReactableBubble({
       {trayPos && (
         <div
           role="menu"
+          // SwipeBackContainer won't start a swipe while this is open
+          data-reaction-tray=""
           style={{
             position: 'fixed',
             top: trayPos.top,

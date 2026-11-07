@@ -23,6 +23,7 @@ import Sidebar from './components/Sidebar';
 import MessageThread from './components/MessageThread';
 import BottomNav from './components/BottomNav';
 import MobileMessageList from './components/MobileMessageList';
+import SwipeBackContainer from './components/SwipeBackContainer';
 import { sortByDistance, formatDistance, getDistanceToPost, calculateDistance } from '@/lib/distance';
 import { subscribeToPush } from '@/lib/pushNotifications';
 import { registerNativePush, PUSH_SUBSCRIBED_KEY } from '@/lib/nativePush';
@@ -433,6 +434,37 @@ useEffect(() => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Mobile threads get one history entry, so the Android and browser back
+  // buttons return to the chat list instead of leaving the app. Switching
+  // straight from one thread to another replaces it rather than adding one.
+  const pushMobileThreadEntry = () => {
+    if (window.history.state?.mobileThread) {
+      window.history.replaceState(window.history.state, '');
+    } else {
+      window.history.pushState({ mobileThread: true }, '');
+    }
+  };
+
+  const closeMobileThreadState = () => {
+    setShowMobileThread(false);
+    setSelectedThreadId(null);
+    setShowMobileMessages(true);
+    setMobileTab('messages');
+    // Refresh unread state after reading messages
+    setSidebarRefreshTrigger(prev => prev + 1);
+  };
+
+  // Back arrow, swipe, leave and block all close through history when the
+  // thread's entry is on top, so the entry is used up rather than left
+  // behind for a later back press to land on. popstate then closes it.
+  const closeMobileThread = () => {
+    if (window.history.state?.mobileThread) {
+      window.history.back();
+    } else {
+      closeMobileThreadState();
+    }
+  };
+
   // Read thread ID from URL query params
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -444,7 +476,7 @@ useEffect(() => {
       setSelectedThreadId(threadId);
       if (isMobile) {
         setShowMobileThread(true);
-        window.history.pushState({ mobileThread: true }, '');
+        pushMobileThreadEntry();
       }
       // Clean up the URL via Next's router (not a raw History API call) so
       // Next's internal search-params tracking actually clears too. Otherwise
@@ -458,9 +490,7 @@ useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       if (showMobileThread) {
         e.preventDefault();
-        setShowMobileThread(false);
-        setSelectedThreadId(null);
-        setShowMobileMessages(true);
+        closeMobileThreadState();
       } else if (showMobileMessages) {
         e.preventDefault();
         setShowMobileMessages(false);
@@ -1154,7 +1184,7 @@ const sortedPosts = useMemo(() => {
       setSelectedThreadId(threadId);
       if (isMobile) {
         setShowMobileThread(true);
-        window.history.pushState({ mobileThread: true }, '');
+        pushMobileThreadEntry();
       }
     }
     setSelectedPost(null);
@@ -1260,7 +1290,7 @@ const sortedPosts = useMemo(() => {
     if (isMobile) {
       setShowMobileMessages(false);
       setShowMobileThread(true);
-      window.history.pushState({ mobileThread: true }, '');
+      pushMobileThreadEntry();
     }
   };
 
@@ -1275,10 +1305,10 @@ const sortedPosts = useMemo(() => {
 
   const handleLeaveThread = () => {
     // Close the thread panel
-    setSelectedThreadId(null);
     if (isMobile) {
-      setShowMobileThread(false);
-      setShowMobileMessages(true);
+      closeMobileThread();
+    } else {
+      setSelectedThreadId(null);
     }
     // Refresh sidebar to remove the thread
     setSidebarRefreshTrigger(prev => prev + 1);
@@ -1866,42 +1896,42 @@ const sortedPosts = useMemo(() => {
   </>
 )}
 
-      {/* Mobile Message List */}
-      {isMobile && showMobileMessages && (
-        <MobileMessageList
-          userId={user.id}
-          onSelectThread={handleSelectThread}
-          onClose={() => {
-            setShowMobileMessages(false);
-            setMobileTab('home');
+      {/* Mobile chat list, with the open thread on top of it. One list
+          instance stays mounted underneath the thread so an edge swipe can
+          reveal it. */}
+      {isMobile && (showMobileMessages || (showMobileThread && selectedThreadId)) && (
+        <SwipeBackContainer
+          threadOpen={showMobileThread && !!selectedThreadId}
+          onSwipeClose={() => {
+            posthog.capture('thread_swiped_back');
+            closeMobileThread();
           }}
-          refreshTrigger={sidebarRefreshTrigger}
-          hiddenUserIds={blockedUserIds}
+          list={
+            <MobileMessageList
+              userId={user.id}
+              onSelectThread={handleSelectThread}
+              onClose={() => {
+                setShowMobileMessages(false);
+                setMobileTab('home');
+              }}
+              refreshTrigger={sidebarRefreshTrigger}
+              hiddenUserIds={blockedUserIds}
+            />
+          }
+          thread={selectedThreadId && (
+            <MessageThread
+              key={selectedThreadId}
+              threadId={selectedThreadId}
+              currentUserId={user.id}
+              onClose={closeMobileThread}
+              onReport={handleReportClick}
+              onLeaveThread={handleLeaveThread}
+              onUserBlocked={applyBlock}
+              blockedUserIds={blockedUserIds}
+              showBrandHeader
+            />
+          )}
         />
-      )}
-
-      {/* Mobile Message Thread */}
-      {isMobile && showMobileThread && selectedThreadId && (
-        <div className="mobile-message-overlay open">
-          <MessageThread
-            key={selectedThreadId}
-            threadId={selectedThreadId}
-            currentUserId={user.id}
-            onClose={() => {
-              setShowMobileThread(false);
-              setSelectedThreadId(null);
-              setShowMobileMessages(true);
-              setMobileTab('messages');
-              // Refresh unread count after reading messages
-              setSidebarRefreshTrigger(prev => prev + 1);
-            }}
-            onReport={handleReportClick}
-            onLeaveThread={handleLeaveThread}
-            onUserBlocked={applyBlock}
-            blockedUserIds={blockedUserIds}
-            showBrandHeader
-          />
-        </div>
       )}
 
 

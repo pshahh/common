@@ -47,6 +47,34 @@ function BrandBar({ show }: { show: boolean }) {
   );
 }
 
+// Mobile back control for the full-screen thread. Replaces the desktop ×.
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Back to chats"
+      style={{
+        width: '44px',
+        height: '44px',
+        margin: '-10px 4px -10px -14px',
+        padding: 0,
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+    </button>
+  );
+}
+
 interface Message {
   id: string;
   thread_id: string;
@@ -858,12 +886,15 @@ export default function MessageThread({
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <span style={{ fontSize: '16px', fontWeight: 600 }}>Loading...</span>
-          <button onClick={onClose} style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '18px',
-            color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px',
-            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>×</button>
+          {showBrandHeader && <BackButton onClick={onClose} />}
+          <span style={{ fontSize: '16px', fontWeight: 600, flex: 1 }}>Loading...</span>
+          {!showBrandHeader && (
+            <button onClick={onClose} style={{
+              background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '18px',
+              color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px',
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>×</button>
+          )}
         </div>
       </div>
     );
@@ -881,12 +912,15 @@ export default function MessageThread({
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <span style={{ fontSize: '16px', fontWeight: 600 }}>Conversation unavailable</span>
-          <button onClick={onClose} style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '18px',
-            color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px',
-            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>×</button>
+          {showBrandHeader && <BackButton onClick={onClose} />}
+          <span style={{ fontSize: '16px', fontWeight: 600, flex: 1 }}>Conversation unavailable</span>
+          {!showBrandHeader && (
+            <button onClick={onClose} style={{
+              background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '18px',
+              color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px',
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>×</button>
+          )}
         </div>
         <div style={{
           flex: 1,
@@ -954,6 +988,7 @@ export default function MessageThread({
         alignItems: 'center',
         flexShrink: 0,
       }}>
+        {showBrandHeader && <BackButton onClick={onClose} />}
         {isGroupHeader ? (
           <div style={{ flex: 1, minWidth: 0, marginRight: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1090,12 +1125,14 @@ export default function MessageThread({
               </div>
             )}
           </div>
-          <button onClick={onClose} style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '18px',
-            color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px',
-            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-          }}>×</button>
+          {!showBrandHeader && (
+            <button onClick={onClose} style={{
+              background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '18px',
+              color: 'var(--text-secondary)', cursor: 'pointer', width: '36px', height: '36px',
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            }}>×</button>
+          )}
         </div>
       </div>
 
