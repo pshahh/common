@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { formatPreview, formatRowTime } from '@/lib/messageTime';
+import { createPreviewRefresher, fetchThreadPreviews, type ThreadPreview } from '@/lib/threadPreviews';
 
 interface ThreadPost {
   id: string;
@@ -22,6 +24,7 @@ interface Thread {
   post: ThreadPost | null;
   otherParticipantName: string | null;
   hasUnread: boolean;
+  preview: ThreadPreview | null;
 }
 
 interface SidebarProps {
@@ -48,6 +51,8 @@ export default function Sidebar({
 }: SidebarProps) {
   const router = useRouter();
   const [threads, setThreads] = useState<Thread[]>([]);
+  // First names of everyone in the user's threads, for preview prefixes
+  const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
@@ -106,20 +111,7 @@ export default function Sidebar({
       return;
     }
 
-    // Fetch read timestamps for all threads in one query
     const threadIds = data.map((t) => t.id);
-    const { data: readData } = await supabase
-      .from('thread_reads')
-      .select('thread_id, last_read_at')
-      .eq('user_id', userId)
-      .in('thread_id', threadIds);
-
-    const readMap: Record<string, string> = {};
-    if (readData) {
-      readData.forEach((r) => {
-        readMap[r.thread_id] = r.last_read_at;
-      });
-    }
 
     // Collect all other participant IDs across all threads
     const otherParticipantIds = new Set<string>();
@@ -129,18 +121,37 @@ export default function Sidebar({
       });
     });
 
-    // Fetch their names in one query
-    let nameMap: Record<string, string> = {};
-    if (otherParticipantIds.size > 0) {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, first_name')
-        .in('id', [...otherParticipantIds]);
-      if (profiles) {
-        profiles.forEach((p) => {
-          nameMap[p.id] = p.first_name;
-        });
-      }
+    // Read times, names and previews only need the thread ids, so they run together
+    const [readResult, profileResult, previews] = await Promise.all([
+      supabase
+        .from('thread_reads')
+        .select('thread_id, last_read_at')
+        .eq('user_id', userId)
+        .in('thread_id', threadIds),
+      otherParticipantIds.size > 0
+        ? supabase.from('profiles').select('id, first_name').in('id', [...otherParticipantIds])
+        : Promise.resolve({ data: [] as { id: string; first_name: string }[] }),
+      fetchThreadPreviews(threadIds),
+    ]);
+
+    const readMap: Record<string, string> = {};
+    (readResult.data || []).forEach((r) => {
+      readMap[r.thread_id] = r.last_read_at;
+    });
+
+    const nameMap: Record<string, string> = {};
+    (profileResult.data || []).forEach((p) => {
+      nameMap[p.id] = p.first_name;
+    });
+
+    // Senders who have since left a thread aren't participants any more
+    const missing = [...new Set(Object.values(previews).map((p) => p.sender_id))]
+      .filter((id) => id !== userId && !nameMap[id]);
+    if (missing.length > 0) {
+      const { data: extra } = await supabase.from('profiles').select('id, first_name').in('id', missing);
+      (extra || []).forEach((p) => {
+        nameMap[p.id] = p.first_name;
+      });
     }
 
     const transformedThreads: Thread[] = data.map((thread) => {
@@ -174,9 +185,11 @@ export default function Sidebar({
         post: post,
         otherParticipantName: otherName,
         hasUnread,
+        preview: previews[thread.id] || null,
       };
     });
 
+    setNames(nameMap);
     setThreads(transformedThreads);
     setLoading(false);
   }, [userId]);
@@ -238,6 +251,7 @@ export default function Sidebar({
                 post: postData,
                 otherParticipantName: otherName,
                 hasUnread: true,
+                preview: null,
               };
               setThreads((prev) => {
                 if (prev.some(t => t.id === newThread.id)) return prev;
@@ -253,9 +267,13 @@ export default function Sidebar({
     };
   }, [userId]);
 
-  // Subscribe to thread updates (last_message_at changes) so ordering stays live
+  // Subscribe to thread updates (last_message_at changes) so ordering and
+  // previews stay live. Previews for a burst of updates come in one call.
   useEffect(() => {
     if (!userId) return;
+    const refresher = createPreviewRefresher((previews) => {
+      setThreads((prev) => prev.map((t) => (previews[t.id] ? { ...t, preview: previews[t.id] } : t)));
+    });
     const channel = supabase
       .channel(`thread-updates-${userId}`)
       .on(
@@ -282,10 +300,12 @@ export default function Sidebar({
             };
             return updatedThreads;
           });
+          refresher.queue(updated.id);
         }
       )
       .subscribe();
     return () => {
+      refresher.cancel();
       supabase.removeChannel(channel);
     };
   }, [userId, selectedThreadId]);
@@ -304,6 +324,8 @@ export default function Sidebar({
     if (!thread.post?.expires_at) return false;
     return new Date(thread.post.expires_at) < new Date();
   };
+
+  const now = new Date();
 
   const NavItem = ({
     onClick,
@@ -416,41 +438,62 @@ export default function Sidebar({
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontSize: '14px',
-                          color: ended ? 'var(--text-secondary)' : 'var(--text-primary)',
-                          fontWeight: unread ? 600 : (isSelected ? 500 : 400),
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          marginBottom: '2px',
-                        }}>
-                          {thread.post?.title || 'Unknown post'}
-                        </div>
-                        {thread.thread_type !== 'group' && (
+                        {/* Line 1: name and title, time on the right */}
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px' }}>
                           <div style={{
-                            fontSize: '12px',
-                            color: 'var(--text-secondary)',
+                            flex: 1,
+                            minWidth: 0,
+                            fontSize: '14px',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            fontWeight: unread ? 500 : 400,
                           }}>
-                            {thread.otherParticipantName || thread.post?.location || ''}
+                            {thread.thread_type !== 'group' && thread.otherParticipantName ? (
+                              <>
+                                <span style={{ color: 'var(--text-primary)', fontWeight: unread ? 600 : 500 }}>{thread.otherParticipantName}</span>
+                                <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}> · {thread.post?.title || 'Unknown post'}</span>
+                              </>
+                            ) : (
+                              <span style={{ color: 'var(--text-primary)', fontWeight: unread ? 600 : 500 }}>{thread.post?.title || 'Unknown post'}</span>
+                            )}
                           </div>
-                        )}
-                      </div>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                            {formatRowTime(thread.last_message_at || thread.created_at, now)}
+                          </span>
+                        </div>
 
-                      {/* Unread dot — right side; grey once the event has ended */}
-                      {unread && (
-                        <div style={{
-                          width: '6px',
-                          height: '6px',
-                          borderRadius: '50%',
-                          background: ended ? 'var(--text-secondary)' : 'var(--accent)',
-                          flexShrink: 0,
-                        }} />
-                      )}
+                        {/* Line 2: preview, unread dot on the right */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{
+                            flex: 1,
+                            minWidth: 0,
+                            fontSize: '12px',
+                            color: unread ? 'var(--text-primary)' : 'var(--text-secondary)',
+                            fontWeight: unread ? 500 : 400,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}>
+                            {thread.preview
+                              ? formatPreview(thread.preview, {
+                                  currentUserId: userId,
+                                  isGroup: thread.thread_type === 'group',
+                                  senderFirstName: names[thread.preview.sender_id],
+                                })
+                              : 'No messages yet'}
+                          </div>
+                          {/* Unread dot; grey once the event has ended */}
+                          {unread && (
+                            <div style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              background: ended ? 'var(--text-secondary)' : 'var(--accent)',
+                              flexShrink: 0,
+                            }} />
+                          )}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}

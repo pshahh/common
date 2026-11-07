@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { formatPreview, formatRowTime } from '@/lib/messageTime';
+import { createPreviewRefresher, fetchThreadPreviews, type ThreadPreview } from '@/lib/threadPreviews';
 
 interface ThreadPost {
   id: string;
@@ -19,8 +21,13 @@ interface Thread {
   last_message_at: string | null;
   thread_type: string;
   post: ThreadPost | null;
-  otherParticipantName: string | null;
   hasUnread: boolean;
+  preview: ThreadPreview | null;
+}
+
+interface PersonSummary {
+  first_name: string;
+  avatar_url: string | null;
 }
 
 interface MobileMessageListProps {
@@ -30,6 +37,47 @@ interface MobileMessageListProps {
   refreshTrigger?: number;
   // People the user has just blocked. Their threads disappear before the refetch lands.
   hiddenUserIds?: Set<string>;
+  // The thread open on top of this list, if any. While set, the list is
+  // hidden underneath it: realtime updates keep ordering current but skip
+  // preview fetches (the list refetches when the thread closes), and the
+  // open thread never shows an unread dot.
+  activeThreadId?: string | null;
+}
+
+function Initial({ name, size, fontSize, style }: { name: string; size: number; fontSize: number; style?: React.CSSProperties }) {
+  return (
+    <span style={{
+      width: `${size}px`,
+      height: `${size}px`,
+      borderRadius: '50%',
+      background: 'var(--pill-fill)',
+      color: 'var(--text-primary)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: `${fontSize}px`,
+      fontWeight: 500,
+      boxSizing: 'border-box',
+      ...style,
+    }}>
+      {name.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+function PersonCircle({ person, size, fontSize, style }: { person: PersonSummary | undefined; size: number; fontSize: number; style?: React.CSSProperties }) {
+  const name = person?.first_name || '?';
+  if (person?.avatar_url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={person.avatar_url}
+        alt=""
+        style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover', display: 'block', boxSizing: 'border-box', ...style }}
+      />
+    );
+  }
+  return <Initial name={name} size={size} fontSize={fontSize} style={style} />;
 }
 
 export default function MobileMessageList({
@@ -37,11 +85,25 @@ export default function MobileMessageList({
   onSelectThread,
   refreshTrigger = 0,
   hiddenUserIds,
+  activeThreadId = null,
 }: MobileMessageListProps) {
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [people, setPeople] = useState<Record<string, PersonSummary>>({});
   const [loading, setLoading] = useState(true);
+  const activeThreadIdRef = useRef(activeThreadId);
+  const threadIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    activeThreadIdRef.current = activeThreadId;
+  }, [activeThreadId]);
+
+  useEffect(() => {
+    threadIdsRef.current = new Set(threads.map(t => t.id));
+  }, [threads]);
+
+  useEffect(() => {
+    let cancelled = false;
+
     async function fetchThreads() {
       const { data, error } = await supabase
         .from('threads')
@@ -63,6 +125,8 @@ export default function MobileMessageList({
         .contains('participant_ids', [userId])
         .order('last_message_at', { ascending: false, nullsFirst: false });
 
+      if (cancelled) return;
+
       if (error) {
         console.error('Error fetching threads:', error);
         setLoading(false);
@@ -74,22 +138,7 @@ export default function MobileMessageList({
         return;
       }
 
-      // Fetch read timestamps for all threads in one query
       const threadIds = data.map((t) => t.id);
-      const { data: readData } = await supabase
-        .from('thread_reads')
-        .select('thread_id, last_read_at')
-        .eq('user_id', userId)
-        .in('thread_id', threadIds);
-
-      const readMap: Record<string, string> = {};
-      if (readData) {
-        readData.forEach((r) => {
-          readMap[r.thread_id] = r.last_read_at;
-        });
-      }
-
-      // Collect all other participant IDs across all threads
       const otherParticipantIds = new Set<string>();
       data.forEach((thread) => {
         thread.participant_ids.forEach((id: string) => {
@@ -97,18 +146,46 @@ export default function MobileMessageList({
         });
       });
 
-      // Fetch their names in one query
-      let nameMap: Record<string, string> = {};
-      if (otherParticipantIds.size > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, first_name')
-          .in('id', [...otherParticipantIds]);
-        if (profiles) {
-          profiles.forEach((p) => {
-            nameMap[p.id] = p.first_name;
-          });
-        }
+      // Read times, participant profiles and previews only need the thread
+      // ids, so they run together.
+      const [readResult, profileResult, previews] = await Promise.all([
+        supabase
+          .from('thread_reads')
+          .select('thread_id, last_read_at')
+          .eq('user_id', userId)
+          .in('thread_id', threadIds),
+        otherParticipantIds.size > 0
+          ? supabase.from('profiles').select('id, first_name, avatar_url').in('id', [...otherParticipantIds])
+          : Promise.resolve({ data: [] as { id: string; first_name: string; avatar_url: string | null }[] }),
+        fetchThreadPreviews(threadIds),
+      ]);
+
+      if (cancelled) return;
+
+      const readMap: Record<string, string> = {};
+      (readResult.data || []).forEach((r) => {
+        readMap[r.thread_id] = r.last_read_at;
+      });
+
+      const peopleMap: Record<string, PersonSummary> = {};
+      const addPeople = (rows: { id: string; first_name: string; avatar_url: string | null }[] | null) => {
+        (rows || []).forEach((p) => {
+          peopleMap[p.id] = { first_name: p.first_name, avatar_url: p.avatar_url };
+        });
+      };
+      addPeople(profileResult.data);
+
+      // Senders who have since left a thread aren't participants any more
+      const missing = new Set<string>();
+      Object.values(previews).forEach((p) => {
+        [p.sender_id, ...p.recent_sender_ids].forEach((id) => {
+          if (id !== userId && !peopleMap[id]) missing.add(id);
+        });
+      });
+      if (missing.size > 0) {
+        const { data: extra } = await supabase.from('profiles').select('id, first_name, avatar_url').in('id', [...missing]);
+        if (cancelled) return;
+        addPeople(extra);
       }
 
       const transformedThreads: Thread[] = data.map((thread) => {
@@ -117,19 +194,11 @@ export default function MobileMessageList({
           ? postData[0] || null
           : postData;
 
-        const otherIds = thread.participant_ids.filter((id: string) => id !== userId);
-        const otherName = otherIds.length > 0 ? nameMap[otherIds[0]] || null : null;
-
-        // Determine unread status
         const lastReadAt = readMap[thread.id];
         const lastMessageAt = thread.last_message_at;
         let hasUnread = false;
         if (lastMessageAt) {
-          if (!lastReadAt) {
-            hasUnread = true;
-          } else {
-            hasUnread = new Date(lastMessageAt) > new Date(lastReadAt);
-          }
+          hasUnread = !lastReadAt || new Date(lastMessageAt) > new Date(lastReadAt);
         }
 
         return {
@@ -139,12 +208,13 @@ export default function MobileMessageList({
           created_at: thread.created_at,
           last_message_at: thread.last_message_at,
           thread_type: thread.thread_type || '1:1',
-          post: post,
-          otherParticipantName: otherName,
+          post,
           hasUnread,
+          preview: previews[thread.id] || null,
         };
       });
 
+      setPeople(peopleMap);
       setThreads(transformedThreads);
       setLoading(false);
     }
@@ -152,7 +222,45 @@ export default function MobileMessageList({
     if (userId) {
       fetchThreads();
     }
+    return () => {
+      cancelled = true;
+    };
   }, [userId, refreshTrigger]);
+
+  // Keep ordering and previews live. A thread's last_message_at changes on
+  // every new message; refetch just that thread's preview (batched).
+  useEffect(() => {
+    if (!userId) return;
+    const refresher = createPreviewRefresher((previews) => {
+      setThreads((prev) => prev.map((t) => (previews[t.id] ? { ...t, preview: previews[t.id] } : t)));
+    });
+    const channel = supabase
+      .channel(`mobile-thread-updates-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'threads' },
+        (payload) => {
+          const updated = payload.new as { id: string; last_message_at: string | null };
+          if (!threadIdsRef.current.has(updated.id)) return;
+          setThreads((prev) => prev.map((t) => {
+            if (t.id !== updated.id) return t;
+            const changed = updated.last_message_at !== t.last_message_at;
+            return {
+              ...t,
+              last_message_at: updated.last_message_at,
+              hasUnread: activeThreadIdRef.current === t.id ? false : (changed || t.hasUnread),
+            };
+          }));
+          // Hidden under an open thread: the list refetches when it closes
+          if (!activeThreadIdRef.current) refresher.queue(updated.id);
+        }
+      )
+      .subscribe();
+    return () => {
+      refresher.cancel();
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   const visibleThreads = hiddenUserIds && hiddenUserIds.size > 0
     ? threads.filter(t => !t.participant_ids.some(id => id !== userId && hiddenUserIds.has(id)))
@@ -172,6 +280,35 @@ export default function MobileMessageList({
     if (thread.post?.status === 'closed') return true;
     if (!thread.post?.expires_at) return false;
     return new Date(thread.post.expires_at) < new Date();
+  };
+
+  const now = new Date();
+
+  const renderAvatar = (thread: Thread) => {
+    const others = thread.participant_ids.filter(id => id !== userId && !hiddenUserIds?.has(id));
+    if (thread.thread_type !== 'group') {
+      const person = others[0] ? people[others[0]] : undefined;
+      return <PersonCircle person={person} size={44} fontSize={17} style={{ flexShrink: 0 }} />;
+    }
+    // Two most recent other senders, topped up from the other participants
+    const ids: string[] = [];
+    [...(thread.preview?.recent_sender_ids || []), ...others].forEach((id) => {
+      if (ids.length < 2 && !ids.includes(id) && !hiddenUserIds?.has(id)) ids.push(id);
+    });
+    if (ids.length < 2) {
+      return <PersonCircle person={ids[0] ? people[ids[0]] : undefined} size={44} fontSize={17} style={{ flexShrink: 0 }} />;
+    }
+    return (
+      <div style={{ position: 'relative', width: '44px', height: '44px', flexShrink: 0 }}>
+        <PersonCircle person={people[ids[0]]} size={30} fontSize={13} style={{ position: 'absolute', top: 0, left: 0 }} />
+        <PersonCircle
+          person={people[ids[1]]}
+          size={30}
+          fontSize={13}
+          style={{ position: 'absolute', right: 0, bottom: 0, border: '2px solid var(--bg-badge)' }}
+        />
+      </div>
+    );
   };
 
   return (
@@ -230,10 +367,21 @@ export default function MobileMessageList({
           Messages appear here when it&apos;s time to coordinate.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
           {sortedThreads.map((thread) => {
-            const unread = thread.hasUnread;
+            const unread = thread.hasUnread && thread.id !== activeThreadId;
             const ended = isEventEnded(thread);
+            const isGroup = thread.thread_type === 'group';
+            const otherId = thread.participant_ids.find(id => id !== userId);
+            const otherName = otherId ? people[otherId]?.first_name : undefined;
+            const title = thread.post?.title || 'Unknown post';
+            const previewText = thread.preview
+              ? formatPreview(thread.preview, {
+                  currentUserId: userId,
+                  isGroup,
+                  senderFirstName: people[thread.preview.sender_id]?.first_name,
+                })
+              : 'No messages yet';
 
             return (
               <div
@@ -246,7 +394,7 @@ export default function MobileMessageList({
                   onSelectThread(thread.id);
                 }}
                 style={{
-                  padding: '16px 0',
+                  padding: '12px 0',
                   background: 'var(--bg-badge)',
                   borderBottom: '1px solid var(--border)',
                   cursor: 'pointer',
@@ -256,36 +404,59 @@ export default function MobileMessageList({
                   gap: '12px',
                 }}
               >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: '15px',
-                    fontWeight: unread ? 600 : 500,
-                    color: ended ? 'var(--text-secondary)' : 'var(--text-primary)',
-                    marginBottom: '4px',
-                  }}>
-                    {thread.post?.title || 'Unknown post'}
-                  </div>
-                  {thread.thread_type !== 'group' && (
-                    <div style={{
-                      fontSize: '13px',
-                      color: 'var(--text-secondary)',
-                      fontWeight: unread ? 500 : 400,
-                    }}>
-                      {thread.otherParticipantName || thread.post?.location || ''}
-                    </div>
-                  )}
-                </div>
+                {renderAvatar(thread)}
 
-                {/* Unread dot — right side; grey once the event has ended */}
-                {unread && (
-                  <div style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: ended ? 'var(--text-secondary)' : 'var(--accent)',
-                    flexShrink: 0,
-                  }} />
-                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Line 1: name and title, time on the right */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                    <div style={{
+                      flex: 1,
+                      minWidth: 0,
+                      fontSize: '15px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {!isGroup && otherName ? (
+                        <>
+                          <span style={{ color: 'var(--text-primary)', fontWeight: unread ? 600 : 500 }}>{otherName}</span>
+                          <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}> · {title}</span>
+                        </>
+                      ) : (
+                        <span style={{ color: 'var(--text-primary)', fontWeight: unread ? 600 : 500 }}>{title}</span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                      {formatRowTime(thread.last_message_at || thread.created_at, now)}
+                    </span>
+                  </div>
+
+                  {/* Line 2: preview, unread dot on the right */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                    <div style={{
+                      flex: 1,
+                      minWidth: 0,
+                      fontSize: '14px',
+                      color: unread ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontWeight: unread ? 500 : 400,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {previewText}
+                    </div>
+                    {/* Unread dot; grey once the event has ended */}
+                    {unread && (
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        background: ended ? 'var(--text-secondary)' : 'var(--accent)',
+                        flexShrink: 0,
+                      }} />
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })}

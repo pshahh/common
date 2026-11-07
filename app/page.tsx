@@ -1585,15 +1585,19 @@ const sortedPosts = useMemo(() => {
             overflow: 'hidden',
           }}
         >
-          <Sidebar
-            userId={user.id}
-            selectedThreadId={selectedThreadId}
-            onSelectThread={handleSelectThread}
-            onNavigateToMyActivity={handleNavigateToMyActivity}
-            onLogout={handleLogout}
-            refreshTrigger={sidebarRefreshTrigger}
-            hiddenUserIds={blockedUserIds}
-          />
+          {/* CSS hides this column on mobile; skip mounting it there too so
+              phones don't fetch and subscribe to the chat list twice. */}
+          {!isMobile && (
+            <Sidebar
+              userId={user.id}
+              selectedThreadId={selectedThreadId}
+              onSelectThread={handleSelectThread}
+              onNavigateToMyActivity={handleNavigateToMyActivity}
+              onLogout={handleLogout}
+              refreshTrigger={sidebarRefreshTrigger}
+              hiddenUserIds={blockedUserIds}
+            />
+          )}
         </div>
 
         {/* Feed - Scrollable, clickable to close thread */}
@@ -1916,6 +1920,7 @@ const sortedPosts = useMemo(() => {
               }}
               refreshTrigger={sidebarRefreshTrigger}
               hiddenUserIds={blockedUserIds}
+              activeThreadId={showMobileThread ? selectedThreadId : null}
             />
           }
           thread={selectedThreadId && (

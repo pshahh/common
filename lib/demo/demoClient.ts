@@ -13,6 +13,33 @@ import { PUSH_SUBSCRIBED_KEY } from '../nativePush';
 type Row = Record<string, unknown>;
 type Result = { data: unknown; error: null; count: number | null };
 
+// Same result shape as the get_thread_previews SQL function.
+function demoThreadPreviews(tables: Record<string, Row[]>, threadIds: string[]) {
+  const byNewest = [...(tables.messages || [])].sort(
+    (a, b) => String(b.created_at).localeCompare(String(a.created_at))
+  );
+  return threadIds.flatMap((threadId) => {
+    const inThread = byNewest.filter((m) => m.thread_id === threadId);
+    const latest = inThread[0];
+    if (!latest) return [];
+    const recent: string[] = [];
+    inThread.forEach((m) => {
+      const sender = m.sender_id as string;
+      if (recent.length < 2 && m.message_type !== 'system' && sender !== demoUser.id && !recent.includes(sender)) {
+        recent.push(sender);
+      }
+    });
+    return [{
+      thread_id: threadId,
+      sender_id: latest.sender_id,
+      content: latest.content,
+      message_type: latest.message_type,
+      created_at: latest.created_at,
+      recent_sender_ids: recent,
+    }];
+  });
+}
+
 export function isDemoMode(): boolean {
   return typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === '1';
 }
@@ -200,8 +227,9 @@ export function createDemoClient(): SupabaseClient {
 
   const client = {
     from: (table: string) => new DemoQuery(tables, table),
-    rpc: (name: string) => {
+    rpc: (name: string, args?: Record<string, unknown>) => {
       if (name === 'join_group_thread') return ok({ thread_id: DEMO_GROUP_THREAD_ID });
+      if (name === 'get_thread_previews') return ok(demoThreadPreviews(tables, (args?.thread_ids as string[]) || []));
       return ok(null);
     },
     channel: () => channel,
