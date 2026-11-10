@@ -158,6 +158,39 @@ a[href] {
   margin-bottom: 4px;
 }
 
+/* Visually hidden but read by screen readers and crawlers (e.g. the post page h1) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Logged-out intro under the feed heading (HomeClient.tsx and FeedFallback.tsx) */
+.guest-intro {
+  margin: 6px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  max-width: 34em;
+}
+
+.guest-intro-link {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.guest-intro-link:hover {
+  text-decoration: underline;
+}
+
 .page-subtitle {
   font-size: 14px;
   color: var(--text-secondary);

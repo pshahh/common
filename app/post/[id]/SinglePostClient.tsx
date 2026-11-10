@@ -16,7 +16,7 @@ import ClosedBadge from '../../components/ClosedBadge';
 import PostStateScreen from '../../components/PostStateScreen';
 import BlockUserModal from '../../components/BlockUserModal';
 
-interface Post {
+export interface Post {
   id: string;
   title: string;
   location: string;
@@ -51,13 +51,18 @@ export type PostUnavailableReason = 'removed' | 'not_found' | null;
 interface SinglePostClientProps {
   postId: string;
   unavailableReason?: PostUnavailableReason;
+  /** The post as fetched on the server. Public posts only; null otherwise. */
+  initialPost?: Post | null;
 }
 
-export default function SinglePostClient({ postId, unavailableReason = null }: SinglePostClientProps) {
+export default function SinglePostClient({ postId, unavailableReason = null, initialPost = null }: SinglePostClientProps) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [post, setPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Public posts arrive from the server already loaded, so the HTML (what
+  // crawlers read) has the post in it rather than "Loading...". The fetch
+  // below still runs and refreshes it, and covers friends-only posts.
+  const [post, setPost] = useState<Post | null>(initialPost);
+  const [loading, setLoading] = useState(!initialPost && !unavailableReason);
   const [notFound, setNotFound] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalTrigger, setAuthModalTrigger] = useState<'interested' | 'post' | 'nav'>('nav');
@@ -374,6 +379,8 @@ useEffect(() => {
         >
           ← See what else is going on
         </button>
+        {/* The card's title is an h3 (it's shared with the feed), so the page heading lives here */}
+        <h1 className="sr-only">{post.title}</h1>
         {/* Post card */}
         <PostCard
           id={post.id}
